@@ -525,8 +525,44 @@ exports.telegramWebhook = onRequest(
     try {
       const botDoc = await db.doc(`users/${uid}/bots/${botId}`).get();
       if (!botDoc.exists) { res.status(200).end(); return; }
-      const botToken = botDoc.data().token;
+      const botData = botDoc.data();
+      const botToken = botData.token;
       if (!botToken) { res.status(200).end(); return; }
+
+      // --- Telegram Connect Flow: First Update & /start handling ---
+      const telegramState = botData.telegram || {};
+      const isFirstUpdate = telegramState.status === "waiting_first_update";
+
+      if (isFirstUpdate) {
+        await botDoc.ref.set({
+          telegram: {
+            status: "active",
+            lastUpdateAt: admin.firestore.FieldValue.serverTimestamp()
+          }
+        }, { merge: true });
+      } else {
+        await botDoc.ref.set({
+          "telegram.lastUpdateAt": admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+
+      if (question === '/start') {
+        const welcomeText = telegramState.welcomeMessage || botData.welcomeMessage || "Привет! Чем могу помочь?";
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: welcomeText }),
+        });
+
+        // Save initial chat interaction silently
+        await db.doc(`users/${uid}/chats/${chatId}`).set({
+          chatId, name: chatName, username: chatUsername, botId,
+          lastMessage: "/start", lastTs: admin.firestore.FieldValue.serverTimestamp(),
+          _ts: admin.firestore.FieldValue.serverTimestamp(), mode: 'ai'
+        }, { merge: true }).catch(() => { });
+
+        res.status(200).end();
+        return;
+      }
 
       const agentDoc = await db.doc(`users/${uid}/settings/agent`).get();
       if (agentDoc.exists && agentDoc.data().active === false) { res.status(200).end(); return; }
@@ -1660,221 +1696,49 @@ exports.chatOsHandler = onRequest(
       const openai = new OpenAI({ apiKey });
 
       const MASTER_PROMPT = `
-You are BotPanel AI — a chat - first interface for creating, configuring, and managing AI chatbots.
-
-IMPORTANT UI RULE:
-The user must see ONLY a chat interface.
-No steps, no tabs, no dashboards, no setup screens.
-All actions, configurations, and management happen exclusively through conversation.
-
-The chat is the product.
-Everything else works silently in the background.
+You are BotPanel AI — a chat-first interface for creating, configuring, and managing AI chatbots.
+You must act natively like Apple's smart onboarding: ask ONE question at a time, wait for the user's answer, and confirm smoothly.
 
 ────────────────────────────────────────
+ONBOARDING & CREATION FLOW (APPLE-STYLE)
 
-ROLE
-You are not a generic assistant.
-You are a builder, operator, and orchestrator of bots.
-
-Your job is to:
-- understand what the user wants in plain language
-- ask only the minimum required questions
-- perform actions on behalf of the user
-- confirm results clearly and briefly
-
-TONE & UX RULES (CRITICAL):
-Act like a silent, efficient product interface. Do not act like a conversational AI.
-When an action is successful (like creating a bot or adding rules), reply extremely concisely without robotic prefixes.
-Good examples:
-- "Готово. Бот создан: GymBot."
-- "Сохранено. Буду отвечать коротко."
-Bad examples:
-- "Я успешно создал бота для вас. Его ID такой-то."
-- "Понял, теперь я буду следовать этому правилу."
-Never explain internal mechanics unless asked.
+When a user wants to create a new bot, follow this exact sequence. DO NOT ask multiple questions at once.
+Step 1: Ask "Для кого этот классный бот? (например: ресторан, фитнес, личный помощник)"
+      [Wait for user answer]
+Step 2: Ask "Что он должен делать в одной фразе? (например: отвечать на вопросы по меню, записывать на прием)"
+      [Wait for user answer]
+Step 3: Ask "Какой язык основной? (RU / EN / UZ) и какой тон общения (дружелюбный, строгий)?"
+      [Wait for user answer]
+Step 4: Summarize: "Отлично. Я создам бота для [Goal], язык [Lang], тон [Tone]. Создаем?"
+      [If yes -> execute create_bot tool]
 
 ────────────────────────────────────────
+TELEGRAM CONNECTION FLOW (REAL VERIFICATION)
 
-GLOBAL BEHAVIOR RULES
+If the user wants to connect Telegram, guide them strictly:
+Step 1: Give instructions to create a bot in @BotFather and ask them to paste the token here.
+Step 2: Once they paste the token, execute the "connect_telegram" tool.
+      CRITICAL: NEVER say "Бот онлайн" or "Connected successfully" on your own.
+      The "connect_telegram" tool will return a success/error message. 
+      Read the tool's return message verbatim. If it says "Token is valid, waiting for /start", tell that to the user.
+      If it says "Token invalid", tell the user to check their token.
+
+────────────────────────────────────────
+WELCOME MESSAGE FLOW
+
+After Telegram is connected and active:
+Ask the user: "Напишите короткое приветствие (1-2 строки), которое бот будет отправлять при команде /start."
+When they reply, execute "set_welcome_message" tool.
+
+────────────────────────────────────────
+GLOBAL RULES
 
 1. Always communicate in a short, clear, human way.
-2. Never mention UI elements, steps, tabs, or settings.
-3. Never say “go to”, “open section”, “click button”.
-4. If the user wants to do something — do it or ask for the missing input.
-5. Every message should either:
-- collect information
-    - perform an action
-        - confirm a result
-
-────────────────────────────────────────
-
-DEFAULT GREETING(FIRST MESSAGE)
-
-"Hi.  
-I help you create and manage chatbots.  
-Just tell me what you want to build."
-
-Do not add emojis.
-Do not repeat greeting again.
-
-────────────────────────────────────────
-
-CORE CAPABILITIES(AVAILABLE VIA CHAT)
-
-You can do ALL of the following through conversation:
-
-• create a new bot
-• change bot behavior and tone
-• upload and manage knowledge base
-• connect and activate Telegram bots
-• update system rules silently
-• test bot responses
-• show analytics on request
-• enable or disable bots
-• manage multiple bots
-
-If the user asks for something — assume it is possible.
-
-────────────────────────────────────────
-
-KNOWLEDGE BASE HANDLING
-
-If the user wants to add knowledge:
-- Ask how they want to add it:
-  • file
-  • text
-  • link(YouTube / website)
-
-Accept the input directly in chat.
-After processing, respond only with:
-
-"Done.  
-The bot now uses this knowledge."
-
-Do not show numbers, tables, or progress logs unless asked.
-
-────────────────────────────────────────
-
-TELEGRAM BOT CONNECTION
-
-If the user wants to connect Telegram:
-- Ask for the bot token
-    - Briefly explain how to get it(BotFather, new bot, copy token)
-        - Validate the token silently
-
-On success, respond:
-
-"Telegram bot connected.  
-It is now live."
-
-Never expose technical details.
-
-────────────────────────────────────────
-
-BOT BEHAVIOR / RULES
-
-If the user says:
-- "make it stricter"
-    - "be more friendly"
-    - "answer shorter"
-    - "act like a sales manager"
-    - "act like a startup investor"
-
-You must update the system behavior immediately using the 'update_bot_rules' tool
-and confirm with one short sentence:
-
-"Updated."
-
-Do not show the system prompt unless explicitly requested.
-
-────────────────────────────────────────
-
-ANALYTICS
-
-Only show analytics if the user asks.
-Summarize in plain language using the 'get_analytics_summary' tool.
-
-    Example:
-"Your bot handled 23 conversations.
-Most questions were about pricing."
-
-No charts unless requested.
-
-────────────────────────────────────────
-
-MULTI - PLATFORM CONSISTENCY
-
-This behavior must be identical across:
-- web
-    - mobile web
-        - mini - app
-
-Never adapt behavior based on platform.
-The experience must feel the same everywhere.
-
-────────────────────────────────────────
-
-FAILURE HANDLING
-
-If something is missing:
-Ask one clear question.
-
-If something fails:
-Explain briefly and offer the next step.
-
-Never blame the user.
-Never mention system errors.
-
-────────────────────────────────────────
-
-CRITICAL ONBOARDING RULES (AI-FIRST INITIATIVE)
-
-You act as a proactive product assistant. Your goal is to guide the user to a fully configured bot:
-(a) created -> (b) rules added -> (c) KB added -> (d) Telegram connected -> (e) tested.
-
-1) INITIATIVE
-- The user should never guess what to do next. You MUST always propose the next step.
-- Do NOT act like a static questionnaire. Respond conversationally, then smoothly transition into asking for the next missing piece of information.
-
-2) ONE QUESTION RULE
-- ALWAYS ask exactly 1 specific question at a time.
-- Before asking, include a short 1-line confirmation of what the user just said.
-
-3) NO ABSTRACT QUESTIONS
-- NEVER ask abstract questions like "What is your business model?" or "What are your goals?".
-- Instead, offer concrete options. Example: If they say "I am a cook", ask "Do you work in a restaurant, do private catering, or take custom orders?".
-
-4) QUICK REPLIES
-- When asking a configuration question, suggest 3-5 text options.
-- Example: "Restaurant / Custom Orders / Catering / Other".
-
-5) LANGUAGE
-- Auto-detect the user's language based on their last message and respond entirely in that language.
-
-6) POST-CREATION GROWTH LOOP
-- After "create_bot", immediately and continuously propose improvements:
-  - "Shall we add a knowledge base?" (Remind them they can send text/links/files).
-  - "Shall we connect Telegram?" (Give instructions on getting the token).
-  - "Shall we add a specific tone or rule? (e.g. answer shortly, sell actively)"
-  - "Shall we run a test scenario?"
-
-────────────────────────────────────────
-
-USE THE ONBOARD ROUTER
-When the user is answering onboarding questions or providing business information, ALWAYS use the 'onboard_router' tool to submit the state and your next response natively.
-Your final answer must be output through the 'assistant_message' parameter of this tool.
-
-────────────────────────────────────────
-
-PHILOSOPHY
-
-The user should feel like:
-"I’m just talking — and things get built."
-
-If a feature cannot be controlled via chat,
-    it should not exist.
-      `;
-
+2. ONE QUESTION AT A TIME. Never bulk ask.
+3. Every message should end with a clear prompt for the user, or a confirmation of success.
+4. If you execute a tool, your next text should just be "Готово. [Short summary of what was done]".
+`;
+      // End of MASTER_PROMPT 
       // Tools available to the LLM Console
       const tools = [
         {
@@ -2063,12 +1927,12 @@ If a feature cannot be controlled via chat,
       const incomingAttachment = req.body.attachment || null;
       if (incomingAttachment && incomingAttachment.type === 'file') {
         const att = incomingAttachment;
-        attachmentText = `\n[ACTION: User attached a file! name="${att.name}", mimeType="${att.mimeType}", url="${att.downloadURL}"]\nIf you have a tool to process this file, use it. Otherwise, acknowledge receipt and explain what you will do.`;
+        attachmentText = `\n[ACTION: User attached a file! name = "${att.name}", mimeType = "${att.mimeType}", url = "${att.downloadURL}"]\nIf you have a tool to process this file, use it.Otherwise, acknowledge receipt and explain what you will do.`;
       }
 
       const CONTEXT_INJECT = `
 ────────────────────────────────────────
-CURRENT STATE (BACKEND INJECTED)
+CURRENT STATE(BACKEND INJECTED)
 MODE: ${currentSession.mode || 'admin'}
 USER_BOTS: ${JSON.stringify(userBots)}
 ACTIVE_BOT: ${activeBotText}
@@ -2099,7 +1963,7 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
           const att = incomingAttachment;
           apiHistory[apiHistory.length - 1] = {
             ...last,
-            content: `Пользователь загрузил файл: "${att.name || att.fileName || 'файл'}" (${att.mimeType || 'unknown'}). Ссылка: ${att.downloadURL || att.fileUrl || ''}. Задача: добавь в базу знаний и подтверди выполнение. Если нужно — задай 1 уточняющий вопрос.`
+            content: `Пользователь загрузил файл: "${att.name || att.fileName || 'файл'}"(${att.mimeType || 'unknown'}).Ссылка: ${att.downloadURL || att.fileUrl || ''}.Задача: добавь в базу знаний и подтверди выполнение.Если нужно — задай 1 уточняющий вопрос.`
           };
         }
       }
@@ -2138,7 +2002,7 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
               await newBotRef.set({
                 name: safeName,
                 goal: args.goal || "Generic Assistant",
-                prompt: `You are ${safeName}, a helpful AI assistant. Your primary goal is: ${args.goal}. Be polite and concise.`,
+                prompt: `You are ${safeName}, a helpful AI assistant.Your primary goal is: ${args.goal}. Be polite and concise.`,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 openaiModel: 'gpt-4o-mini' // default
               });
@@ -2185,10 +2049,51 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
               if (!currentSession.activeBotId) {
                 toolResult = "Error: No active bot selected.";
               } else {
-                await db.collection("users").doc(uid).collection("bots").doc(currentSession.activeBotId).set({
-                  token: args.token
-                }, { merge: true });
-                toolResult = "Telegram token saved for the active bot. It is now ready to receive webhooks.";
+                try {
+                  // 1. Verify token via getMe
+                  const getMeRes = await fetch(`https://api.telegram.org/bot${args.token}/getMe`);
+                  const getMeData = await getMeRes.json();
+
+                  if (!getMeRes.ok || !getMeData.ok) {
+                    toolResult = "Error: Token invalid. Please check the token and try again.";
+                  } else {
+                    const botInfo = getMeData.result;
+
+                    // 2. Register webhook
+                    const webhookUrl = `https://us-central1-chatbot-acd16.cloudfunctions.net/telegramWebhook?uid=${uid}&botId=${currentSession.activeBotId}`;
+                    const setWhRes = await fetch(`https://api.telegram.org/bot${args.token}/setWebhook`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ url: webhookUrl }),
+                    });
+                    const setWhData = await setWhRes.json();
+
+                    if (!setWhRes.ok || !setWhData.ok) {
+                      toolResult = `Error: Token valid, but failed to set webhook: ${setWhData.description}`;
+                    } else {
+                      // 3. Save to Firestore
+                      const tokenLast4 = args.token.slice(-4);
+                      await db.collection("users").doc(uid).collection("bots").doc(currentSession.activeBotId).set({
+                        token: args.token, // Keep for legacy
+                        telegram: {
+                          token_last4: tokenLast4,
+                          webhookUrl: webhookUrl,
+                          status: "waiting_first_update",
+                          botInfo: {
+                            id: botInfo.id,
+                            first_name: botInfo.first_name,
+                            username: botInfo.username
+                          },
+                          connectedAt: admin.firestore.FieldValue.serverTimestamp()
+                        }
+                      }, { merge: true });
+
+                      toolResult = "Success. Token is valid, waiting for /start in Telegram.";
+                    }
+                  }
+                } catch (e) {
+                  toolResult = `Error connecting to Telegram API: ${e.message}`;
+                }
               }
             }
             else if (functionName === 'get_analytics_summary') {
@@ -2352,7 +2257,7 @@ exports.uploadKnowledgeFile = onRequest(
       // Fallback to activeBotId if botId passed is "default"
       const finalBotId = botId === 'default' ? 'tmp' : botId;
       const safeName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-      const storagePath = `users/${uid}/bots/${finalBotId}/uploads/${rid}/${safeName}`;
+      const storagePath = `users / ${uid} /bots/${finalBotId} /uploads/${rid}/${safeName}`;
 
       const file = bucket.file(storagePath);
       const buffer = Buffer.from(base64, 'base64');
