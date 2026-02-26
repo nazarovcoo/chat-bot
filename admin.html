@@ -5089,28 +5089,26 @@
             <div style="font-size:0.8rem;color:#707579;">Chat-based bot builder</div>
           </div>
         </div>
+        <!-- Header actions (moved inside header for correct flex layout) -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="btn-open-kb" class="chat-header-btn" title="База знаний" aria-label="База знаний"
+            style="padding:4px 8px;display:flex;align-items:center;gap:6px;font-size:0.85rem;color:#3390ec;background:rgba(51,144,236,0.1);border-radius:12px;"
+            onclick="openKBDrawer()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+            </svg>
+            <span style="font-weight:600;">База знаний</span>
+          </button>
+          <button id="clear-chat-btn" class="chat-header-btn" title="Очистить чат" aria-label="Очистить чат">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <path d="M9 3h6m-8 4h10m-9 0 1 16h6l1-16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round" />
+            </svg>
+          </button>
+          <button class="btn-ghost" style="padding:6px 10px;font-size:0.85rem;color:#707579;"
+            onclick="auth.signOut()">Выйти</button>
+        </div>
       </div>
-
-      <!-- Header actions -->
-      <div style="display:flex;align-items:center;gap:8px;">
-        <button id="btn-open-kb" class="chat-header-btn" title="База знаний" aria-label="База знаний"
-          style="padding:4px 8px;display:flex;align-items:center;gap:6px;font-size:0.85rem;color:#3390ec;background:rgba(51,144,236,0.1);border-radius:12px;"
-          onclick="openKBDrawer()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
-          </svg>
-          <span style="font-weight:600;">База знаний</span>
-        </button>
-        <button id="clear-chat-btn" class="chat-header-btn" title="Очистить чат" aria-label="Очистить чат">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-            <path d="M9 3h6m-8 4h10m-9 0 1 16h6l1-16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round" />
-          </svg>
-        </button>
-        <button class="btn-ghost" style="padding:6px 10px;font-size:0.85rem;color:#707579;"
-          onclick="auth.signOut()">Выйти</button>
-      </div>
-    </div>
 
     <!-- ══ STATUS BAR ══ -->
     <div id="chatos-statusbar" class="chatos-statusbar">
@@ -5191,20 +5189,20 @@
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- In-chat confirm modal -->
-  <div id="chat-confirm" class="chat-confirm hidden" role="dialog" aria-modal="true">
-    <div class="cc-card">
-      <div class="cc-title" id="cc-title">Подтвердить действие</div>
-      <div class="cc-text" id="cc-text">Вы уверены?</div>
-      <div class="cc-actions">
-        <button id="cc-cancel" class="cc-btn cc-btn--ghost" type="button">Отмена</button>
-        <button id="cc-ok" class="cc-btn cc-btn--danger" type="button">ОК</button>
+    <!-- In-chat confirm modal -->
+    <div id="chat-confirm" class="chat-confirm hidden" role="dialog" aria-modal="true">
+      <div class="cc-card">
+        <div class="cc-title" id="cc-title">Подтвердить действие</div>
+        <div class="cc-text" id="cc-text">Вы уверены?</div>
+        <div class="cc-actions">
+          <button id="cc-cancel" class="cc-btn cc-btn--ghost" type="button">Отмена</button>
+          <button id="cc-ok" class="cc-btn cc-btn--danger" type="button">ОК</button>
+        </div>
       </div>
     </div>
   </div>
-  </div>
+</div>
 
   <div class="sidebar">
     <div class="sidebar-logo">
@@ -8913,6 +8911,7 @@
 
     // ── Firestore load ──
     async function loadKBListSafe() {
+      if (!window.resolvedUid) { renderKBList([]); return; }
       try {
         const sessionSnap = await db.collection("users").doc(window.resolvedUid)
           .collection("chat_os_sessions").doc("default").get();
