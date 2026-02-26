@@ -1,0 +1,11 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Authenticated users can only read/write their own upload folder
+    match /users/{uid}/bots/{botId}/uploads/{allPaths=**} {
+      allow read:  if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid
+                   && request.resource.size < 20 * 1024 * 1024; // max 20 MB
+    }
+  }
+}

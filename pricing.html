@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Тарифы — BotPanel</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1a1a2e; min-height: 100vh; padding: 60px 20px; }
+
+  .page { max-width: 900px; margin: 0 auto; }
+
+  h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 6px; }
+  .subtitle { color: #666; font-size: 1rem; margin-bottom: 40px; }
+
+  /* Toggle */
+  .billing-toggle { display: flex; flex-direction: column; gap: 10px; margin-bottom: 40px; width: 180px; }
+  .toggle-option { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; border: 2px solid transparent; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; }
+  .toggle-option.active { border-color: #6366f1; background: #fff; }
+  .toggle-option .badge { background: #22c55e; color: #fff; font-size: 0.65rem; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
+  .toggle-option .badge-plan { background: #e0e0e0; color: #555; font-size: 0.6rem; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
+  .radio-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .radio-dot.checked { border-color: #6366f1; background: #6366f1; }
+  .radio-dot.checked::after { content: ''; width: 6px; height: 6px; background: #fff; border-radius: 50%; }
+
+  /* Plans grid */
+  .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+
+  .plan-card { border-radius: 16px; overflow: hidden; }
+
+  /* Pro */
+  .plan-card.pro { background: linear-gradient(145deg, #4f2d7f, #3b1f6e); color: #fff; }
+  /* Premium */
+  .plan-card.premium { background: linear-gradient(145deg, #1a1a2e, #16213e); color: #fff; }
+
+  .plan-header { padding: 24px 24px 20px; position: relative; }
+  .plan-badge { position: absolute; top: 20px; right: 20px; font-size: 0.65rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+  .plan-badge.popular { background: #a3e635; color: #1a1a2e; }
+  .plan-badge.boost { background: #3b82f6; color: #fff; }
+
+  .plan-name { font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; }
+  .plan-desc { font-size: 0.78rem; opacity: 0.75; line-height: 1.5; margin-bottom: 18px; min-height: 42px; }
+
+  .plan-price-old { font-size: 0.85rem; opacity: 0.5; text-decoration: line-through; }
+  .plan-price { font-size: 2.4rem; font-weight: 800; line-height: 1; }
+  .plan-price span { font-size: 0.9rem; font-weight: 400; opacity: 0.7; }
+  .plan-price-note { font-size: 0.7rem; opacity: 0.6; margin-top: 4px; margin-bottom: 20px; }
+
+  .plan-btn { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+  .plan-btn.disabled { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); cursor: default; }
+  .plan-btn.active { background: #fff; color: #1a1a2e; }
+  .plan-btn.active:hover { background: #f0f0f0; }
+
+  /* Features */
+  .plan-features { background: #fff; border-radius: 0 0 16px 16px; }
+  .feature-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 22px; border-bottom: 1px solid #f0f0f0; font-size: 0.82rem; color: #333; }
+  .feature-row:last-child { border-bottom: none; }
+  .feature-left { display: flex; align-items: center; gap: 9px; }
+  .feature-ico { font-size: 16px; }
+  .feature-val { font-weight: 700; color: #1a1a2e; }
+  .feature-val.dim { color: #999; font-weight: 400; font-size: 0.75rem; }
+  .feature-val.check { color: #22c55e; font-size: 1.1rem; }
+  .feature-val.inf { font-size: 1.2rem; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 1.6rem; }
+    .plans { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Выберите тариф</h1>
+  <p class="subtitle">Вы всегда сможете его изменить</p>
+
+  <!-- Billing toggle -->
+  <div class="billing-toggle">
+    <div class="toggle-option active" id="opt-year" onclick="setBilling('year')">
+      <span>На год <span class="badge">-20%</span></span>
+      <div class="radio-dot checked" id="dot-year"></div>
+    </div>
+    <div class="toggle-option" id="opt-month" onclick="setBilling('month')">
+      <span>Помесячно</span>
+      <div class="radio-dot" id="dot-month"></div>
+    </div>
+  </div>
+
+  <!-- Plans -->
+  <div class="plans">
+
+    <!-- Pro -->
+    <div class="plan-card pro">
+      <div class="plan-header">
+        <div class="plan-badge popular">Часто выбирают</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-desc">Лучший выбор для малого и среднего бизнеса</div>
+        <div class="plan-price-old" id="pro-old">$20</div>
+        <div class="plan-price" id="pro-price">$16 <span>/ в месяц</span></div>
+        <div class="plan-price-note" id="pro-note">при оплате за год</div>
+        <button class="plan-btn disabled">Подключить сейчас</button>
+      </div>
+      <div class="plan-features">
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">🤖</span> Telegram ботов</div>
+          <span class="feature-val">1</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">💬</span> Диалогов с клиентами</div>
+          <span class="feature-val inf">∞</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">📚</span> База знаний</div>
+          <span class="feature-val">100 записей</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">🧠</span> Модели AI</div>
+          <span class="feature-val">GPT / Gemini</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">⚡</span> AI-запросов в месяц</div>
+          <span class="feature-val">2 000</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">➕</span> +1 000 AI-запросов</div>
+          <span class="feature-val">$15</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Premium -->
+    <div class="plan-card premium">
+      <div class="plan-header">
+        <div class="plan-badge boost">AI Boost</div>
+        <div class="plan-name">Premium</div>
+        <div class="plan-desc">Для тех, кто хочет масштабировать бизнес без ограничений</div>
+        <div class="plan-price-old" id="prem-old">$50</div>
+        <div class="plan-price" id="prem-price">$40 <span>/ в месяц</span></div>
+        <div class="plan-price-note" id="prem-note">при оплате за год</div>
+        <button class="plan-btn active">Подключить сейчас</button>
+      </div>
+      <div class="plan-features">
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">🤖</span> Telegram ботов</div>
+          <span class="feature-val inf">∞</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">💬</span> Диалогов с клиентами</div>
+          <span class="feature-val inf">∞</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">📚</span> База знаний</div>
+          <span class="feature-val inf">∞</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">🧠</span> Модели AI</div>
+          <span class="feature-val check">✓ Все модели</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">⚡</span> AI-запросов в месяц</div>
+          <span class="feature-val">20 000</span>
+        </div>
+        <div class="feature-row">
+          <div class="feature-left"><span class="feature-ico">➕</span> +1 000 AI-запросов</div>
+          <span class="feature-val">$10</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  let billing = 'year';
+
+  const prices = {
+    pro:  { year: { price: '$16', old: '$20', note: 'при оплате за год' }, month: { price: '$20', old: '', note: 'при оплате помесячно' } },
+    prem: { year: { price: '$40', old: '$50', note: 'при оплате за год' }, month: { price: '$50', old: '', note: 'при оплате помесячно' } },
+  };
+
+  function setBilling(val) {
+    billing = val;
+    const isYear = val === 'year';
+
+    document.getElementById('opt-year').classList.toggle('active', isYear);
+    document.getElementById('opt-month').classList.toggle('active', !isYear);
+    document.getElementById('dot-year').classList.toggle('checked', isYear);
+    document.getElementById('dot-month').classList.toggle('checked', !isYear);
+
+    const p = prices.pro[val];
+    document.getElementById('pro-price').innerHTML = `${p.price} <span>/ в месяц</span>`;
+    document.getElementById('pro-old').textContent = p.old;
+    document.getElementById('pro-note').textContent = p.note;
+
+    const q = prices.prem[val];
+    document.getElementById('prem-price').innerHTML = `${q.price} <span>/ в месяц</span>`;
+    document.getElementById('prem-old').textContent = q.old;
+    document.getElementById('prem-note').textContent = q.note;
+  }
+</script>
+</body>
+</html>

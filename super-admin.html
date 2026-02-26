@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BotPanel — Super Admin</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc2626'/><text y='74' x='50' text-anchor='middle' font-size='58' font-family='system-ui'>⚡</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --surface: #141414;
+            --surface2: #1a1a1a;
+            --border: #262626;
+            --border2: #333;
+            --text: #f5f5f5;
+            --text-sec: #a3a3a3;
+            --text-dim: #525252;
+            --red: #ef4444;
+            --green: #22c55e;
+            --yellow: #f59e0b;
+            --cyan: #06b6d4;
+            --blue: #3b82f6;
+            --purple: #8b5cf6;
+            --accent: #ef4444;
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        [data-theme="light"] {
+            --bg: #f5f5f5;
+            --surface: #ffffff;
+            --surface2: #f0f0f0;
+            --border: #e5e5e5;
+            --border2: #d4d4d4;
+            --text: #171717;
+            --text-sec: #737373;
+            --text-dim: #a3a3a3;
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        [data-theme="light"] .tab-btn.active {
+            color: var(--text);
+        }
+
+        [data-theme="light"] .topbar {
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+        }
+
+        [data-theme="light"] .kpi-card {
+            border-color: var(--border);
+        }
+
+        [data-theme="light"] table th {
+            background: var(--surface2);
+            color: var(--text);
+        }
+
+        [data-theme="light"] .modal {
+            background: var(--surface);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        /* ══ AUTH SCREENS ══ */
+        .auth-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .auth-screen-icon {
+            font-size: 64px;
+        }
+
+        .auth-screen-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+        }
+
+        .auth-screen-sub {
+            font-size: 0.9rem;
+            color: var(--text-sec);
+            max-width: 360px;
+            line-height: 1.6;
+        }
+
+        .auth-btn {
+            padding: 12px 28px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: opacity 0.15s;
+        }
+
+        .auth-btn:hover {
+            opacity: 0.85;
+        }
+
+        .auth-btn.danger {
+            background: var(--red);
+            color: #fff;
+        }
+
+        /* ══ TOPBAR ══ */
+        .topbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .topbar-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--red);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+
+        .topbar-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+        }
+
+        .topbar-badge {
+            background: var(--red);
+            color: #fff;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.6rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--text-sec);
+        }
+
+        .topbar-signout {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-sec);
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .topbar-signout:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* ══ CONTENT ══ */
+        .content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* ══ TABS ══ */
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 10px 18px;
+            background: none;
+            border: none;
+            color: var(--text-sec);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+        }
+
+        .tab-btn.active {
+            color: var(--text);
+            border-bottom-color: var(--red);
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* ══ KPI CARDS ══ */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px;
+        }
+
+        .kpi-lbl {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+        }
+
+        .kpi-val {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .kpi-sub {
+            font-size: 0.72rem;
+            color: var(--text-sec);
+            margin-top: 4px;
+        }
+
+        /* ══ TABLE ══ */
+        .tbl-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .tbl-search {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 14px;
+            color: var(--text);
+            font-size: 0.82rem;
+            width: 260px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .tbl-search:focus {
+            border-color: var(--red);
+        }
+
+        .tbl-search::placeholder {
+            color: var(--text-dim);
+        }
+
+        .tbl-filter {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            color: var(--text);
+            font-size: 0.78rem;
+            cursor: pointer;
+            font-family: inherit;
+            appearance: none;
+        }
+
+        .tbl-count {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-left: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        thead th {
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        thead th:hover {
+            color: var(--text-sec);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.12s;
+        }
+
+        tbody tr:hover {
+            background: var(--surface);
+        }
+
+        td {
+            padding: 12px;
+            vertical-align: middle;
+        }
+
+        .user-email {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .user-name {
+            font-size: 0.72rem;
+            color: var(--text-sec);
+        }
+
+        /* Plan badges */
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-trial {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--blue);
+        }
+
+        .badge-pro {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--green);
+        }
+
+        .badge-premium {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--purple);
+        }
+
+        .badge-expired {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--red);
+        }
+
+        .badge-free {
+            background: rgba(82, 82, 82, 0.15);
+            color: var(--text-dim);
+        }
+
+        /* ══ DETAIL MODAL ══ */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            width: 640px;
+            max-width: 95vw;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: none;
+            color: var(--text-sec);
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .modal-body {
+            padding: 20px 24px;
+        }
+
+        .detail-section {
+            margin-bottom: 20px;
+        }
+
+        .detail-label {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .detail-item {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .detail-item-lbl {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            margin-bottom: 2px;
+        }
+
+        .detail-item-val {
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .act-btn {
+            padding: 8px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .act-btn:hover {
+            border-color: var(--text-sec);
+        }
+
+        .act-btn.primary {
+            background: var(--green);
+            color: #000;
+            border-color: var(--green);
+        }
+
+        .act-btn.warn {
+            background: var(--yellow);
+            color: #000;
+            border-color: var(--yellow);
+        }
+
+        .act-btn.danger {
+            background: var(--red);
+            color: #fff;
+            border-color: var(--red);
+        }
+
+        /* ══ PROMO CODES ══ */
+        .promo-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .form-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+        }
+
+        .form-input {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            color: var(--text);
+            font-size: 0.82rem;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--red);
+        }
+
+        .form-select {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            color: var(--text);
+            font-size: 0.82rem;
+            font-family: inherit;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        /* ══ LOADING ══ */
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid var(--border);
+            border-top-color: var(--red);
+            animation: spin 0.7s linear infinite;
+            margin: 40px auto;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            text-align: center;
+            color: var(--text-sec);
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+
+        /* ══ TOAST ══ */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            box-shadow: var(--shadow);
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        .toast.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ══ RESPONSIVE ══ */
+        @media (max-width: 768px) {
+            .content {
+                padding: 14px;
+            }
+
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .tbl-search {
+                width: 100%;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.75rem;
+            }
+
+            td,
+            thead th {
+                padding: 8px;
+            }
+
+            .topbar {
+                padding: 0 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Auth: Loading -->
+    <div class="auth-screen" id="screen-loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Проверяем доступ...</div>
+    </div>
+
+    <!-- Auth: Login -->
+    <div class="auth-screen" id="screen-login" style="display:none;">
+        <div class="auth-screen-icon">🔐</div>
+        <div class="auth-screen-title">BotPanel Admin</div>
+        <div class="auth-screen-sub">Войдите через Google-аккаунт команды для доступа к супер-админке.</div>
+        <button class="auth-btn" onclick="doLogin()">🔑 Войти через Google</button>
+    </div>
+
+    <!-- Auth: Access Denied -->
+    <div class="auth-screen" id="screen-denied" style="display:none;">
+        <div class="auth-screen-icon">🚫</div>
+        <div class="auth-screen-title">Доступ запрещён</div>
+        <div class="auth-screen-sub">Ваш аккаунт не входит в список администраторов BotPanel.</div>
+        <div id="denied-uid" style="font-size:0.7rem;color:var(--text-dim);font-family:monospace;"></div>
+        <button class="auth-btn danger" onclick="firebase.auth().signOut()">Выйти</button>
+    </div>
+
+    <!-- ══ MAIN APP ══ -->
+    <div id="app" style="display:none;">
+
+        <!-- Topbar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <div class="topbar-logo">⚡</div>
+                <span class="topbar-title">BotPanel</span>
+                <span class="topbar-badge">ADMIN</span>
+            </div>
+            <div class="topbar-user">
+                <span id="admin-email"></span>
+                <button class="topbar-signout" onclick="toggleSaTheme()" id="sa-theme-btn"
+                    style="background:var(--surface2);color:var(--text);border-color:var(--border)">🌙</button>
+                <button class="topbar-signout" onclick="firebase.auth().signOut()">Выйти</button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('dashboard',this)">📊 Дашборд</button>
+                <button class="tab-btn" onclick="switchTab('users',this)">👥 Пользователи</button>
+                <button class="tab-btn" onclick="switchTab('promos',this)">🎫 Промокоды</button>
+                <button class="tab-btn" onclick="switchTab('aistats',this);loadAiStatsOnce()">🤖 Статистика ИИ</button>
+            </div>
+
+            <!-- ═══ TAB: DASHBOARD ═══ -->
+            <div class="tab-panel active" id="tab-dashboard">
+                <div class="kpi-grid" id="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Всего пользователей</div>
+                        <div class="kpi-val" id="k-total">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Активных ботов</div>
+                        <div class="kpi-val" id="k-bots">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">AI-запросов (мес)</div>
+                        <div class="kpi-val" id="k-requests">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Триал</div>
+                        <div class="kpi-val" id="k-trial" style="color:var(--blue)">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Оплаченные</div>
+                        <div class="kpi-val" id="k-paid" style="color:var(--green)">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Истёкшие</div>
+                        <div class="kpi-val" id="k-expired" style="color:var(--red)">—</div>
+                    </div>
+                </div>
+
+                <!-- Recent users -->
+                <div style="margin-top:8px;">
+                    <div class="detail-label">Последние регистрации</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Тариф</th>
+                                <th>Дата</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-users"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══ TAB: USERS ═══ -->
+            <div class="tab-panel" id="tab-users">
+                <div class="tbl-toolbar">
+                    <input class="tbl-search" id="user-search" placeholder="🔍 Поиск по email или имени..."
+                        oninput="filterUsers()">
+                    <select class="tbl-filter" id="user-filter" onchange="filterUsers()">
+                        <option value="all">Все тарифы</option>
+                        <option value="trial">Триал</option>
+                        <option value="pro">Pro</option>
+                        <option value="premium">Premium</option>
+                        <option value="expired">Истёкшие</option>
+                    </select>
+                    <span class="tbl-count" id="user-count"></span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th onclick="sortUsers('email')">Email ↕</th>
+                                <th onclick="sortUsers('plan')">Тариф ↕</th>
+                                <th onclick="sortUsers('bots')">Боты ↕</th>
+                                <th onclick="sortUsers('requests')">Запросы ↕</th>
+                                <th>Платформа</th>
+                                <th onclick="sortUsers('created')">Дата ↕</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══ TAB: PROMOS ═══ -->
+            <div class="tab-panel" id="tab-promos">
+                <div class="detail-label">Создать промокод</div>
+                <div class="promo-form">
+                    <div class="form-group">
+                        <label class="form-label">Код</label>
+                        <input class="form-input" id="promo-code" placeholder="WELCOME2026" style="width:160px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Тип</label>
+                        <select class="form-select" id="promo-type">
+                            <option value="extra_requests">+ Запросы</option>
+                            <option value="trial_extension">+ Дни триала</option>
+                            <option value="upgrade_pro">Upgrade → Pro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Значение</label>
+                        <input class="form-input" id="promo-value" type="number" placeholder="500" style="width:100px;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Макс. исп.</label>
+                        <input class="form-input" id="promo-max" type="number" placeholder="100" style="width:80px;">
+                    </div>
+                    <button class="act-btn primary" onclick="createPromo()" style="align-self:flex-end;">+
+                        Создать</button>
+                </div>
+
+                <div class="detail-label" style="margin-top:20px;">Все промокоды</div>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Код</th>
+                                <th>Тип</th>
+                                <th>Значение</th>
+                                <th>Исп.</th>
+                                <th>Статус</th>
+                                <th>Действие</th>
+                            </tr>
+                        </thead>
+                        <tbody id="promos-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══ TAB: AI STATS ═══ -->
+            <div class="tab-panel" id="tab-aistats">
+                <div
+                    style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+                    <div style="display:flex;gap:4px;">
+                        <button class="tab-btn" id="ais-tab-1" onclick="setAiStatsPeriod(1)">Сегодня</button>
+                        <button class="tab-btn active" id="ais-tab-7" onclick="setAiStatsPeriod(7)">7 дней</button>
+                        <button class="tab-btn" id="ais-tab-30" onclick="setAiStatsPeriod(30)">30 дней</button>
+                    </div>
+                    <div style="display:flex;gap:4px;">
+                        <button class="tab-btn active" id="ais-cur-USD" onclick="setAiStatsCurrency('USD')">USD</button>
+                        <button class="tab-btn" id="ais-cur-EUR" onclick="setAiStatsCurrency('EUR')">EUR</button>
+                        <button class="tab-btn" id="ais-cur-RUB" onclick="setAiStatsCurrency('RUB')">RUB</button>
+                        <button class="tab-btn" id="ais-cur-UZS" onclick="setAiStatsCurrency('UZS')">UZS</button>
+                    </div>
+                </div>
+                <div class="kpi-grid" id="ais-kpi">
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Всего токенов</div>
+                        <div class="kpi-val" id="ais-tokens" style="color:var(--purple)">—</div>
+                        <div class="kpi-sub" id="ais-tokens-sub">input + output</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Запросов к ИИ</div>
+                        <div class="kpi-val" id="ais-reqs" style="color:var(--cyan)">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Avg токенов</div>
+                        <div class="kpi-val" id="ais-avg" style="color:var(--green)">—</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Стоимость</div>
+                        <div class="kpi-val" id="ais-cost" style="color:var(--yellow)">—</div>
+                        <div class="kpi-sub" id="ais-cost-sub">USD</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-lbl">Ошибки</div>
+                        <div class="kpi-val" id="ais-errors" style="color:var(--red)">—</div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                    <div>
+                        <div class="detail-label">По провайдерам</div>
+                        <div style="overflow-x:auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Провайдер</th>
+                                        <th>Запросы</th>
+                                        <th>Input</th>
+                                        <th>Output</th>
+                                        <th>Всего</th>
+                                        <th>Стоимость</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ais-providers">
+                                    <tr>
+                                        <td colspan="6" style="color:var(--text-dim);padding:20px">Загрузка...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="detail-label">По моделям</div>
+                        <div style="overflow-x:auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Модель</th>
+                                        <th>Запросы</th>
+                                        <th>Всего токенов</th>
+                                        <th>Avg</th>
+                                        <th>Стоимость</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ais-models">
+                                    <tr>
+                                        <td colspan="5" style="color:var(--text-dim);padding:20px">Загрузка...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="detail-label">Топ пользователей по расходу</div>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Запросы</th>
+                                <th>Input</th>
+                                <th>Output</th>
+                                <th>Всего</th>
+                                <th>Стоимость</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ais-top-users">
+                            <tr>
+                                <td colspan="6" style="color:var(--text-dim);padding:20px">Загрузка...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- User Detail Modal -->
+    <div class="modal-overlay" id="user-modal" onclick="if(event.target===this)closeUserModal()">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-title">Пользователь</div>
+                <button class="modal-close" onclick="closeUserModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="detail-actions" id="modal-actions"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        /* ══ FIREBASE ══ */
+        const firebaseConfig = {
+            apiKey: "AIzaSyBnQBiGjMGbIkeM31rZnxisiZUr-AsAqSU",
+            authDomain: "chatbot-acd16.firebaseapp.com",
+            projectId: "chatbot-acd16",
+            storageBucket: "chatbot-acd16.firebasestorage.app",
+            messagingSenderId: "236507228929",
+            appId: "1:236507228929:web:4124a3c257e4edb3e4c900"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        /* ══ ADMIN WHITELIST ══ */
+        const ADMIN_EMAILS = ['internationcoo@gmail.com'];
+
+        /* ══ STATE ══ */
+        let ALL_USERS = [];
+        let SORT_KEY = 'created';
+        let SORT_DIR = -1;
+        let AI_EVENTS = [];
+        let AI_PERIOD = 7;
+        let AI_CURRENCY = 'USD';
+        let _aiStatsLoaded = false;
+
+        /* ══ AUTH ══ */
+        function show(id) {
+            ['screen-loading', 'screen-login', 'screen-denied', 'app'].forEach(s =>
+                document.getElementById(s).style.display = s === id ? '' : 'none'
+            );
+        }
+
+        function doLogin() {
+            auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (!user) { show('screen-login'); return; }
+
+            if (!ADMIN_EMAILS.includes(user.email)) {
+                document.getElementById('denied-uid').textContent = user.email;
+                show('screen-denied');
+                return;
+            }
+
+            document.getElementById('admin-email').textContent = user.email;
+            document.getElementById('admin-email').title = 'UID: ' + user.uid;
+            console.log('🔑 Your UID:', user.uid);
+            show('app');
+            loadAll();
+        });
+
+        /* ══ DATA LOADING ══ */
+        async function loadAll() {
+            showToast('⏳ Загрузка данных...');
+            try {
+                await loadUsers();
+                renderDashboard();
+                renderUsersTable();
+                await loadPromos();
+                showToast('✅ Данные загружены');
+            } catch (e) {
+                console.error(e);
+                showToast('❌ Ошибка загрузки: ' + e.message);
+            }
+        }
+
+        async function loadUsers() {
+            // Call Cloud Function that uses Admin SDK to list all Auth users
+            const FUNCTION_URL = 'https://us-central1-chatbot-acd16.cloudfunctions.net/listAllUsers';
+            const resp = await fetch(FUNCTION_URL);
+            if (!resp.ok) throw new Error('Failed to load users: ' + resp.status);
+            const data = await resp.json();
+
+            ALL_USERS = (data.users || []).map(u => ({
+                uid: u.uid,
+                email: u.email || '—',
+                name: u.displayName || u.agentName || '',
+                plan: u.plan || {},
+                planType: getPlanType(u.plan || {}),
+                bots: u.bots || 0,
+                requests: u.requests || 0,
+                kbCount: u.kbCount || 0,
+                agentName: u.agentName || '',
+                agentActive: u.agentActive || false,
+                platform: u.platform || '',
+                phone: u.phone || '',
+                tgUsername: u.tgUsername || '',
+                created: u.created ? new Date(u.created) : null,
+                lastSignIn: u.lastSignIn ? new Date(u.lastSignIn) : null,
+            }));
+
+            console.log(`Loaded ${ALL_USERS.length} users from Cloud Function`);
+        }
+
+        function getPlanType(plan) {
+            if (!plan || !plan.type) return 'free';
+            if (plan.type === 'trial') {
+                const ends = plan.trialEnds?.seconds ? plan.trialEnds.seconds * 1000 : 0;
+                return ends < Date.now() ? 'expired' : 'trial';
+            }
+            if (plan.type === 'pro') {
+                const ends = plan.paidUntil?.seconds ? plan.paidUntil.seconds * 1000 : 0;
+                return ends < Date.now() ? 'expired' : 'pro';
+            }
+            if (plan.type === 'premium') {
+                const ends = plan.paidUntil?.seconds ? plan.paidUntil.seconds * 1000 : 0;
+                return ends < Date.now() ? 'expired' : 'premium';
+            }
+            return plan.type;
+        }
+
+        function badgeHTML(type) {
+            const map = {
+                trial: ['badge-trial', 'Триал'],
+                pro: ['badge-pro', 'Pro'],
+                premium: ['badge-premium', 'Premium'],
+                expired: ['badge-expired', 'Истёк'],
+                free: ['badge-free', 'Free'],
+            };
+            const [cls, label] = map[type] || ['badge-free', type];
+            return `<span class="badge ${cls}">${label}</span>`;
+        }
+
+        /* ══ DASHBOARD ══ */
+        function renderDashboard() {
+            const el = id => document.getElementById(id);
+            el('k-total').textContent = ALL_USERS.length;
+            el('k-bots').textContent = ALL_USERS.reduce((s, u) => s + u.bots, 0);
+            el('k-requests').textContent = ALL_USERS.reduce((s, u) => s + u.requests, 0).toLocaleString('ru');
+            el('k-trial').textContent = ALL_USERS.filter(u => u.planType === 'trial').length;
+            el('k-paid').textContent = ALL_USERS.filter(u => ['pro', 'premium'].includes(u.planType)).length;
+            el('k-expired').textContent = ALL_USERS.filter(u => u.planType === 'expired').length;
+
+            // Recent registrations (by created date desc)
+            const recent = [...ALL_USERS]
+                .filter(u => u.created)
+                .sort((a, b) => (b.created?.getTime() || 0) - (a.created?.getTime() || 0))
+                .slice(0, 8);
+
+            el('recent-users').innerHTML = recent.map(u => `
+        <tr onclick="showUserDetail('${u.uid}')">
+          <td><span class="user-email">${esc(u.email)}</span></td>
+          <td>${badgeHTML(u.planType)}</td>
+          <td style="color:var(--text-sec)">${u.created ? u.created.toLocaleDateString('ru') : '—'}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="3" style="color:var(--text-dim);padding:20px;">Нет данных</td></tr>';
+        }
+
+        /* ══ USERS TABLE ══ */
+        function renderUsersTable() {
+            let list = getFilteredUsers();
+
+            // Sort
+            list.sort((a, b) => {
+                let va = a[SORT_KEY], vb = b[SORT_KEY];
+                if (SORT_KEY === 'email') { va = (va || '').toLowerCase(); vb = (vb || '').toLowerCase(); }
+                if (SORT_KEY === 'created') { va = va?.getTime?.() || 0; vb = vb?.getTime?.() || 0; }
+                if (va < vb) return -1 * SORT_DIR;
+                if (va > vb) return 1 * SORT_DIR;
+                return 0;
+            });
+
+            document.getElementById('user-count').textContent = list.length + ' пользователей';
+
+            document.getElementById('users-table').innerHTML = list.map(u => {
+                let primaryIdentifier = u.email;
+                if (!u.email || u.email === '—') {
+                    if (u.phone) primaryIdentifier = u.phone;
+                    else if (u.tgUsername) primaryIdentifier = '@' + u.tgUsername;
+                    else primaryIdentifier = 'Без email';
+                }
+                return `
+        <tr onclick="showUserDetail('${u.uid}')">
+          <td>
+            <div class="user-email">${esc(primaryIdentifier)}</div>
+            ${u.name ? `<div class="user-name">${esc(u.name)}</div>` : ''}
+          </td>
+          <td>${badgeHTML(u.planType)}</td>
+          <td>${u.bots}</td>
+          <td>${u.requests.toLocaleString('ru')}</td>
+          <td style="font-size:0.78rem">${platformIcon(u.platform)}</td>
+          <td style="color:var(--text-sec);font-size:0.75rem;">${u.created ? u.created.toLocaleDateString('ru') : '—'}</td>
+        </tr>
+      `}).join('') || '<tr><td colspan="6" style="color:var(--text-dim);padding:20px;">Нет пользователей</td></tr>';
+        }
+
+        function getFilteredUsers() {
+            const q = document.getElementById('user-search').value.toLowerCase();
+            const f = document.getElementById('user-filter').value;
+            return ALL_USERS.filter(u => {
+                if (f !== 'all' && u.planType !== f) return false;
+                if (q && !(u.email || '').toLowerCase().includes(q) && !(u.name || '').toLowerCase().includes(q)) return false;
+                return true;
+            });
+        }
+
+        function filterUsers() { renderUsersTable(); }
+
+        function sortUsers(key) {
+            if (SORT_KEY === key) SORT_DIR *= -1;
+            else { SORT_KEY = key; SORT_DIR = 1; }
+            renderUsersTable();
+        }
+
+        /* ══ USER DETAIL ══ */
+        function showUserDetail(uid) {
+            const u = ALL_USERS.find(x => x.uid === uid);
+            if (!u) return;
+
+            document.getElementById('modal-title').textContent = u.email || u.uid;
+
+            const planEnd = u.plan.trialEnds || u.plan.paidUntil;
+            const endDate = planEnd?.seconds ? new Date(planEnd.seconds * 1000).toLocaleDateString('ru') : '—';
+            const limit = u.plan.monthlyLimit || 2000;
+
+            document.getElementById('modal-body').innerHTML = `
+        <div class="detail-section">
+          <div class="detail-label">Профиль</div>
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-item-lbl">Email</div><div class="detail-item-val">${esc(u.email)}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">Имя</div><div class="detail-item-val">${esc(u.name || '—')}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">Телефон</div><div class="detail-item-val">${esc(u.phone || '—')}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">TG Юзернейм</div><div class="detail-item-val">${u.tgUsername ? '@' + esc(u.tgUsername) : '—'}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">UID</div><div class="detail-item-val" style="font-size:0.68rem;font-family:monospace;word-break:break-all;">${u.uid}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">Регистрация</div><div class="detail-item-val">${u.created ? u.created.toLocaleDateString('ru') : '—'}</div></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-label">Тариф и использование</div>
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-item-lbl">Тариф</div><div class="detail-item-val">${badgeHTML(u.planType)}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">Действует до</div><div class="detail-item-val">${endDate}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">AI-запросов (мес)</div><div class="detail-item-val">${u.requests.toLocaleString('ru')} / ${limit.toLocaleString('ru')}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">Лимит</div><div class="detail-item-val">${limit.toLocaleString('ru')}</div></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-label">Боты и база знаний</div>
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-item-lbl">Ботов</div><div class="detail-item-val">${u.bots}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">Агент</div><div class="detail-item-val">${esc(u.agentName || '—')} ${u.agentActive ? '🟢' : '🔴'}</div></div>
+            <div class="detail-item"><div class="detail-item-lbl">Q&A пар в БЗ</div><div class="detail-item-val">${u.kbCount}</div></div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-label">AI-провайдеры</div>
+          <div class="detail-grid" id="ai-providers-container" style="display:block;">
+            <div style="font-size:0.8rem;color:var(--text-sec);padding:10px;">Загрузка настроек ИИ...</div>
+          </div>
+        </div>
+      `;
+
+            document.getElementById('modal-actions').innerHTML = `
+        <button class="act-btn primary" onclick="addRequests('${u.uid}')">+ Добавить запросы</button>
+        <button class="act-btn warn" onclick="extendTrial('${u.uid}')">+ Продлить триал</button>
+        <button class="act-btn" onclick="upgradePro('${u.uid}')">⬆ Upgrade → Pro</button>
+      `;
+
+            document.getElementById('user-modal').classList.add('open');
+            loadUserAiSettings(uid);
+        }
+
+        function closeUserModal() {
+            document.getElementById('user-modal').classList.remove('open');
+        }
+
+        /* ══ ADMIN ACTIONS ══ */
+        async function addRequests(uid) {
+            const amount = prompt('Сколько запросов добавить?', '500');
+            if (!amount || isNaN(amount)) return;
+            try {
+                const ref = db.doc(`users/${uid}/settings/plan`);
+                const snap = await ref.get();
+                const current = snap.exists ? (snap.data().monthlyLimit || 2000) : 2000;
+                await ref.set({ monthlyLimit: current + parseInt(amount) }, { merge: true });
+                showToast(`✅ Добавлено ${amount} запросов`);
+                // Update local state
+                const u = ALL_USERS.find(x => x.uid === uid);
+                if (u) { u.plan.monthlyLimit = current + parseInt(amount); showUserDetail(uid); }
+            } catch (e) {
+                showToast('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        async function extendTrial(uid) {
+            const days = prompt('На сколько дней продлить?', '14');
+            if (!days || isNaN(days)) return;
+            try {
+                const ref = db.doc(`users/${uid}/settings/plan`);
+                const snap = await ref.get();
+                const plan = snap.exists ? snap.data() : {};
+                const curEnd = plan.trialEnds?.seconds || Math.floor(Date.now() / 1000);
+                const newEnd = new firebase.firestore.Timestamp(curEnd + parseInt(days) * 86400, 0);
+                await ref.set({ type: 'trial', trialEnds: newEnd }, { merge: true });
+                showToast(`✅ Триал продлён на ${days} дней`);
+                const u = ALL_USERS.find(x => x.uid === uid);
+                if (u) { u.plan.trialEnds = newEnd; u.plan.type = 'trial'; u.planType = 'trial'; showUserDetail(uid); renderDashboard(); renderUsersTable(); }
+            } catch (e) {
+                showToast('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        async function upgradePro(uid) {
+            if (!confirm('Активировать Pro-тариф на 30 дней?')) return;
+            try {
+                const ref = db.doc(`users/${uid}/settings/plan`);
+                const paidUntil = new firebase.firestore.Timestamp(Math.floor(Date.now() / 1000) + 30 * 86400, 0);
+                await ref.set({ type: 'pro', paidUntil, monthlyLimit: 2000 }, { merge: true });
+                showToast('✅ Тариф Pro активирован на 30 дней');
+                const u = ALL_USERS.find(x => x.uid === uid);
+                if (u) { u.plan.type = 'pro'; u.plan.paidUntil = paidUntil; u.planType = 'pro'; showUserDetail(uid); renderDashboard(); renderUsersTable(); }
+            } catch (e) {
+                showToast('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        /* ══ AI PROVIDER SETTINGS ══ */
+        let _currentUserAiUid = null;
+        let _currentUserAiSettings = { providers: {} };
+
+        async function loadUserAiSettings(uid) {
+            _currentUserAiUid = uid;
+            const container = document.getElementById('ai-providers-container');
+            container.innerHTML = '<div style="font-size:0.8rem;color:var(--text-sec);padding:10px;">Загрузка...</div>';
+
+            try {
+                const docSnap = await db.collection('users').doc(uid).collection('settings').doc('ai').get();
+                if (docSnap.exists) {
+                    _currentUserAiSettings = docSnap.data() || { providers: {} };
+                } else {
+                    _currentUserAiSettings = { providers: {} };
+                }
+                if (!_currentUserAiSettings.providers) _currentUserAiSettings.providers = {};
+                renderAiProvidersUI();
+            } catch (err) {
+                container.innerHTML = `<div style="font-size:0.8rem;color:var(--red);padding:10px;">Ошибка загрузки: ${err.message}</div>`;
+            }
+        }
+
+        async function saveUserAiSettings() {
+            if (!_currentUserAiUid) return;
+            try {
+                await db.collection('users').doc(_currentUserAiUid).collection('settings').doc('ai')
+                    .set(_currentUserAiSettings, { merge: true });
+                showToast('✅ Настройки ИИ сохранены');
+            } catch (err) {
+                showToast('❌ Ошибка сохранения ИИ: ' + err.message);
+            }
+        }
+
+        window.toggleAdminAiProvider = function (p) {
+            if (!_currentUserAiSettings.providers[p]) {
+                _currentUserAiSettings.providers[p] = { enabled: true };
+            } else {
+                _currentUserAiSettings.providers[p].enabled = !_currentUserAiSettings.providers[p].enabled;
+            }
+            // default models if missing
+            if (_currentUserAiSettings.providers[p].enabled) {
+                if (p === 'openai' && !_currentUserAiSettings.providers[p].model) _currentUserAiSettings.providers[p].model = 'gpt-4o-mini';
+                if (p === 'gemini' && !_currentUserAiSettings.providers[p].model) _currentUserAiSettings.providers[p].model = 'gemini-1.5-flash';
+                if (p === 'claude' && !_currentUserAiSettings.providers[p].model) _currentUserAiSettings.providers[p].model = 'claude-haiku-4-5-20251001';
+            }
+            renderAiProvidersUI();
+            saveUserAiSettings();
+        }
+
+        window.changeAdminAiModel = function (p, model) {
+            if (!_currentUserAiSettings.providers[p]) _currentUserAiSettings.providers[p] = {};
+            _currentUserAiSettings.providers[p].model = model;
+            saveUserAiSettings();
+        }
+
+        function renderAiProvidersUI() {
+            const container = document.getElementById('ai-providers-container');
+            if (!container) return;
+
+            const provNames = {
+                'openai': { icon: '🟢', name: 'OpenAI GPT', models: [['gpt-4o-mini', 'gpt-4o-mini (быстрый)'], ['gpt-4o', 'gpt-4o (умный)']] },
+                'gemini': { icon: '🔵', name: 'Google Gemini', models: [['gemini-1.5-flash', 'gemini-1.5-flash (быстрый)'], ['gemini-1.5-pro', 'gemini-1.5-pro (умный)'], ['gemini-2.0-flash', 'gemini-2.0-flash (новый)']] },
+                'claude': { icon: '🟠', name: 'Anthropic Claude', models: [['claude-haiku-4-5-20251001', 'claude-haiku (быстрый)'], ['claude-sonnet-4-6', 'claude-sonnet (умный)']] }
+            };
+
+            let html = '';
+            for (const p of ['openai', 'gemini', 'claude']) {
+                const info = provNames[p];
+                const cfg = _currentUserAiSettings.providers[p] || {};
+                const enabled = !!cfg.enabled;
+                const model = cfg.model || '';
+
+                let modelOpts = info.models.map(m => `<option value="${m[0]}" ${model === m[0] ? 'selected' : ''}>${m[1]}</option>`).join('');
+
+                html += `
+                <div style="background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:18px;">${info.icon}</span>
+                            <div style="font-size:0.85rem; font-weight:700;">${info.name}</div>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.75rem;">
+                            <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleAdminAiProvider('${p}')">
+                            ${enabled ? '<span style="color:var(--green)">Вкл</span>' : '<span style="color:var(--text-sec)">Выкл</span>'}
+                        </label>
+                    </div>
+                    ${enabled ? `
+                    <div style="margin-top:10px; font-size:0.75rem;">
+                        <div style="color:var(--text-sec); margin-bottom:4px;">Модель</div>
+                        <select onchange="changeAdminAiModel('${p}', this.value)" style="width:100%; padding:6px; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:4px;">
+                            ${modelOpts}
+                        </select>
+                    </div>
+                    ` : ''}
+                </div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        /* ══ PROMO CODES ══ */
+        async function loadPromos() {
+            const snap = await db.collection('promoCodes').get();
+            const tbody = document.getElementById('promos-table');
+            if (snap.empty) {
+                tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-dim);padding:20px;">Нет промокодов</td></tr>';
+                return;
+            }
+            const typeLabels = { extra_requests: '+ Запросы', trial_extension: '+ Дни', upgrade_pro: '→ Pro' };
+            tbody.innerHTML = snap.docs.map(doc => {
+                const p = doc.data();
+                return `
+          <tr>
+            <td style="font-weight:700;font-family:monospace;">${esc(doc.id)}</td>
+            <td>${typeLabels[p.type] || p.type}</td>
+            <td>${p.value || '—'}</td>
+            <td>${p.usedCount || 0} / ${p.maxUses || '∞'}</td>
+            <td>${p.active ? '<span style="color:var(--green)">Активен</span>' : '<span style="color:var(--red)">Выключен</span>'}</td>
+            <td>
+              <button class="act-btn" style="padding:4px 10px;font-size:0.7rem;" onclick="togglePromo('${doc.id}', ${!p.active})">
+                ${p.active ? '🔴 Выключить' : '🟢 Включить'}
+              </button>
+            </td>
+          </tr>
+        `;
+            }).join('');
+        }
+
+        async function createPromo() {
+            const code = document.getElementById('promo-code').value.trim().toUpperCase();
+            const type = document.getElementById('promo-type').value;
+            const value = parseInt(document.getElementById('promo-value').value) || 0;
+            const maxUses = parseInt(document.getElementById('promo-max').value) || 9999;
+
+            if (!code) { showToast('❌ Введите код'); return; }
+            if (!value && type !== 'upgrade_pro') { showToast('❌ Введите значение'); return; }
+
+            try {
+                await db.collection('promoCodes').doc(code).set({
+                    type,
+                    value: type === 'upgrade_pro' ? 30 : value,
+                    maxUses,
+                    active: true,
+                    usedCount: 0,
+                    usedBy: [],
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                });
+                showToast('✅ Промокод создан: ' + code);
+                document.getElementById('promo-code').value = '';
+                document.getElementById('promo-value').value = '';
+                document.getElementById('promo-max').value = '';
+                await loadPromos();
+            } catch (e) {
+                showToast('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        async function togglePromo(code, active) {
+            try {
+                await db.collection('promoCodes').doc(code).update({ active });
+                showToast(active ? '✅ Промокод включён' : '🔴 Промокод выключен');
+                await loadPromos();
+            } catch (e) {
+                showToast('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        /* ══ TABS ══ */
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.tab-bar .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        /* ══ AI STATISTICS ══ */
+        const MODEL_PRICING = {
+            'gpt-4o-mini': { input: 0.15, output: 0.60 },
+            'gpt-4o': { input: 2.50, output: 10.00 },
+            'gpt-3.5-turbo': { input: 0.50, output: 1.50 },
+            'gemini-1.5-flash': { input: 0.075, output: 0.30 },
+            'gemini-1.5-flash-8b': { input: 0.0375, output: 0.15 },
+            'gemini-1.5-pro': { input: 1.25, output: 5.00 },
+            'gemini-2.0-flash': { input: 0.10, output: 0.40 },
+            'gemini-2.0-flash-lite': { input: 0.075, output: 0.30 },
+            'claude-haiku-4-5': { input: 0.80, output: 4.00 },
+            'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
+            'claude-opus-4': { input: 15.00, output: 75.00 },
+            'claude-haiku-4-5-20251001': { input: 0.80, output: 4.00 },
+            'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
+            'gpt-4.1': { input: 2.00, output: 8.00 },
+        };
+        const CURRENCIES = {
+            USD: { symbol: '$', rate: 1, label: 'USD' },
+            EUR: { symbol: '€', rate: 0.92, label: 'EUR' },
+            RUB: { symbol: '₽', rate: 90, label: 'RUB' },
+            UZS: { symbol: "so'm", rate: 12850, label: 'UZS' },
+        };
+
+        function calcCostUSD(inp, out, model) {
+            const p = MODEL_PRICING[model];
+            if (!p) return 0;
+            return (inp / 1e6) * p.input + (out / 1e6) * p.output;
+        }
+
+        function fmtNum(n) {
+            if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+            if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+            return String(n);
+        }
+
+        function fmtCost(usd) {
+            const cur = CURRENCIES[AI_CURRENCY] || CURRENCIES.USD;
+            const val = usd * cur.rate;
+            if (AI_CURRENCY === 'UZS') return val < 1 ? `${val.toFixed(1)} so'm` : `${Math.round(val).toLocaleString('ru')} so'm`;
+            if (AI_CURRENCY === 'RUB') return val < 1 ? `${val.toFixed(2)} ₽` : `${val.toFixed(1)} ₽`;
+            if (val < 0.001) return `${cur.symbol}${val.toFixed(5)}`;
+            if (val < 1) return `${cur.symbol}${val.toFixed(3)}`;
+            return `${cur.symbol}${val.toFixed(2)}`;
+        }
+
+        async function loadAiStatsOnce() {
+            if (_aiStatsLoaded) return;
+            _aiStatsLoaded = true;
+            showToast('⏳ Загрузка статистики ИИ...');
+            try {
+                const resp = await fetch('https://us-central1-chatbot-acd16.cloudfunctions.net/getAiStats');
+                if (!resp.ok) throw new Error(resp.status);
+                const data = await resp.json();
+                AI_EVENTS = data.events || [];
+                renderAiStats();
+                showToast(`✅ Загружено ${AI_EVENTS.length} событий`);
+            } catch (e) {
+                showToast('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        function setAiStatsPeriod(days) {
+            AI_PERIOD = days;
+            [1, 7, 30].forEach(d => document.getElementById(`ais-tab-${d}`)?.classList.toggle('active', d === days));
+            renderAiStats();
+        }
+
+        function setAiStatsCurrency(code) {
+            AI_CURRENCY = code;
+            Object.keys(CURRENCIES).forEach(c => document.getElementById(`ais-cur-${c}`)?.classList.toggle('active', c === code));
+            renderAiStats();
+        }
+
+        function renderAiStats() {
+            const now = Date.now();
+            const cutoff = AI_PERIOD === 1 ? now - 86400000 : now - AI_PERIOD * 86400000;
+            const events = AI_EVENTS.filter(e => {
+                const ts = e.createdAt?.seconds ? e.createdAt.seconds * 1000 : 0;
+                return ts >= cutoff;
+            });
+
+            const totalTokens = events.reduce((s, e) => s + (e.totalTokens || 0), 0);
+            const totalInput = events.reduce((s, e) => s + (e.inputTokens || 0), 0);
+            const totalOutput = events.reduce((s, e) => s + (e.outputTokens || 0), 0);
+            const totalCost = events.reduce((s, e) => s + calcCostUSD(e.inputTokens || 0, e.outputTokens || 0, e.model || ''), 0);
+            const errors = events.filter(e => e.status === 'error').length;
+            const avg = events.length > 0 ? Math.round(totalTokens / events.length) : 0;
+
+            document.getElementById('ais-tokens').textContent = events.length ? fmtNum(totalTokens) : '—';
+            document.getElementById('ais-tokens-sub').textContent = `↑ ${fmtNum(totalInput)} / ↓ ${fmtNum(totalOutput)}`;
+            document.getElementById('ais-reqs').textContent = events.length ? fmtNum(events.length) : '—';
+            document.getElementById('ais-avg').textContent = avg > 0 ? fmtNum(avg) : '—';
+            document.getElementById('ais-cost').textContent = events.length ? fmtCost(totalCost) : '—';
+            document.getElementById('ais-cost-sub').textContent = CURRENCIES[AI_CURRENCY]?.label || 'USD';
+            document.getElementById('ais-errors').textContent = errors > 0 ? errors : '—';
+
+            // Providers
+            const provMap = {};
+            events.forEach(e => {
+                const p = e.provider || 'unknown';
+                if (!provMap[p]) provMap[p] = { reqs: 0, inp: 0, out: 0, tot: 0, cost: 0 };
+                provMap[p].reqs++; provMap[p].inp += e.inputTokens || 0;
+                provMap[p].out += e.outputTokens || 0; provMap[p].tot += e.totalTokens || 0;
+                provMap[p].cost += calcCostUSD(e.inputTokens || 0, e.outputTokens || 0, e.model || '');
+            });
+            const provEl = document.getElementById('ais-providers');
+            provEl.innerHTML = Object.keys(provMap).length === 0
+                ? '<tr><td colspan="6" style="color:var(--text-dim);padding:20px">Нет данных</td></tr>'
+                : Object.entries(provMap).sort((a, b) => b[1].tot - a[1].tot).map(([p, d]) =>
+                    `<tr><td style="font-weight:600">${esc(p)}</td><td>${d.reqs}</td><td style="color:var(--text-sec)">${fmtNum(d.inp)}</td><td style="color:var(--text-sec)">${fmtNum(d.out)}</td><td style="font-weight:700;color:var(--purple)">${fmtNum(d.tot)}</td><td style="font-weight:700;color:var(--yellow)">${fmtCost(d.cost)}</td></tr>`
+                ).join('');
+
+            // Models
+            const modMap = {};
+            events.forEach(e => {
+                const m = e.model || 'unknown';
+                if (!modMap[m]) modMap[m] = { reqs: 0, tot: 0, cost: 0 };
+                modMap[m].reqs++; modMap[m].tot += e.totalTokens || 0;
+                modMap[m].cost += calcCostUSD(e.inputTokens || 0, e.outputTokens || 0, m);
+            });
+            const modEl = document.getElementById('ais-models');
+            modEl.innerHTML = Object.keys(modMap).length === 0
+                ? '<tr><td colspan="5" style="color:var(--text-dim);padding:20px">Нет данных</td></tr>'
+                : Object.entries(modMap).sort((a, b) => b[1].tot - a[1].tot).map(([m, d]) => {
+                    const avgT = d.reqs > 0 ? Math.round(d.tot / d.reqs) : 0;
+                    return `<tr><td style="font-weight:600;font-size:0.75rem">${esc(m)}</td><td>${d.reqs}</td><td style="font-weight:700;color:var(--purple)">${fmtNum(d.tot)}</td><td style="color:var(--text-sec)">${fmtNum(avgT)}</td><td style="font-weight:700;color:var(--yellow)">${fmtCost(d.cost)}</td></tr>`;
+                }).join('');
+
+            // Top users by tokens
+            const userMap = {};
+            events.forEach(e => {
+                const email = e.ownerEmail || 'unknown';
+                if (!userMap[email]) userMap[email] = { reqs: 0, inp: 0, out: 0, tot: 0, cost: 0 };
+                userMap[email].reqs++; userMap[email].inp += e.inputTokens || 0;
+                userMap[email].out += e.outputTokens || 0; userMap[email].tot += e.totalTokens || 0;
+                userMap[email].cost += calcCostUSD(e.inputTokens || 0, e.outputTokens || 0, e.model || '');
+            });
+            const topEl = document.getElementById('ais-top-users');
+            const topEntries = Object.entries(userMap).sort((a, b) => b[1].tot - a[1].tot).slice(0, 20);
+            topEl.innerHTML = topEntries.length === 0
+                ? '<tr><td colspan="6" style="color:var(--text-dim);padding:20px">Нет данных</td></tr>'
+                : topEntries.map(([email, d]) =>
+                    `<tr><td style="font-weight:600">${esc(email)}</td><td>${d.reqs}</td><td style="color:var(--text-sec)">${fmtNum(d.inp)}</td><td style="color:var(--text-sec)">${fmtNum(d.out)}</td><td style="font-weight:700;color:var(--purple)">${fmtNum(d.tot)}</td><td style="font-weight:700;color:var(--yellow)">${fmtCost(d.cost)}</td></tr>`
+                ).join('');
+        }
+
+        /* ══ UTILS ══ */
+        function platformIcon(p) {
+            if (p === 'telegram') return '✈️ Telegram';
+            if (p === 'mobile') return '📱 Телефон';
+            if (p === 'desktop') return '🖥️ ПК';
+            return '—';
+        }
+        function esc(s) {
+            if (!s) return '';
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        let _toastTimer;
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+        }
+        /* ══ THEME ══ */
+        function toggleSaTheme() {
+            const cur = document.documentElement.getAttribute('data-theme');
+            const next = cur === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            document.getElementById('sa-theme-btn').textContent = next === 'dark' ? '🌙' : '☀️';
+            localStorage.setItem('sa-theme', next);
+        }
+        // Apply saved theme on load
+        (function () {
+            const saved = localStorage.getItem('sa-theme') || 'dark';
+            if (saved === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                const btn = document.getElementById('sa-theme-btn');
+                if (btn) btn.textContent = '☀️';
+            }
+        })();
+    </script>
+
+</body>
+
+</html>

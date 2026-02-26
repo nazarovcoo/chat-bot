@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+functions/node_modules/
+
+# Environment & secrets
+.env
+.env.*
+*.env
+functions/.env
+functions/.env.*
+service-account*.json
+*serviceAccount*.json
+*credentials*.json
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.cache
+
+# Deploy artifacts
+deploy/
+netlify/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Misc
+photo.jpg
+hh
+the wear

@@ -1,0 +1,77 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "*.sh",
+      "CLAUDE.md",
+      "deploy",
+      "hh",
+      "netlify",
+      "netlify.toml",
+      "photo.jpg",
+      "the wear",
+      "unit-economics.html",
+      "functions",
+      "functions/**",
+      "**/node_modules/**",
+      "node_modules"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/ai-chat",
+        "function": "aiChat"
+      },
+      {
+        "source": "/api/register-webhook",
+        "function": "registerWebhook"
+      },
+      {
+        "source": "/api/process-knowledge",
+        "function": "processKnowledge"
+      },
+      {
+        "source": "/api/transcribe",
+        "function": "transcribeYouTube"
+      },
+      {
+        "source": "/api/admin-send-message",
+        "function": "adminSendMessage"
+      },
+      {
+        "source": "/api/broadcast-message",
+        "function": "broadcastMessage"
+      },
+      {
+        "source": "/api/telegram-auth",
+        "function": "telegramAuth"
+      },
+      {
+        "source": "/api/generate-answer",
+        "function": "generateAnswer"
+      },
+      {
+        "source": "/super-admin",
+        "destination": "/super-admin.html"
+      },
+      {
+        "source": "/",
+        "destination": "/admin.html"
+      },
+      {
+        "source": "**",
+        "destination": "/admin.html"
+      }
+    ]
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

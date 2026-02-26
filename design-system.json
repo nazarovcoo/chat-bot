@@ -1,0 +1,940 @@
+{
+    "designSystem": {
+        "meta": {
+            "name": "ChatPlace Design System",
+            "version": "1.0",
+            "description": "Дизайн-система на основе анализа интерфейса ChatPlace — SaaS-платформа для автоматизации мессенджеров и контента"
+        },
+        "colorPalette": {
+            "primary": {
+                "50": "#f5ffe6",
+                "100": "#e6ffb3",
+                "200": "#d5ff80",
+                "300": "#c5ff4d",
+                "400": "#beff33",
+                "500": "#CCFF00",
+                "600": "#b8e600",
+                "700": "#99bf00",
+                "800": "#7a9900",
+                "900": "#5c7300"
+            },
+            "secondary": {
+                "50": "#eef0ff",
+                "100": "#d9deff",
+                "200": "#b3bdff",
+                "300": "#8d9cff",
+                "400": "#6366f1",
+                "500": "#4338ca",
+                "600": "#3730a3",
+                "700": "#312e81",
+                "800": "#27255c",
+                "900": "#1e1b4b"
+            },
+            "neutral": {
+                "0": "#FFFFFF",
+                "50": "#F8F8F8",
+                "100": "#F3F3F3",
+                "200": "#E8E8E8",
+                "300": "#D4D4D4",
+                "400": "#A3A3A3",
+                "500": "#737373",
+                "600": "#525252",
+                "700": "#404040",
+                "800": "#262626",
+                "900": "#171717",
+                "950": "#0A0A0A",
+                "1000": "#000000"
+            },
+            "semantic": {
+                "success": "#22C55E",
+                "successLight": "#DCFCE7",
+                "warning": "#F59E0B",
+                "warningLight": "#FEF3C7",
+                "error": "#EF4444",
+                "errorLight": "#FEE2E2",
+                "info": "#3B82F6",
+                "infoLight": "#DBEAFE"
+            },
+            "background": {
+                "primary": "#FFFFFF",
+                "secondary": "#F8F8F8",
+                "surface": "#FFFFFF",
+                "surfaceElevated": "#FFFFFF",
+                "dark": "#000000",
+                "darkSurface": "#171717",
+                "accent": "#CCFF00"
+            },
+            "brand": {
+                "instagram": "#E1306C",
+                "telegram": "#229ED9",
+                "tiktok": "#000000",
+                "proPlanHeader": "#2563EB",
+                "premiumPlanHeader": "#1E1044",
+                "proTableColumn": "#1E3A5F",
+                "premiumTableColumn": "#1E1044",
+                "hotPink": "#EC4899"
+            }
+        },
+        "typography": {
+            "fontFamilies": {
+                "primary": "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                "heading": "'Inter', sans-serif",
+                "monospace": "'JetBrains Mono', 'Fira Code', 'Courier New', monospace"
+            },
+            "fontSizes": {
+                "xs": "11px",
+                "sm": "13px",
+                "base": "15px",
+                "md": "16px",
+                "lg": "18px",
+                "xl": "20px",
+                "2xl": "24px",
+                "3xl": "30px",
+                "4xl": "36px",
+                "5xl": "48px",
+                "6xl": "56px",
+                "7xl": "64px",
+                "8xl": "72px"
+            },
+            "lineHeights": {
+                "none": "1",
+                "tight": "1.1",
+                "snug": "1.2",
+                "normal": "1.4",
+                "relaxed": "1.5",
+                "loose": "1.75"
+            },
+            "fontWeights": {
+                "normal": "400",
+                "medium": "500",
+                "semibold": "600",
+                "bold": "700",
+                "extrabold": "800",
+                "black": "900"
+            },
+            "letterSpacing": {
+                "tighter": "-0.04em",
+                "tight": "-0.02em",
+                "normal": "0",
+                "wide": "0.02em"
+            },
+            "textStyles": {
+                "heroHeading": {
+                    "fontSize": "64px",
+                    "fontWeight": "900",
+                    "lineHeight": "1.1",
+                    "letterSpacing": "-0.04em",
+                    "color": "#000000",
+                    "fontStyle": "italic",
+                    "textAlign": "center"
+                },
+                "sectionHeading": {
+                    "fontSize": "48px",
+                    "fontWeight": "900",
+                    "lineHeight": "1.15",
+                    "letterSpacing": "-0.03em",
+                    "color": "#000000",
+                    "fontStyle": "italic",
+                    "textAlign": "center"
+                },
+                "subsectionHeading": {
+                    "fontSize": "36px",
+                    "fontWeight": "800",
+                    "lineHeight": "1.2",
+                    "letterSpacing": "-0.02em",
+                    "color": "#000000",
+                    "fontStyle": "italic"
+                },
+                "cardTitle": {
+                    "fontSize": "24px",
+                    "fontWeight": "700",
+                    "lineHeight": "1.3",
+                    "letterSpacing": "-0.01em",
+                    "color": "#000000",
+                    "fontStyle": "italic"
+                },
+                "bodyLarge": {
+                    "fontSize": "18px",
+                    "fontWeight": "400",
+                    "lineHeight": "1.5",
+                    "color": "#525252"
+                },
+                "body": {
+                    "fontSize": "15px",
+                    "fontWeight": "400",
+                    "lineHeight": "1.5",
+                    "color": "#525252"
+                },
+                "bodySmall": {
+                    "fontSize": "13px",
+                    "fontWeight": "400",
+                    "lineHeight": "1.5",
+                    "color": "#737373"
+                },
+                "caption": {
+                    "fontSize": "11px",
+                    "fontWeight": "400",
+                    "lineHeight": "1.4",
+                    "color": "#A3A3A3"
+                },
+                "navLink": {
+                    "fontSize": "15px",
+                    "fontWeight": "500",
+                    "lineHeight": "1",
+                    "color": "#171717"
+                },
+                "priceMain": {
+                    "fontSize": "48px",
+                    "fontWeight": "900",
+                    "lineHeight": "1",
+                    "color": "#000000"
+                },
+                "pricePeriod": {
+                    "fontSize": "18px",
+                    "fontWeight": "400",
+                    "lineHeight": "1",
+                    "color": "#525252"
+                },
+                "priceStrikethrough": {
+                    "fontSize": "16px",
+                    "fontWeight": "400",
+                    "lineHeight": "1",
+                    "color": "#A3A3A3",
+                    "textDecoration": "line-through"
+                },
+                "badge": {
+                    "fontSize": "12px",
+                    "fontWeight": "700",
+                    "lineHeight": "1",
+                    "letterSpacing": "0.02em",
+                    "textTransform": "uppercase"
+                },
+                "tableCell": {
+                    "fontSize": "14px",
+                    "fontWeight": "500",
+                    "lineHeight": "1.4",
+                    "color": "#171717"
+                },
+                "tableCellBold": {
+                    "fontSize": "14px",
+                    "fontWeight": "700",
+                    "lineHeight": "1.4",
+                    "color": "#000000"
+                }
+            }
+        },
+        "spacing": {
+            "scale": "linear",
+            "baseUnit": "4px",
+            "values": {
+                "0": "0px",
+                "0.5": "2px",
+                "1": "4px",
+                "2": "8px",
+                "3": "12px",
+                "4": "16px",
+                "5": "20px",
+                "6": "24px",
+                "7": "28px",
+                "8": "32px",
+                "10": "40px",
+                "12": "48px",
+                "14": "56px",
+                "16": "64px",
+                "20": "80px",
+                "24": "96px",
+                "32": "128px"
+            }
+        },
+        "borderRadius": {
+            "none": "0px",
+            "sm": "4px",
+            "md": "8px",
+            "lg": "12px",
+            "xl": "16px",
+            "2xl": "20px",
+            "3xl": "24px",
+            "full": "9999px"
+        },
+        "borders": {
+            "none": "none",
+            "thin": "1px solid #E8E8E8",
+            "medium": "2px solid #E8E8E8",
+            "dark": "1px solid #404040",
+            "focus": "2px solid #CCFF00"
+        },
+        "shadows": {
+            "none": "none",
+            "xs": "0 1px 2px rgba(0, 0, 0, 0.04)",
+            "sm": "0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)",
+            "md": "0 4px 6px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.04)",
+            "lg": "0 10px 15px rgba(0, 0, 0, 0.08), 0 4px 6px rgba(0, 0, 0, 0.04)",
+            "xl": "0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04)",
+            "card": "0 0 0 1px rgba(0, 0, 0, 0.05), 0 4px 16px rgba(0, 0, 0, 0.06)",
+            "cardHover": "0 0 0 1px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 0, 0, 0.1)",
+            "button": "0 2px 8px rgba(0, 0, 0, 0.08)"
+        },
+        "components": {
+            "button": {
+                "variants": {
+                    "primary": {
+                        "backgroundColor": "#CCFF00",
+                        "color": "#000000",
+                        "border": "none",
+                        "borderRadius": "9999px",
+                        "padding": "14px 28px",
+                        "fontSize": "15px",
+                        "fontWeight": "700",
+                        "fontStyle": "italic",
+                        "minHeight": "48px",
+                        "cursor": "pointer",
+                        "display": "inline-flex",
+                        "alignItems": "center",
+                        "gap": "8px",
+                        "states": {
+                            "hover": {
+                                "backgroundColor": "#B8E600",
+                                "transform": "translateY(-1px)",
+                                "boxShadow": "0 4px 16px rgba(204, 255, 0, 0.3)"
+                            },
+                            "active": {
+                                "backgroundColor": "#A3CC00",
+                                "transform": "translateY(0px)",
+                                "boxShadow": "none"
+                            },
+                            "disabled": {
+                                "backgroundColor": "#E8E8E8",
+                                "color": "#A3A3A3",
+                                "cursor": "not-allowed"
+                            },
+                            "focus": {
+                                "outline": "2px solid #000000",
+                                "outlineOffset": "2px"
+                            }
+                        },
+                        "iconSuffix": {
+                            "content": "→ (стрелка в круге)",
+                            "width": "32px",
+                            "height": "32px",
+                            "borderRadius": "50%",
+                            "backgroundColor": "#000000",
+                            "color": "#CCFF00",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center"
+                        }
+                    },
+                    "dark": {
+                        "backgroundColor": "#000000",
+                        "color": "#FFFFFF",
+                        "border": "none",
+                        "borderRadius": "9999px",
+                        "padding": "14px 28px",
+                        "fontSize": "15px",
+                        "fontWeight": "700",
+                        "fontStyle": "italic",
+                        "minHeight": "48px",
+                        "states": {
+                            "hover": {
+                                "backgroundColor": "#262626",
+                                "transform": "translateY(-1px)"
+                            },
+                            "active": {
+                                "backgroundColor": "#171717"
+                            },
+                            "disabled": {
+                                "backgroundColor": "#737373",
+                                "cursor": "not-allowed"
+                            }
+                        }
+                    },
+                    "outline": {
+                        "backgroundColor": "transparent",
+                        "color": "#171717",
+                        "border": "1.5px solid #D4D4D4",
+                        "borderRadius": "9999px",
+                        "padding": "12px 24px",
+                        "fontSize": "15px",
+                        "fontWeight": "500",
+                        "minHeight": "44px",
+                        "states": {
+                            "hover": {
+                                "borderColor": "#171717",
+                                "backgroundColor": "#F8F8F8"
+                            },
+                            "active": {
+                                "backgroundColor": "#F3F3F3"
+                            }
+                        }
+                    },
+                    "ghost": {
+                        "backgroundColor": "transparent",
+                        "color": "#171717",
+                        "border": "none",
+                        "padding": "8px 12px",
+                        "fontSize": "15px",
+                        "fontWeight": "500",
+                        "states": {
+                            "hover": {
+                                "backgroundColor": "#F3F3F3"
+                            }
+                        }
+                    }
+                },
+                "sizes": {
+                    "sm": {
+                        "padding": "8px 16px",
+                        "fontSize": "13px",
+                        "minHeight": "36px"
+                    },
+                    "md": {
+                        "padding": "12px 24px",
+                        "fontSize": "15px",
+                        "minHeight": "44px"
+                    },
+                    "lg": {
+                        "padding": "16px 32px",
+                        "fontSize": "16px",
+                        "minHeight": "52px"
+                    }
+                }
+            },
+            "input": {
+                "base": {
+                    "backgroundColor": "#FFFFFF",
+                    "border": "1.5px solid #E8E8E8",
+                    "borderRadius": "12px",
+                    "padding": "12px 16px",
+                    "fontSize": "15px",
+                    "fontWeight": "400",
+                    "color": "#171717",
+                    "minHeight": "44px",
+                    "placeholder": {
+                        "color": "#A3A3A3",
+                        "opacity": "1"
+                    },
+                    "states": {
+                        "focus": {
+                            "borderColor": "#000000",
+                            "outline": "none",
+                            "boxShadow": "0 0 0 3px rgba(0, 0, 0, 0.05)"
+                        },
+                        "error": {
+                            "borderColor": "#EF4444",
+                            "boxShadow": "0 0 0 3px rgba(239, 68, 68, 0.1)"
+                        },
+                        "disabled": {
+                            "backgroundColor": "#F3F3F3",
+                            "color": "#A3A3A3",
+                            "cursor": "not-allowed"
+                        }
+                    }
+                },
+                "numberStepper": {
+                    "description": "Поле с кнопками − и + по бокам",
+                    "container": {
+                        "display": "inline-flex",
+                        "alignItems": "center",
+                        "gap": "0",
+                        "border": "1.5px solid #E8E8E8",
+                        "borderRadius": "12px",
+                        "overflow": "hidden"
+                    },
+                    "input": {
+                        "width": "56px",
+                        "textAlign": "center",
+                        "border": "none",
+                        "fontSize": "16px",
+                        "fontWeight": "600",
+                        "color": "#171717",
+                        "padding": "10px 0"
+                    },
+                    "button": {
+                        "width": "40px",
+                        "height": "40px",
+                        "backgroundColor": "transparent",
+                        "border": "none",
+                        "fontSize": "18px",
+                        "fontWeight": "400",
+                        "color": "#171717",
+                        "cursor": "pointer"
+                    },
+                    "buttonHover": {
+                        "backgroundColor": "#F3F3F3"
+                    }
+                }
+            },
+            "toggle": {
+                "base": {
+                    "width": "48px",
+                    "height": "28px",
+                    "borderRadius": "9999px",
+                    "backgroundColor": "#D4D4D4",
+                    "transition": "background-color 200ms ease",
+                    "cursor": "pointer"
+                },
+                "thumb": {
+                    "width": "22px",
+                    "height": "22px",
+                    "borderRadius": "50%",
+                    "backgroundColor": "#FFFFFF",
+                    "boxShadow": "0 1px 3px rgba(0,0,0,0.15)",
+                    "transition": "transform 200ms ease",
+                    "offsetLeft": "3px"
+                },
+                "states": {
+                    "active": {
+                        "backgroundColor": "#CCFF00",
+                        "thumbTransform": "translateX(20px)"
+                    },
+                    "disabled": {
+                        "opacity": "0.5",
+                        "cursor": "not-allowed"
+                    }
+                }
+            },
+            "segmentedControl": {
+                "description": "Переключатель На год -20% / Помесячно и P / $",
+                "container": {
+                    "display": "inline-flex",
+                    "borderRadius": "9999px",
+                    "border": "1.5px solid #E8E8E8",
+                    "overflow": "hidden",
+                    "backgroundColor": "#FFFFFF"
+                },
+                "option": {
+                    "padding": "8px 20px",
+                    "fontSize": "14px",
+                    "fontWeight": "500",
+                    "color": "#737373",
+                    "cursor": "pointer",
+                    "transition": "all 200ms ease",
+                    "border": "none",
+                    "backgroundColor": "transparent"
+                },
+                "optionActive": {
+                    "backgroundColor": "#000000",
+                    "color": "#FFFFFF",
+                    "borderRadius": "9999px",
+                    "fontWeight": "600"
+                },
+                "currencyVariant": {
+                    "description": "Маленький переключатель валют P / $",
+                    "optionSize": "36px",
+                    "borderRadius": "50%",
+                    "fontSize": "14px"
+                }
+            },
+            "card": {
+                "base": {
+                    "backgroundColor": "#FFFFFF",
+                    "border": "1.5px solid #E8E8E8",
+                    "borderRadius": "20px",
+                    "padding": "32px",
+                    "boxShadow": "none",
+                    "transition": "all 300ms ease"
+                },
+                "hover": {
+                    "borderColor": "#D4D4D4",
+                    "boxShadow": "0 8px 32px rgba(0, 0, 0, 0.08)"
+                }
+            },
+            "pricingCard": {
+                "free": {
+                    "backgroundColor": "#FFFFFF",
+                    "border": "1.5px solid #E8E8E8",
+                    "borderRadius": "20px",
+                    "padding": "32px",
+                    "titleColor": "#000000",
+                    "titleFontSize": "24px",
+                    "titleFontWeight": "700",
+                    "titleFontStyle": "italic",
+                    "ctaVariant": "outline"
+                },
+                "pro": {
+                    "backgroundColor": "#2563EB",
+                    "border": "none",
+                    "borderRadius": "20px",
+                    "padding": "32px",
+                    "titleColor": "#FFFFFF",
+                    "bodyColor": "rgba(255,255,255,0.85)",
+                    "priceColor": "#FFFFFF",
+                    "ctaBackgroundColor": "#CCFF00",
+                    "ctaColor": "#000000"
+                },
+                "premium": {
+                    "backgroundColor": "#1E1044",
+                    "border": "none",
+                    "borderRadius": "20px",
+                    "padding": "32px",
+                    "titleColor": "#FFFFFF",
+                    "bodyColor": "rgba(255,255,255,0.75)",
+                    "priceColor": "#FFFFFF",
+                    "ctaBackgroundColor": "#CCFF00",
+                    "ctaColor": "#000000"
+                }
+            },
+            "navbar": {
+                "height": "64px",
+                "backgroundColor": "#FFFFFF",
+                "borderBottom": "1px solid #E8E8E8",
+                "padding": "0 32px",
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "space-between",
+                "position": "sticky",
+                "top": "0",
+                "zIndex": "100",
+                "logo": {
+                    "fontFamily": "Custom/Brand",
+                    "fontWeight": "900",
+                    "fontSize": "18px",
+                    "letterSpacing": "0.1em",
+                    "textTransform": "uppercase",
+                    "color": "#000000",
+                    "style": "Геометрический шрифт с прямыми линиями"
+                },
+                "languageSwitcher": {
+                    "fontSize": "13px",
+                    "fontWeight": "500",
+                    "color": "#737373",
+                    "marginLeft": "12px"
+                },
+                "links": {
+                    "fontSize": "15px",
+                    "fontWeight": "500",
+                    "color": "#171717",
+                    "gap": "8px",
+                    "padding": "8px 16px",
+                    "borderRadius": "8px",
+                    "hoverBackground": "#F3F3F3"
+                },
+                "dropdownIndicator": {
+                    "icon": "chevron-down",
+                    "size": "14px",
+                    "marginLeft": "4px"
+                },
+                "userIcon": {
+                    "width": "40px",
+                    "height": "40px",
+                    "borderRadius": "50%",
+                    "backgroundColor": "#000000",
+                    "iconColor": "#FFFFFF",
+                    "iconSize": "18px"
+                },
+                "ctaButton": {
+                    "variant": "dark",
+                    "borderRadius": "9999px",
+                    "padding": "10px 24px",
+                    "fontSize": "14px",
+                    "fontWeight": "700",
+                    "fontStyle": "italic"
+                }
+            },
+            "announcementBar": {
+                "backgroundColor": "#171717",
+                "color": "#FFFFFF",
+                "padding": "10px 24px",
+                "textAlign": "center",
+                "fontSize": "14px",
+                "fontWeight": "400",
+                "badge": {
+                    "backgroundColor": "#CCFF00",
+                    "color": "#000000",
+                    "borderRadius": "6px",
+                    "padding": "4px 10px",
+                    "fontSize": "11px",
+                    "fontWeight": "700",
+                    "textTransform": "uppercase",
+                    "marginRight": "8px"
+                },
+                "arrow": {
+                    "content": "→",
+                    "marginLeft": "6px"
+                }
+            },
+            "productGrid": {
+                "description": "Сетка иконок продуктов (Instagram, Telegram, TikTok...)",
+                "layout": "flex",
+                "gap": "48px",
+                "justifyContent": "center",
+                "item": {
+                    "display": "flex",
+                    "flexDirection": "column",
+                    "alignItems": "center",
+                    "gap": "12px",
+                    "cursor": "pointer"
+                },
+                "icon": {
+                    "width": "48px",
+                    "height": "48px",
+                    "borderRadius": "14px",
+                    "border": "1.5px solid #E8E8E8",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "justifyContent": "center",
+                    "fontSize": "24px",
+                    "transition": "all 200ms ease",
+                    "hoverBorderColor": "#000000",
+                    "hoverTransform": "translateY(-2px)"
+                },
+                "label": {
+                    "fontSize": "13px",
+                    "fontWeight": "500",
+                    "color": "#171717",
+                    "textAlign": "center"
+                }
+            },
+            "comparisonTable": {
+                "headerRow": {
+                    "position": "sticky",
+                    "top": "64px"
+                },
+                "row": {
+                    "borderBottom": "1px solid #E8E8E8",
+                    "padding": "20px 24px",
+                    "minHeight": "56px"
+                },
+                "featureLabel": {
+                    "fontSize": "14px",
+                    "fontWeight": "400",
+                    "color": "#525252",
+                    "width": "200px"
+                },
+                "freeColumn": {
+                    "backgroundColor": "#FFFFFF",
+                    "border": "1.5px solid #E8E8E8",
+                    "textAlign": "center"
+                },
+                "proColumn": {
+                    "backgroundColor": "#1E3A5F",
+                    "color": "#FFFFFF",
+                    "border": "none",
+                    "textAlign": "center"
+                },
+                "premiumColumn": {
+                    "backgroundColor": "#1E1044",
+                    "color": "#FFFFFF",
+                    "border": "none",
+                    "textAlign": "center"
+                },
+                "includedBadge": {
+                    "text": "Включено",
+                    "fontWeight": "700",
+                    "color": "#FFFFFF"
+                },
+                "unavailableBadge": {
+                    "text": "Недоступно",
+                    "fontWeight": "700",
+                    "color": "#000000"
+                }
+            },
+            "calculator": {
+                "description": "Калькулятор стоимости тарифа PRO",
+                "container": {
+                    "backgroundColor": "#F8F8F8",
+                    "borderRadius": "24px",
+                    "padding": "48px"
+                },
+                "heading": {
+                    "fontSize": "36px",
+                    "fontWeight": "800",
+                    "fontStyle": "italic",
+                    "color": "#000000",
+                    "lineHeight": "1.2"
+                },
+                "proBadge": {
+                    "backgroundColor": "#CCFF00",
+                    "borderRadius": "8px",
+                    "padding": "4px 12px",
+                    "fontWeight": "800",
+                    "fontSize": "28px",
+                    "display": "inline-block"
+                },
+                "optionRow": {
+                    "display": "flex",
+                    "alignItems": "center",
+                    "justifyContent": "space-between",
+                    "gap": "48px",
+                    "paddingBottom": "32px",
+                    "borderBottom": "1px solid #E8E8E8"
+                },
+                "optionLabel": {
+                    "fontSize": "14px",
+                    "fontWeight": "400",
+                    "color": "#525252",
+                    "lineHeight": "1.4"
+                },
+                "totalSection": {
+                    "paddingTop": "32px",
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "flex-end"
+                },
+                "totalPrice": {
+                    "fontSize": "36px",
+                    "fontWeight": "900",
+                    "color": "#000000"
+                },
+                "totalPeriod": {
+                    "fontSize": "18px",
+                    "fontWeight": "400",
+                    "color": "#525252"
+                },
+                "totalSubtext": {
+                    "fontSize": "13px",
+                    "fontWeight": "400",
+                    "color": "#A3A3A3"
+                }
+            }
+        },
+        "layout": {
+            "grid": {
+                "columns": 12,
+                "gap": "24px",
+                "maxWidth": "1200px"
+            },
+            "containers": {
+                "xs": "480px",
+                "sm": "640px",
+                "md": "768px",
+                "lg": "1024px",
+                "xl": "1200px",
+                "2xl": "1400px"
+            },
+            "sectionPadding": {
+                "vertical": "80px",
+                "horizontal": "24px"
+            },
+            "pricingGrid": {
+                "columns": "repeat(3, 1fr)",
+                "gap": "20px",
+                "maxWidth": "960px"
+            }
+        },
+        "animations": {
+            "transitions": {
+                "fast": "150ms ease",
+                "normal": "200ms ease",
+                "smooth": "300ms cubic-bezier(0.4, 0, 0.2, 1)",
+                "slow": "500ms ease"
+            },
+            "commonEffects": [
+                {
+                    "name": "hoverLift",
+                    "description": "Элемент поднимается вверх при наведении",
+                    "transform": "translateY(-2px)",
+                    "transition": "transform 200ms ease, box-shadow 200ms ease"
+                },
+                {
+                    "name": "scalePress",
+                    "description": "Лёгкое уменьшение при нажатии",
+                    "transform": "scale(0.98)",
+                    "transition": "transform 100ms ease"
+                },
+                {
+                    "name": "fadeIn",
+                    "description": "Плавное появление секций при скролле",
+                    "from": {
+                        "opacity": 0,
+                        "transform": "translateY(20px)"
+                    },
+                    "to": {
+                        "opacity": 1,
+                        "transform": "translateY(0)"
+                    },
+                    "duration": "600ms"
+                },
+                {
+                    "name": "slideIn",
+                    "description": "Горизонтальное появление диагональных блоков",
+                    "from": {
+                        "transform": "skewY(-6deg) translateX(-100%)"
+                    },
+                    "to": {
+                        "transform": "skewY(-6deg) translateX(0)"
+                    },
+                    "duration": "800ms"
+                }
+            ]
+        },
+        "iconography": {
+            "style": "outline",
+            "strokeWidth": "1.5px",
+            "defaultSize": "24px",
+            "sizes": {
+                "sm": "16px",
+                "md": "20px",
+                "lg": "24px",
+                "xl": "32px",
+                "productIcon": "28px"
+            },
+            "colors": {
+                "primary": "#171717",
+                "secondary": "#737373",
+                "muted": "#A3A3A3",
+                "inverse": "#FFFFFF",
+                "accent": "#CCFF00"
+            },
+            "brandIcons": {
+                "instagram": {
+                    "color": "#E1306C",
+                    "bgGradient": "linear-gradient(45deg, #F58529, #DD2A7B, #8134AF, #515BD4)"
+                },
+                "telegram": {
+                    "color": "#229ED9"
+                },
+                "tiktok": {
+                    "color": "#000000"
+                }
+            }
+        },
+        "specificElements": {
+            "diagonalSection": {
+                "description": "Яркая диагональная секция внизу hero (розовый + белый треугольник)",
+                "background": "#EC4899",
+                "clipPath": "polygon(0 30%, 100% 0, 100% 100%, 0 100%)",
+                "minHeight": "300px"
+            },
+            "announcementBadge": {
+                "description": "Зелёная плашка НОВОЕ в баннере",
+                "backgroundColor": "#CCFF00",
+                "color": "#000000",
+                "borderRadius": "6px",
+                "padding": "4px 10px",
+                "fontWeight": "700",
+                "fontSize": "11px",
+                "textTransform": "uppercase",
+                "icon": "✏️ emoji перед текстом"
+            },
+            "ctaArrowCircle": {
+                "description": "Круглая кнопка-стрелка справа от CTA текста",
+                "width": "36px",
+                "height": "36px",
+                "borderRadius": "50%",
+                "backgroundColor": "#000000",
+                "color": "#CCFF00",
+                "icon": "→",
+                "fontSize": "18px"
+            },
+            "yearDiscountToggle": {
+                "description": "Тоггл На год -20% с фоновым блоком",
+                "container": {
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": "8px"
+                },
+                "toggle": {
+                    "width": "44px",
+                    "height": "24px",
+                    "activeColor": "#CCFF00"
+                },
+                "label": {
+                    "fontSize": "14px",
+                    "fontWeight": "500",
+                    "color": "#171717"
+                }
+            }
+        }
+    }
+}
