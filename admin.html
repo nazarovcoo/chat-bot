@@ -11642,6 +11642,77 @@ ${kbSummary}`,
     // Base URL for all chatOsHandler calls — single source of truth
     const CHAT_OS_HANDLER_URL = 'https://us-central1-chatbot-acd16.cloudfunctions.net/chatOsHandler';
 
+    // ── Telegram verification helpers ──
+    function _showTgWaitingCard() {
+      if (document.getElementById('tg-verify-ui')) return; // already shown
+      const card = document.createElement('div');
+      card.id = 'tg-verify-ui';
+      card.className = 'tg-verify-card msg-bot';
+      card.innerHTML = `
+        <div class="tg-verify-header">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.19-.08-.05-.19-.02-.27 0-.12.03-1.98 1.26-5.59 3.7-.53.36-1.01.54-1.44.53-.47-.01-1.38-.27-2.06-.49-.83-.27-1.49-.41-1.43-.87.03-.23.36-.47 1-.72 3.92-1.7 6.53-2.83 7.84-3.37 3.73-1.55 4.51-1.82 5.02-1.83.11 0 .36.03.49.13.11.08.15.19.16.32-.01.07-.02.16-.02.19z"/></svg>
+          Telegram Подключение
+        </div>
+        <div class="tg-step"><div class="tg-icon tg-check">✓</div> Токен валиден</div>
+        <div class="tg-step"><div class="tg-icon tg-check">✓</div> Webhook установлен</div>
+        <div class="tg-step"><div class="tg-icon tg-spin"></div> Ожидание /start сообщения...</div>
+      `;
+      CHAT_OS.messagesEl.appendChild(card);
+      scrollToBottomChatOs();
+      // Timeout fallback after 60 seconds
+      setTimeout(() => {
+        const c = document.getElementById('tg-verify-ui');
+        if (c && c.innerHTML.includes('tg-spin')) {
+          c.innerHTML = `
+            <div class="tg-verify-header" style="color:#ef4444;">
+              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+              Превышено время ожидания
+            </div>
+            <div class="tg-step">Убедитесь, что вы отправили /start именно этому боту.</div>
+          `;
+          setTimeout(() => { handleChatObSend("Я не смог отправить /start, или бот его не получил. Что делать?"); }, 1000);
+        }
+      }, 60000);
+    }
+
+    function _showTgActiveCard(existingCard) {
+      existingCard.innerHTML = `
+        <div class="tg-verify-header">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Бот успешно подключен!
+        </div>
+        <div class="tg-step"><div class="tg-icon tg-check">✓</div> Токен валиден</div>
+        <div class="tg-step"><div class="tg-icon tg-check">✓</div> Webhook установлен</div>
+        <div class="tg-step"><div class="tg-icon tg-check">✓</div> Сообщение получено</div>
+      `;
+      if (window._tgListenerUnsub) { window._tgListenerUnsub(); window._tgListenerUnsub = null; }
+      setTimeout(() => { handleChatObSend("Я только что отправил(а) /start боту и он заработал. Что дальше?"); }, 1500);
+    }
+
+    // Collection-level TG listener — watches ALL bots so it works for new users too
+    function setupTgListener(uid) {
+      if (window._tgListenerUnsub) { window._tgListenerUnsub(); window._tgListenerUnsub = null; }
+      let _firstSnap = true;
+      window._tgListenerUnsub = db.collection("users").doc(uid).collection("bots")
+        .onSnapshot((snapshot) => {
+          const isFirst = _firstSnap;
+          _firstSnap = false;
+          snapshot.docChanges().forEach((change) => {
+            if (change.type === 'removed') return;
+            const tg = (change.doc.data() || {}).telegram;
+            if (!tg) return;
+            // On first load: skip already-active bots (already working, don't re-show success)
+            if (isFirst && tg.status === 'active') return;
+            if (tg.status === 'waiting_first_update') {
+              _showTgWaitingCard();
+            } else if (tg.status === 'active') {
+              const existingCard = document.getElementById('tg-verify-ui');
+              if (existingCard) _showTgActiveCard(existingCard);
+            }
+          });
+        });
+    }
+
     // Modified to always stay open for all users and fetch history from backend
     // forceReload=true: re-fetches from backend (used after clear_chat) without page reload
     async function initChatOnboarding(uid, botsCount, forceReload) {
@@ -11670,9 +11741,7 @@ ${kbSummary}`,
           chatOsInitDone = true;
 
           chatOsHistory = data.history || [];
-          if (chatOsHistory.length === 0) {
-            addChatOsMsg('bot', 'Привет. Я помогу создать и управлять чат-ботами. Просто скажи, что ты хочешь сделать.');
-          } else {
+          if (chatOsHistory.length > 0) {
             renderChatOsHistory();
           }
 
@@ -11684,109 +11753,25 @@ ${kbSummary}`,
                 const b = botDoc.data() || {};
                 const kbSnap = await db.collection("users").doc(uid).collection("bots").doc(data.activeBotId).collection("knowledge_base").get();
                 updateStatusBar({ activeBotName: b.name || 'Bot', kbCount: kbSnap.size, tgConnected: !!b.token });
-
-                // --- TELEGRAM VERIFICATION REAL-TIME LISTENER ---
-                if (window._tgListenerUnsub) {
-                  window._tgListenerUnsub();
-                  window._tgListenerUnsub = null;
-                }
-
-                window._tgListenerUnsub = db.collection("users").doc(uid).collection("bots").doc(data.activeBotId)
-                  .onSnapshot((botSnap) => {
-                    if (!botSnap.exists) return;
-                    const bData = botSnap.data();
-                    const tg = bData.telegram;
-
-                    const existingCard = document.getElementById('tg-verify-ui');
-                    if (tg && tg.status === "waiting_first_update") {
-                      // Show loading card
-                      if (!existingCard) {
-                        const card = document.createElement('div');
-                        card.id = 'tg-verify-ui';
-                        card.className = 'tg-verify-card msg-bot';
-                        card.innerHTML = `
-                          <div class="tg-verify-header">
-                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.19-.08-.05-.19-.02-.27 0-.12.03-1.98 1.26-5.59 3.7-.53.36-1.01.54-1.44.53-.47-.01-1.38-.27-2.06-.49-.83-.27-1.49-.41-1.43-.87.03-.23.36-.47 1-.72 3.92-1.7 6.53-2.83 7.84-3.37 3.73-1.55 4.51-1.82 5.02-1.83.11 0 .36.03.49.13.11.08.15.19.16.32-.01.07-.02.16-.02.19z"/></svg>
-                            Telegram Подключение
-                          </div>
-                          <div class="tg-step">
-                            <div class="tg-icon tg-check">✓</div> Токен валиден
-                          </div>
-                          <div class="tg-step">
-                            <div class="tg-icon tg-check">✓</div> Webhook установлен
-                          </div>
-                          <div class="tg-step">
-                            <div class="tg-icon tg-spin"></div> Ожидание /start сообщения...
-                          </div>
-                        `;
-                        CHAT_OS.messagesEl.appendChild(card);
-                        scrollToBottomChatOs();
-
-                        // Error handling timeout (60 seconds)
-                        setTimeout(() => {
-                          const currentCard = document.getElementById('tg-verify-ui');
-                          // If card still exists and hasn't changed to active
-                          if (currentCard && currentCard.innerHTML.includes('tg-spin')) {
-                            currentCard.innerHTML = `
-                              <div class="tg-verify-header" style="color: #ef4444;">
-                                <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                                Превышено время ожидания
-                              </div>
-                              <div class="tg-step">
-                                Убедитесь, что вы отправили /start именно этому боту.
-                              </div>
-                            `;
-                            // Ask LLM to recover
-                            setTimeout(() => {
-                              handleChatObSend("Я не смог отправить /start, или бот его не получил. Что делать?");
-                            }, 1000);
-                          }
-                        }, 60000);
-                      }
-                    } else if (tg && tg.status === "active" && existingCard) {
-                      // Transition to active and remove listener
-                      existingCard.innerHTML = `
-                        <div class="tg-verify-header">
-                          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                          Бот успешно подключен!
-                        </div>
-                        <div class="tg-step">
-                          <div class="tg-icon tg-check">✓</div> Токен валиден
-                        </div>
-                        <div class="tg-step">
-                          <div class="tg-icon tg-check">✓</div> Webhook установлен
-                        </div>
-                        <div class="tg-step">
-                          <div class="tg-icon tg-check">✓</div> Сообщение получено
-                        </div>
-                      `;
-
-                      // Cleanup listener since it's verified
-                      if (window._tgListenerUnsub) {
-                        window._tgListenerUnsub();
-                        window._tgListenerUnsub = null;
-                      }
-
-                      // Ask LLM to continue flow behind the scenes 
-                      setTimeout(() => {
-                        handleChatObSend("Я только что отправил(а) /start боту и он заработал. Что дальше?");
-                      }, 1500);
-                    }
-                  });
               } else {
                 updateStatusBar({ activeBotName: '—', kbCount: undefined, tgConnected: false });
-                if (window._tgListenerUnsub) { window._tgListenerUnsub(); window._tgListenerUnsub = null; }
               }
             } catch (_) {
               updateStatusBar({ activeBotName: '—', kbCount: undefined, tgConnected: false });
-              if (window._tgListenerUnsub) { window._tgListenerUnsub(); window._tgListenerUnsub = null; }
             }
           })();
+
+          // Collection-level TG listener — works for new users and existing ones
+          setupTgListener(uid);
 
           // Enable UI after valid backend response
           CHAT_OS.inputEl.disabled = false;
           CHAT_OS.inputEl.placeholder = "Напишите ответ...";
           document.getElementById('chat-ob-attach-btn').disabled = false;
+          // Auto-start: bot initiates conversation when history is empty
+          if (chatOsHistory.length === 0) {
+            handleChatObSend('Привет', { hidden: true });
+          }
         } catch (e) {
           removeTypingIndicator();
           addChatOsMsg('bot', forceReload ? 'Ошибка обновления. Попробуйте ещё раз.' : 'Привет. Ошибка загрузки истории, но я готов к работе.');
@@ -12027,7 +12012,7 @@ ${kbSummary}`,
       }, 50);
     }
 
-    async function handleChatObSend(overrideText) {
+    async function handleChatObSend(overrideText, opts = {}) {
       if (!authReady || !chatOsInitDone || !window.resolvedUid) {
         // Queue retry — preserve text and file so the message isn't lost
         const _savedText = overrideText || CHAT_OS.inputEl.value.trim();
@@ -12057,7 +12042,7 @@ ${kbSummary}`,
       document.getElementById('chat-ob-attach-btn').disabled = true;
       isWaitingForAI = true;
 
-      if (text) addChatOsMsg('user', text);
+      if (text && !opts.hidden) addChatOsMsg('user', text);
 
       let attachmentMeta = null;
       let uploadBubble = null;
