@@ -610,130 +610,395 @@
 
     /* Status bar */
     #onboarding-chat-overlay .chatos-statusbar {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
       padding: 5px 14px;
       background: #fff;
-      border-bottom: 1px solid rgba(15,23,42,.07);
+      border-bottom: 1px solid rgba(15, 23, 42, .07);
       flex-shrink: 0;
     }
-    #onboarding-chat-overlay .cs-left { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+
+    #onboarding-chat-overlay .cs-left {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
     #onboarding-chat-overlay .cs-pill {
-      font-size: 11px; font-weight: 600; color: #475569;
-      background: transparent; border: none;
-      padding: 2px 0; white-space: nowrap;
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+      background: transparent;
+      border: none;
+      padding: 2px 0;
+      white-space: nowrap;
     }
-    #onboarding-chat-overlay .cs-pill + .cs-pill::before {
-      content: '·'; margin-right: 5px; color: #cbd5e1;
+
+    #onboarding-chat-overlay .cs-pill+.cs-pill::before {
+      content: '·';
+      margin-right: 5px;
+      color: #cbd5e1;
     }
-    #onboarding-chat-overlay .cs-right { display: flex; align-items: center; gap: 4px; }
+
+    #onboarding-chat-overlay .cs-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     #onboarding-chat-overlay .cs-iconbtn {
-      width: 28px; height: 28px; border-radius: 8px;
-      border: none; background: transparent;
-      cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: #3390ec;
     }
-    #onboarding-chat-overlay .cs-iconbtn:hover { background: rgba(51,144,236,.08); }
+
+    #onboarding-chat-overlay .cs-iconbtn:hover {
+      background: rgba(51, 144, 236, .08);
+    }
 
     /* KB backdrop */
     #onboarding-chat-overlay .kb-backdrop {
-      position: fixed; inset: 0;
-      background: rgba(2,6,23,.35); z-index: 80;
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, .35);
+      z-index: 80;
     }
-    #onboarding-chat-overlay .kb-backdrop.hidden { display: none !important; }
+
+    #onboarding-chat-overlay .kb-backdrop.hidden {
+      display: none !important;
+    }
 
     /* KB drawer */
     #onboarding-chat-overlay .kb-drawer {
-      position: fixed; top: 0; right: 0;
-      height: 100dvh; width: min(420px, 92vw);
-      z-index: 90; background: #fff;
-      border-left: 1px solid rgba(15,23,42,.08);
-      box-shadow: -20px 0 40px rgba(15,23,42,.12);
-      display: flex; flex-direction: column;
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100dvh;
+      width: min(420px, 92vw);
+      z-index: 90;
+      background: #fff;
+      border-left: 1px solid rgba(15, 23, 42, .08);
+      box-shadow: -20px 0 40px rgba(15, 23, 42, .12);
+      display: flex;
+      flex-direction: column;
     }
-    #onboarding-chat-overlay .kb-drawer.hidden { display: none !important; }
+
+    #onboarding-chat-overlay .kb-drawer.hidden {
+      display: none !important;
+    }
 
     #onboarding-chat-overlay .kb-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px; border-bottom: 1px solid rgba(15,23,42,.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(15, 23, 42, .08);
     }
+
     #onboarding-chat-overlay .kb-title {
-      font-size: 14.5px; font-weight: 750; color: #0f172a;
+      font-size: 14.5px;
+      font-weight: 750;
+      color: #0f172a;
     }
+
     #onboarding-chat-overlay .kb-close {
-      width: 34px; height: 34px; border-radius: 10px;
-      border: 1px solid rgba(15,23,42,.10); background: #fff; cursor: pointer;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid rgba(15, 23, 42, .10);
+      background: #fff;
+      cursor: pointer;
     }
-    #onboarding-chat-overlay .kb-close:hover { background: rgba(15,23,42,.04); }
+
+    #onboarding-chat-overlay .kb-close:hover {
+      background: rgba(15, 23, 42, .04);
+    }
 
     #onboarding-chat-overlay .kb-body {
-      padding: 14px; overflow: auto; flex: 1 1 auto;
+      padding: 14px;
+      overflow: auto;
+      flex: 1 1 auto;
     }
-    #onboarding-chat-overlay .kb-empty {
-      border: 1px dashed rgba(15,23,42,.18); border-radius: 14px;
-      padding: 16px; background: rgba(15,23,42,.02);
-    }
-    #onboarding-chat-overlay .kb-empty-title { font-weight: 750; font-size: 13.5px; color: #0f172a; }
-    #onboarding-chat-overlay .kb-empty-sub {
-      margin-top: 5px; font-size: 12.5px; color: #475569; line-height: 1.4;
-    }
-    #onboarding-chat-overlay .kb-empty-actions { margin-top: 12px; display: flex; gap: 8px; }
 
-    #onboarding-chat-overlay .kb-list { display: flex; flex-direction: column; gap: 10px; }
+    #onboarding-chat-overlay .kb-empty {
+      border: 1px dashed rgba(15, 23, 42, .18);
+      border-radius: 14px;
+      padding: 16px;
+      background: rgba(15, 23, 42, .02);
+    }
+
+    #onboarding-chat-overlay .kb-empty-title {
+      font-weight: 750;
+      font-size: 13.5px;
+      color: #0f172a;
+    }
+
+    #onboarding-chat-overlay .kb-empty-sub {
+      margin-top: 5px;
+      font-size: 12.5px;
+      color: #475569;
+      line-height: 1.4;
+    }
+
+    #onboarding-chat-overlay .kb-empty-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+    }
+
+    #onboarding-chat-overlay .kb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
     #onboarding-chat-overlay .kb-item {
-      border: 1px solid rgba(15,23,42,.08); border-radius: 14px; padding: 12px; background: #fff;
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
     }
+
     #onboarding-chat-overlay .kb-item-title {
-      font-weight: 700; font-size: 13px; color: #0f172a;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      font-weight: 700;
+      font-size: 13px;
+      color: #0f172a;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+
     #onboarding-chat-overlay .kb-item-sub {
-      margin-top: 4px; font-size: 12px; color: #64748b;
-      display: flex; justify-content: space-between; gap: 8px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
     }
-    #onboarding-chat-overlay .kb-item-actions { margin-top: 10px; display: flex; gap: 8px; }
+
+    #onboarding-chat-overlay .kb-item-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
 
     #onboarding-chat-overlay .kb-btn {
-      border-radius: 10px; border: 1px solid rgba(15,23,42,.12);
-      background: #fff; padding: 7px 11px; cursor: pointer;
-      font-weight: 700; font-size: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(15, 23, 42, .12);
+      background: #fff;
+      padding: 7px 11px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 12px;
     }
-    #onboarding-chat-overlay .kb-btn:hover { background: rgba(15,23,42,.04); }
-    #onboarding-chat-overlay .kb-btn-delete { color: #ef4444; border-color: rgba(239,68,68,.25); }
-    #onboarding-chat-overlay .kb-btn-delete:hover { background: rgba(239,68,68,.05); }
+
+    #onboarding-chat-overlay .kb-btn:hover {
+      background: rgba(15, 23, 42, .04);
+    }
+
+    #onboarding-chat-overlay .kb-btn-delete {
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, .25);
+    }
+
+    #onboarding-chat-overlay .kb-btn-delete:hover {
+      background: rgba(239, 68, 68, .05);
+    }
 
     #onboarding-chat-overlay .kb-refresh-btn {
-      border-radius: 10px; border: 1px solid rgba(15,23,42,.12);
-      background: #fff; padding: 8px 12px; cursor: pointer; font-weight: 700; font-size: 12.5px;
+      border-radius: 10px;
+      border: 1px solid rgba(15, 23, 42, .12);
+      background: #fff;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 12.5px;
     }
-    #onboarding-chat-overlay .kb-refresh-btn:hover { background: rgba(15,23,42,.04); }
+
+    #onboarding-chat-overlay .kb-refresh-btn:hover {
+      background: rgba(15, 23, 42, .04);
+    }
+
+    /* ══ CHAT OS UX v2 ══ */
+
+    /* 1. Animated typing indicator */
+    #chat-os-typing { padding: 10px 14px !important; display: flex !important; align-items: center; gap: 4px; }
+    .cos-dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; background: #94a3b8;
+      animation: cosDotBounce 1.2s infinite ease-in-out;
+      flex-shrink: 0;
+    }
+    .cos-dot:nth-child(2) { animation-delay: 0.2s; }
+    .cos-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes cosDotBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.55; }
+      30% { transform: translateY(-7px); opacity: 1; }
+    }
+
+    /* 2. Timestamps */
+    .cos-time {
+      font-size: 11px; color: #8d9ea9; text-align: right;
+      margin-top: 4px; line-height: 1; user-select: none;
+    }
+    .msg-user .cos-time { color: #5fa377; }
+
+    /* 3. Message grouping */
+    .msg-grp.msg-bot  { border-top-left-radius: 2px;  margin-top: 1px; }
+    .msg-grp.msg-user { border-top-right-radius: 2px; margin-top: 1px; }
+
+    /* 5. Markdown */
+    .cos-code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      background: rgba(15,23,42,.08); padding: 1px 5px;
+      border-radius: 4px; font-size: 0.87em;
+    }
+    .cos-pre {
+      background: rgba(15,23,42,.07); border-radius: 8px;
+      padding: 10px 12px; margin: 4px 0;
+      overflow-x: auto; font-family: 'SF Mono', monospace; font-size: 0.84em;
+    }
+    .msg-bot ul, .msg-user ul { margin: 5px 0 2px 14px; padding: 0; }
+    .msg-bot li, .msg-user li { margin-bottom: 3px; }
+
+    /* 6. Scroll-to-bottom button */
+    .cos-scroll-btn {
+      position: sticky; bottom: 10px; right: 0; align-self: flex-end;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: #fff; border: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.22);
+      cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 5; transition: opacity .2s, transform .2s;
+      margin-right: 4px;
+    }
+    .cos-scroll-btn.hidden { opacity: 0; pointer-events: none; transform: scale(0.7); }
+
+    /* 7. Empty state */
+    .cos-empty {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px; text-align: center; padding: 40px 20px;
+      pointer-events: none; user-select: none;
+    }
+    .cos-empty.hidden { display: none; }
+    .cos-empty-icon { font-size: 44px; opacity: 0.35; }
+    .cos-empty-title { font-weight: 700; font-size: 15px; color: #0f172a; opacity: 0.5; }
+    .cos-empty-sub { font-size: 12.5px; color: #64748b; opacity: 0.65; line-height: 1.45; max-width: 200px; }
+
+    /* 8. Copy button */
+    .cos-copy-btn {
+      position: absolute; top: 5px; right: 5px;
+      opacity: 0; transition: opacity .15s;
+      background: rgba(15,23,42,.07); border: none; border-radius: 6px;
+      padding: 2px 6px; cursor: pointer; font-size: 12px; color: #475569;
+      line-height: 1.4;
+    }
+    .msg-bot:hover .cos-copy-btn { opacity: 1; }
+
+    /* 9. Reactions */
+    .cos-reactions {
+      display: flex; gap: 4px; margin-top: 3px;
+      align-self: flex-start; margin-bottom: 6px;
+    }
+    .cos-react {
+      background: #fff; border: 1px solid rgba(0,0,0,.1);
+      border-radius: 14px; padding: 2px 9px; cursor: pointer;
+      font-size: 14px; transition: all .15s; line-height: 1.6;
+    }
+    .cos-react:hover { border-color: rgba(0,0,0,.22); transform: scale(1.08); }
+    .cos-react.active { background: #effdde; border-color: #4caf50; }
+
+    /* 4. Textarea auto-grow */
+    textarea.chat-ob-input {
+      resize: none; overflow: hidden; max-height: 120px;
+      line-height: 1.4; padding-top: 8px; padding-bottom: 8px;
+      display: block;
+    }
 
     /* In-chat confirm modal */
     #onboarding-chat-overlay .chat-confirm {
-      position: fixed; inset: 0; z-index: 120;
-      background: rgba(2,6,23,.35);
-      display: flex; align-items: center; justify-content: center; padding: 18px;
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      background: rgba(2, 6, 23, .35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
     }
-    #onboarding-chat-overlay .chat-confirm.hidden { display: none !important; }
-    #onboarding-chat-overlay .cc-card {
-      width: min(380px, 92vw); background: #fff;
-      border-radius: 18px; border: 1px solid rgba(15,23,42,.08);
-      box-shadow: 0 20px 50px rgba(15,23,42,.18); padding: 18px;
-    }
-    #onboarding-chat-overlay .cc-title { font-weight: 800; font-size: 14.5px; color: #0f172a; }
-    #onboarding-chat-overlay .cc-text { margin-top: 7px; font-size: 13px; color: #475569; line-height: 1.4; }
-    #onboarding-chat-overlay .cc-actions {
-      margin-top: 14px; display: flex; justify-content: flex-end; gap: 8px;
-    }
-    #onboarding-chat-overlay .cc-btn {
-      border-radius: 10px; border: 1px solid rgba(15,23,42,.12);
-      background: #fff; padding: 9px 14px; cursor: pointer; font-weight: 800; font-size: 13px;
-    }
-    #onboarding-chat-overlay .cc-btn--ghost:hover { background: rgba(15,23,42,.04); }
-    #onboarding-chat-overlay .cc-btn--danger { border-color: rgba(239,68,68,.3); color: #ef4444; }
-    #onboarding-chat-overlay .cc-btn--danger:hover { background: rgba(239,68,68,.06); }
 
-    .hidden { display: none !important; }
+    #onboarding-chat-overlay .chat-confirm.hidden {
+      display: none !important;
+    }
+
+    #onboarding-chat-overlay .cc-card {
+      width: min(380px, 92vw);
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid rgba(15, 23, 42, .08);
+      box-shadow: 0 20px 50px rgba(15, 23, 42, .18);
+      padding: 18px;
+    }
+
+    #onboarding-chat-overlay .cc-title {
+      font-weight: 800;
+      font-size: 14.5px;
+      color: #0f172a;
+    }
+
+    #onboarding-chat-overlay .cc-text {
+      margin-top: 7px;
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.4;
+    }
+
+    #onboarding-chat-overlay .cc-actions {
+      margin-top: 14px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    #onboarding-chat-overlay .cc-btn {
+      border-radius: 10px;
+      border: 1px solid rgba(15, 23, 42, .12);
+      background: #fff;
+      padding: 9px 14px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    #onboarding-chat-overlay .cc-btn--ghost:hover {
+      background: rgba(15, 23, 42, .04);
+    }
+
+    #onboarding-chat-overlay .cc-btn--danger {
+      border-color: rgba(239, 68, 68, .3);
+      color: #ef4444;
+    }
+
+    #onboarding-chat-overlay .cc-btn--danger:hover {
+      background: rgba(239, 68, 68, .06);
+    }
+
+    .hidden {
+      display: none !important;
+    }
 
 
     .guide-tip-close:hover {
@@ -5086,7 +5351,8 @@
     <div class="chat-ob-wrapper">
       <div class="chat-ob-header">
         <div style="display:flex;align-items:center;gap:10px;">
-          <div style="width:40px;height:40px;background:linear-gradient(135deg,#3390ec,#2778d0);border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;letter-spacing:-0.5px;">
+          <div
+            style="width:40px;height:40px;background:linear-gradient(135deg,#3390ec,#2778d0);border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;letter-spacing:-0.5px;">
             AI</div>
           <div>
             <div style="font-weight:700;font-size:0.97rem;color:#000;line-height:1.2;">Ассистент настройки</div>
@@ -5095,8 +5361,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:2px;">
           <button id="btn-open-kb" class="chat-header-btn" title="База знаний" aria-label="База знаний"
-            style="color:#3390ec;"
-            onclick="openKBDrawer()">
+            style="color:#3390ec;" onclick="openKBDrawer()">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
             </svg>
@@ -5107,101 +5372,109 @@
                 stroke-linejoin="round" />
             </svg>
           </button>
-          <button class="chat-header-btn" style="font-size:0.78rem;width:auto;padding:0 10px;color:#707579;border-radius:20px;"
+          <button class="chat-header-btn"
+            style="font-size:0.78rem;width:auto;padding:0 10px;color:#707579;border-radius:20px;"
             onclick="auth.signOut()">Выйти</button>
         </div>
       </div>
 
-    <!-- ══ STATUS BAR ══ -->
-    <div id="chatos-statusbar" class="chatos-statusbar">
-      <div class="cs-left">
-        <span class="cs-pill" id="cs-activebot">● Bot: —</span>
-        <span class="cs-pill" id="cs-kb">📚 KB: —</span>
-        <span class="cs-pill" id="cs-tg">✈ TG: —</span>
+      <!-- ══ STATUS BAR ══ -->
+      <div id="chatos-statusbar" class="chatos-statusbar">
+        <div class="cs-left">
+          <span class="cs-pill" id="cs-activebot">● Bot: —</span>
+          <span class="cs-pill" id="cs-kb">📚 KB: —</span>
+          <span class="cs-pill" id="cs-tg">✈ TG: —</span>
+        </div>
       </div>
-    </div>
 
-    <!-- ══ KB DRAWER & BACKDROP ══ -->
-    <div id="kb-backdrop" class="kb-backdrop hidden"></div>
-    <aside id="kb-drawer" class="kb-drawer hidden" aria-hidden="true">
-      <div class="kb-header">
-        <div class="kb-title">База знаний</div>
-        <button id="kb-close" class="kb-close" type="button" aria-label="Закрыть">✕</button>
-      </div>
-      <div class="kb-body">
-        <div id="kb-empty" class="kb-empty">
-          <div class="kb-empty-title">Здесь появятся источники знаний</div>
-          <div class="kb-empty-sub">Загрузите файл или добавьте текст — и бот начнёт отвечать точнее.</div>
-          <div class="kb-empty-actions">
-            <button id="kb-refresh" class="kb-refresh-btn" type="button">Обновить</button>
+      <!-- ══ KB DRAWER & BACKDROP ══ -->
+      <div id="kb-backdrop" class="kb-backdrop hidden"></div>
+      <aside id="kb-drawer" class="kb-drawer hidden" aria-hidden="true">
+        <div class="kb-header">
+          <div class="kb-title">База знаний</div>
+          <button id="kb-close" class="kb-close" type="button" aria-label="Закрыть">✕</button>
+        </div>
+        <div class="kb-body">
+          <div id="kb-empty" class="kb-empty">
+            <div class="kb-empty-title">Здесь появятся источники знаний</div>
+            <div class="kb-empty-sub">Загрузите файл или добавьте текст — и бот начнёт отвечать точнее.</div>
+            <div class="kb-empty-actions">
+              <button id="kb-refresh" class="kb-refresh-btn" type="button">Обновить</button>
+            </div>
           </div>
+          <div id="kb-list" class="kb-list hidden"></div>
         </div>
-        <div id="kb-list" class="kb-list hidden"></div>
-      </div>
-    </aside>
+      </aside>
 
-    <div class="chat-ob-messages" id="chat-ob-messages">
-      <!-- Messages injected via JS -->
-    </div>
-
-    <div class="chat-ob-chips" id="chat-ob-chips">
-      <!-- Fast options injected via JS -->
-    </div>
-
-    <div class="chat-ob-input-area">
-      <div id="chat-ob-attachment-pill"
-        style="display:none; padding:8px 12px; background:#f0f2f5; border-radius:12px; margin-bottom:8px; align-items:center; justify-content:space-between; font-size:0.85rem;">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-            <polyline points="13 2 13 9 20 9"></polyline>
-          </svg>
-          <span id="chat-ob-attachment-name"
-            style="font-weight:600; color:#000; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
-          <span id="chat-ob-attachment-size" style="color:#707579;"></span>
+      <div class="chat-ob-messages" id="chat-ob-messages">
+        <!-- 7. Empty state -->
+        <div id="cos-empty" class="cos-empty">
+          <div class="cos-empty-icon">💬</div>
+          <div class="cos-empty-title">Начните диалог</div>
+          <div class="cos-empty-sub">Ассистент поможет создать и настроить вашего бота</div>
         </div>
-        <button onclick="clearChatAttachment()"
-          style="background:none; border:none; color:#ff3b30; cursor:pointer; padding:4px; display:flex;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <!-- 6. Scroll-to-bottom -->
+        <button id="cos-scroll-btn" class="cos-scroll-btn hidden" type="button" aria-label="Прокрутить вниз">↓</button>
       </div>
-      <div class="chat-ob-input-row" style="display:flex;align-items:center;">
-        <button id="chat-ob-attach-btn"
-          style="background:none;border:none;color:#8e8e93;cursor:pointer;padding:8px 4px 8px 8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path
-              d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48">
-            </path>
-          </svg>
-        </button>
-        <input type="file" id="chat-ob-file-input" style="display:none" accept=".txt,.pdf,.csv,.docx,.md,.jpg,.png">
-        <input type="text" id="chat-ob-input" class="chat-ob-input" placeholder="Подключаем аккаунт..."
-          autocomplete="off" disabled>
-        <button id="chat-ob-send" class="chat-ob-send" disabled>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-          </svg>
-        </button>
-      </div>
-    </div>
 
-    <!-- In-chat confirm modal -->
-    <div id="chat-confirm" class="chat-confirm hidden" role="dialog" aria-modal="true">
-      <div class="cc-card">
-        <div class="cc-title" id="cc-title">Подтвердить действие</div>
-        <div class="cc-text" id="cc-text">Вы уверены?</div>
-        <div class="cc-actions">
-          <button id="cc-cancel" class="cc-btn cc-btn--ghost" type="button">Отмена</button>
-          <button id="cc-ok" class="cc-btn cc-btn--danger" type="button">ОК</button>
+      <div class="chat-ob-chips" id="chat-ob-chips">
+        <!-- Fast options injected via JS -->
+      </div>
+
+      <div class="chat-ob-input-area">
+        <div id="chat-ob-attachment-pill"
+          style="display:none; padding:8px 12px; background:#f0f2f5; border-radius:12px; margin-bottom:8px; align-items:center; justify-content:space-between; font-size:0.85rem;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+              <polyline points="13 2 13 9 20 9"></polyline>
+            </svg>
+            <span id="chat-ob-attachment-name"
+              style="font-weight:600; color:#000; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+            <span id="chat-ob-attachment-size" style="color:#707579;"></span>
+          </div>
+          <button onclick="clearChatAttachment()"
+            style="background:none; border:none; color:#ff3b30; cursor:pointer; padding:4px; display:flex;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="chat-ob-input-row" style="display:flex;align-items:center;">
+          <button id="chat-ob-attach-btn"
+            style="background:none;border:none;color:#8e8e93;cursor:pointer;padding:8px 4px 8px 8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48">
+              </path>
+            </svg>
+          </button>
+          <input type="file" id="chat-ob-file-input" style="display:none" accept=".txt,.pdf,.csv,.docx,.md,.jpg,.png">
+          <textarea id="chat-ob-input" class="chat-ob-input" placeholder="Подключаем аккаунт..."
+            autocomplete="off" disabled rows="1"></textarea>
+          <button id="chat-ob-send" class="chat-ob-send" disabled>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- In-chat confirm modal -->
+      <div id="chat-confirm" class="chat-confirm hidden" role="dialog" aria-modal="true">
+        <div class="cc-card">
+          <div class="cc-title" id="cc-title">Подтвердить действие</div>
+          <div class="cc-text" id="cc-text">Вы уверены?</div>
+          <div class="cc-actions">
+            <button id="cc-cancel" class="cc-btn cc-btn--ghost" type="button">Отмена</button>
+            <button id="cc-ok" class="cc-btn cc-btn--danger" type="button">ОК</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
   <div class="sidebar">
     <div class="sidebar-logo">
@@ -8828,16 +9101,16 @@
     // ── Status bar ──
     function updateStatusBar({ activeBotName, kbCount, tgConnected } = {}) {
       const elBot = document.getElementById('cs-activebot');
-      const elKb  = document.getElementById('cs-kb');
-      const elTg  = document.getElementById('cs-tg');
+      const elKb = document.getElementById('cs-kb');
+      const elTg = document.getElementById('cs-tg');
       if (elBot) elBot.textContent = `● Bot: ${activeBotName || '—'}`;
-      if (elKb)  elKb.textContent  = `📚 KB: ${typeof kbCount === 'number' ? kbCount : '—'}`;
-      if (elTg)  elTg.textContent  = `✈ TG: ${tgConnected ? 'подключён' : '—'}`;
+      if (elKb) elKb.textContent = `📚 KB: ${typeof kbCount === 'number' ? kbCount : '—'}`;
+      if (elTg) elTg.textContent = `✈ TG: ${tgConnected ? 'подключён' : '—'}`;
     }
 
     // ── Drawer open / close ──
     function openKBDrawer() {
-      const drawer   = document.getElementById('kb-drawer');
+      const drawer = document.getElementById('kb-drawer');
       const backdrop = document.getElementById('kb-backdrop');
       if (!drawer || !backdrop) return;
       drawer.classList.remove('hidden');
@@ -8846,7 +9119,7 @@
       loadKBListSafe();
     }
     function closeKBDrawer() {
-      const drawer   = document.getElementById('kb-drawer');
+      const drawer = document.getElementById('kb-drawer');
       const backdrop = document.getElementById('kb-backdrop');
       if (!drawer || !backdrop) return;
       drawer.classList.add('hidden');
@@ -8857,7 +9130,7 @@
     // ── Render helpers ──
     function renderKBList(items, botId) {
       const emptyEl = document.getElementById('kb-empty');
-      const listEl  = document.getElementById('kb-list');
+      const listEl = document.getElementById('kb-list');
       if (!emptyEl || !listEl) return;
 
       if (!items || items.length === 0) {
@@ -8974,14 +9247,14 @@
     // ── In-chat confirm (replaces window.confirm) ──
     let __confirmResolve = null;
     function showInlineConfirm({ title, text, okText, cancelText } = {}) {
-      const modal  = document.getElementById('chat-confirm');
+      const modal = document.getElementById('chat-confirm');
       if (!modal) return Promise.resolve(false);
       const t = document.getElementById('cc-title');
       const d = document.getElementById('cc-text');
       const ok = document.getElementById('cc-ok');
       const cancel = document.getElementById('cc-cancel');
       if (t) t.textContent = title || 'Подтвердить действие';
-      if (d) d.textContent = text  || 'Вы уверены?';
+      if (d) d.textContent = text || 'Вы уверены?';
       if (ok) ok.textContent = okText || 'ОК';
       if (cancel) cancel.textContent = cancelText || 'Отмена';
       modal.classList.remove('hidden');
@@ -8996,21 +9269,21 @@
     (function bindConfirmButtons() {
       const ok = document.getElementById('cc-ok');
       const cancel = document.getElementById('cc-cancel');
-      if (ok)     ok.addEventListener('click', () => hideInlineConfirm(true));
+      if (ok) ok.addEventListener('click', () => hideInlineConfirm(true));
       if (cancel) cancel.addEventListener('click', () => hideInlineConfirm(false));
     })();
     // Bindings for KB drawer buttons
     (function bindKBButtons() {
-      const btnKb    = document.getElementById('btn-kb');
-      const btnOpen  = document.getElementById('btn-open-kb');
-      const kbClose  = document.getElementById('kb-close');
+      const btnKb = document.getElementById('btn-kb');
+      const btnOpen = document.getElementById('btn-open-kb');
+      const kbClose = document.getElementById('kb-close');
       const backdrop = document.getElementById('kb-backdrop');
-      const refresh  = document.getElementById('kb-refresh');
-      if (btnKb)    btnKb.addEventListener('click',    openKBDrawer);
-      if (btnOpen)  btnOpen.addEventListener('click',  openKBDrawer);
-      if (kbClose)  kbClose.addEventListener('click',  closeKBDrawer);
+      const refresh = document.getElementById('kb-refresh');
+      if (btnKb) btnKb.addEventListener('click', openKBDrawer);
+      if (btnOpen) btnOpen.addEventListener('click', openKBDrawer);
+      if (kbClose) kbClose.addEventListener('click', closeKBDrawer);
       if (backdrop) backdrop.addEventListener('click', closeKBDrawer);
-      if (refresh)  refresh.addEventListener('click',  loadKBListSafe);
+      if (refresh) refresh.addEventListener('click', loadKBListSafe);
     })();
 
     /* ══ CHATS ══ */
@@ -11404,17 +11677,110 @@ ${kbSummary}`,
           }
 
           // Update status bar asynchronously (non-blocking)
-          ;(async () => {
+          ; (async () => {
             try {
               if (data.activeBotId) {
                 const botDoc = await db.collection("users").doc(uid).collection("bots").doc(data.activeBotId).get();
                 const b = botDoc.data() || {};
                 const kbSnap = await db.collection("users").doc(uid).collection("bots").doc(data.activeBotId).collection("knowledge_base").get();
                 updateStatusBar({ activeBotName: b.name || 'Bot', kbCount: kbSnap.size, tgConnected: !!b.token });
+
+                // --- TELEGRAM VERIFICATION REAL-TIME LISTENER ---
+                if (window._tgListenerUnsub) {
+                  window._tgListenerUnsub();
+                  window._tgListenerUnsub = null;
+                }
+
+                window._tgListenerUnsub = db.collection("users").doc(uid).collection("bots").doc(data.activeBotId)
+                  .onSnapshot((botSnap) => {
+                    if (!botSnap.exists) return;
+                    const bData = botSnap.data();
+                    const tg = bData.telegram;
+
+                    const existingCard = document.getElementById('tg-verify-ui');
+                    if (tg && tg.status === "waiting_first_update") {
+                      // Show loading card
+                      if (!existingCard) {
+                        const card = document.createElement('div');
+                        card.id = 'tg-verify-ui';
+                        card.className = 'tg-verify-card msg-bot';
+                        card.innerHTML = `
+                          <div class="tg-verify-header">
+                            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.19-.08-.05-.19-.02-.27 0-.12.03-1.98 1.26-5.59 3.7-.53.36-1.01.54-1.44.53-.47-.01-1.38-.27-2.06-.49-.83-.27-1.49-.41-1.43-.87.03-.23.36-.47 1-.72 3.92-1.7 6.53-2.83 7.84-3.37 3.73-1.55 4.51-1.82 5.02-1.83.11 0 .36.03.49.13.11.08.15.19.16.32-.01.07-.02.16-.02.19z"/></svg>
+                            Telegram Подключение
+                          </div>
+                          <div class="tg-step">
+                            <div class="tg-icon tg-check">✓</div> Токен валиден
+                          </div>
+                          <div class="tg-step">
+                            <div class="tg-icon tg-check">✓</div> Webhook установлен
+                          </div>
+                          <div class="tg-step">
+                            <div class="tg-icon tg-spin"></div> Ожидание /start сообщения...
+                          </div>
+                        `;
+                        CHAT_OS.messagesEl.appendChild(card);
+                        scrollToBottomChatOs();
+
+                        // Error handling timeout (60 seconds)
+                        setTimeout(() => {
+                          const currentCard = document.getElementById('tg-verify-ui');
+                          // If card still exists and hasn't changed to active
+                          if (currentCard && currentCard.innerHTML.includes('tg-spin')) {
+                            currentCard.innerHTML = `
+                              <div class="tg-verify-header" style="color: #ef4444;">
+                                <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                                Превышено время ожидания
+                              </div>
+                              <div class="tg-step">
+                                Убедитесь, что вы отправили /start именно этому боту.
+                              </div>
+                            `;
+                            // Ask LLM to recover
+                            setTimeout(() => {
+                              handleChatObSend("Я не смог отправить /start, или бот его не получил. Что делать?");
+                            }, 1000);
+                          }
+                        }, 60000);
+                      }
+                    } else if (tg && tg.status === "active" && existingCard) {
+                      // Transition to active and remove listener
+                      existingCard.innerHTML = `
+                        <div class="tg-verify-header">
+                          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                          Бот успешно подключен!
+                        </div>
+                        <div class="tg-step">
+                          <div class="tg-icon tg-check">✓</div> Токен валиден
+                        </div>
+                        <div class="tg-step">
+                          <div class="tg-icon tg-check">✓</div> Webhook установлен
+                        </div>
+                        <div class="tg-step">
+                          <div class="tg-icon tg-check">✓</div> Сообщение получено
+                        </div>
+                      `;
+
+                      // Cleanup listener since it's verified
+                      if (window._tgListenerUnsub) {
+                        window._tgListenerUnsub();
+                        window._tgListenerUnsub = null;
+                      }
+
+                      // Ask LLM to continue flow behind the scenes 
+                      setTimeout(() => {
+                        handleChatObSend("Я только что отправил(а) /start боту и он заработал. Что дальше?");
+                      }, 1500);
+                    }
+                  });
               } else {
                 updateStatusBar({ activeBotName: '—', kbCount: undefined, tgConnected: false });
+                if (window._tgListenerUnsub) { window._tgListenerUnsub(); window._tgListenerUnsub = null; }
               }
-            } catch (_) { updateStatusBar({ activeBotName: '—', kbCount: undefined, tgConnected: false }); }
+            } catch (_) {
+              updateStatusBar({ activeBotName: '—', kbCount: undefined, tgConnected: false });
+              if (window._tgListenerUnsub) { window._tgListenerUnsub(); window._tgListenerUnsub = null; }
+            }
           })();
 
           // Enable UI after valid backend response
@@ -11480,6 +11846,7 @@ ${kbSummary}`,
 
         // Reload session from backend — no page refresh needed
         chatOsInitDone = false; // allow re-init
+        _lastChatRole = null;
         await initChatOnboarding(window.resolvedUid, null, /*forceReload=*/true);
 
       } catch (e) {
@@ -11491,30 +11858,156 @@ ${kbSummary}`,
       }
     }
 
+    // ── Chat OS UX v2 state ──
+    let _lastChatRole = null;
+
+    // 5. Markdown renderer
+    function renderCosMarkdown(text) {
+      let s = esc(text);
+      // Multiline code blocks
+      s = s.replace(/```([\s\S]*?)```/g, (_, c) => `<pre class="cos-pre"><code>${c.trim()}</code></pre>`);
+      // Inline code
+      s = s.replace(/`([^`\n]+)`/g, '<code class="cos-code">$1</code>');
+      // Bold
+      s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+      // Italic
+      s = s.replace(/\*([^*\n]+)\*/g, '<i>$1</i>');
+      // Unordered list items
+      s = s.replace(/(?:^|\n)[•\-] (.+)/g, (_, item) => `\n<li>${item}</li>`);
+      s = s.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
+      // Line breaks
+      s = s.replace(/\n/g, '<br>');
+      return s;
+    }
+
+    // 9. Reaction toggle
+    function cosReactClick(e) {
+      const btn = e.currentTarget;
+      const container = btn.closest('.cos-reactions');
+      const wasActive = btn.classList.contains('active');
+      container.querySelectorAll('.cos-react').forEach(b => b.classList.remove('active'));
+      if (!wasActive) btn.classList.add('active');
+    }
+
+    function _buildMsgEl(role, content, isGroup) {
+      const div = document.createElement('div');
+      div.className = (role === 'bot' ? 'msg-bot' : 'msg-user') + (isGroup ? ' msg-grp' : '');
+      const html = role === 'bot'
+        ? renderCosMarkdown(content)
+        : esc(content).replace(/\n/g, '<br>');
+      const time = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+      div.dataset.text = content;
+      div.innerHTML = `<div class="cos-content">${html}</div><div class="cos-time">${time}</div>`;
+      if (role === 'bot') {
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'cos-copy-btn'; copyBtn.title = 'Копировать'; copyBtn.textContent = '⎘';
+        copyBtn.addEventListener('click', () => {
+          navigator.clipboard.writeText(content).then(() => {
+            copyBtn.textContent = '✓';
+            setTimeout(() => { copyBtn.textContent = '⎘'; }, 1500);
+          }).catch(() => {});
+        });
+        div.appendChild(copyBtn);
+      }
+      return div;
+    }
+
     function renderChatOsHistory() {
-      CHAT_OS.messagesEl.innerHTML = '';
-      const frag = document.createDocumentFragment(); // R4: batch append — single reflow
-      chatOsHistory.forEach(msg => {
-        const div = document.createElement('div');
-        div.className = msg.role === 'bot' ? 'msg-bot' : 'msg-user';
-        div.innerHTML = esc(msg.content || '').replace(/\\n/g, '<br>');
-        frag.appendChild(div);
+      // Remove previous dynamic messages but keep #cos-empty and #cos-scroll-btn
+      Array.from(CHAT_OS.messagesEl.children).forEach(ch => {
+        if (ch.id !== 'cos-empty' && ch.id !== 'cos-scroll-btn') ch.remove();
       });
-      CHAT_OS.messagesEl.appendChild(frag);
+      _lastChatRole = null;
+      const emptyEl  = document.getElementById('cos-empty');
+      const scrollBtn = document.getElementById('cos-scroll-btn');
+      if (emptyEl) emptyEl.classList.toggle('hidden', chatOsHistory.length > 0);
+
+      const frag = document.createDocumentFragment();
+      chatOsHistory.forEach(msg => {
+        const isGroup = msg.role === _lastChatRole;
+        const div = document.createElement('div');
+        div.className = (msg.role === 'bot' ? 'msg-bot' : 'msg-user') + (isGroup ? ' msg-grp' : '');
+        const html = msg.role === 'bot'
+          ? renderCosMarkdown(msg.content || '')
+          : esc(msg.content || '').replace(/\n/g, '<br>');
+        div.dataset.text = msg.content || '';
+        div.innerHTML = `<div class="cos-content">${html}</div>`;
+        if (msg.role === 'bot') {
+          const txt = msg.content || '';
+          const copyBtn = document.createElement('button');
+          copyBtn.className = 'cos-copy-btn'; copyBtn.title = 'Копировать'; copyBtn.textContent = '⎘';
+          copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(txt).then(() => {
+              copyBtn.textContent = '✓'; setTimeout(() => { copyBtn.textContent = '⎘'; }, 1500);
+            }).catch(() => {});
+          });
+          div.appendChild(copyBtn);
+          frag.appendChild(div);
+          const reactEl = document.createElement('div');
+          reactEl.className = 'cos-reactions';
+          reactEl.innerHTML = '<button class="cos-react" data-v="1">👍</button><button class="cos-react" data-v="-1">👎</button>';
+          reactEl.querySelectorAll('.cos-react').forEach(b => b.addEventListener('click', cosReactClick));
+          frag.appendChild(reactEl);
+        } else {
+          frag.appendChild(div);
+        }
+        _lastChatRole = msg.role;
+      });
+      if (scrollBtn) CHAT_OS.messagesEl.insertBefore(frag, scrollBtn);
+      else CHAT_OS.messagesEl.appendChild(frag);
       scrollToBottomChatOs();
     }
 
     function addChatOsMsg(role, content) {
-      chatOsHistory.push({ role, content });
+      const isTyping = role === 'bot' && content === '...';
+      if (!isTyping) chatOsHistory.push({ role, content });
+
+      const scrollBtn = document.getElementById('cos-scroll-btn');
+      const emptyEl  = document.getElementById('cos-empty');
+      if (emptyEl && !emptyEl.classList.contains('hidden')) emptyEl.classList.add('hidden');
+
+      const isGroup = !isTyping && role === _lastChatRole;
+      if (!isTyping) _lastChatRole = role;
+
       const div = document.createElement('div');
-      div.className = role === 'bot' ? 'msg-bot' : 'msg-user';
-      div.innerHTML = esc(content).replace(/\\n/g, '<br>');
-      if (role === 'bot' && content === '...') {
+      div.className = (role === 'bot' ? 'msg-bot' : 'msg-user') + (isGroup ? ' msg-grp' : '');
+
+      if (isTyping) {
+        // 1. Animated typing indicator
         div.id = 'chat-os-typing';
-        // Do not save typing indicator to history array to prevent duplicate renders
-        chatOsHistory.pop();
+        div.innerHTML = '<span class="cos-dot"></span><span class="cos-dot"></span><span class="cos-dot"></span>';
+      } else {
+        const html = role === 'bot'
+          ? renderCosMarkdown(content)
+          : esc(content).replace(/\n/g, '<br>');
+        const time = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+        div.dataset.text = content;
+        div.innerHTML = `<div class="cos-content">${html}</div><div class="cos-time">${time}</div>`;
+        if (role === 'bot') {
+          const copyBtn = document.createElement('button');
+          copyBtn.className = 'cos-copy-btn'; copyBtn.title = 'Копировать'; copyBtn.textContent = '⎘';
+          copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(content).then(() => {
+              copyBtn.textContent = '✓'; setTimeout(() => { copyBtn.textContent = '⎘'; }, 1500);
+            }).catch(() => {});
+          });
+          div.appendChild(copyBtn);
+        }
       }
-      CHAT_OS.messagesEl.appendChild(div);
+
+      if (scrollBtn) CHAT_OS.messagesEl.insertBefore(div, scrollBtn);
+      else CHAT_OS.messagesEl.appendChild(div);
+
+      // 9. Reactions (bot only, not typing)
+      if (!isTyping && role === 'bot') {
+        const reactEl = document.createElement('div');
+        reactEl.className = 'cos-reactions';
+        reactEl.innerHTML = '<button class="cos-react" data-v="1">👍</button><button class="cos-react" data-v="-1">👎</button>';
+        reactEl.querySelectorAll('.cos-react').forEach(b => b.addEventListener('click', cosReactClick));
+        if (scrollBtn) CHAT_OS.messagesEl.insertBefore(reactEl, scrollBtn);
+        else CHAT_OS.messagesEl.appendChild(reactEl);
+      }
+
       scrollToBottomChatOs();
     }
 
@@ -11524,8 +12017,14 @@ ${kbSummary}`,
       chatOsHistory = chatOsHistory.filter(m => m.content !== '...');
     }
 
+    // 10. Smooth scroll + hide scroll button
     function scrollToBottomChatOs() {
-      setTimeout(() => { CHAT_OS.messagesEl.scrollTop = CHAT_OS.messagesEl.scrollHeight; }, 50);
+      const el = CHAT_OS.messagesEl;
+      setTimeout(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        const btn = document.getElementById('cos-scroll-btn');
+        if (btn) btn.classList.add('hidden');
+      }, 50);
     }
 
     async function handleChatObSend(overrideText) {
@@ -11552,6 +12051,7 @@ ${kbSummary}`,
       if (!text && !pendingChatAttachment) return;
 
       CHAT_OS.inputEl.value = '';
+      CHAT_OS.inputEl.style.height = 'auto';
       CHAT_OS.inputEl.disabled = true;
       CHAT_OS.sendBtn.disabled = true;
       document.getElementById('chat-ob-attach-btn').disabled = true;
@@ -11701,13 +12201,26 @@ ${kbSummary}`,
     }
 
     CHAT_OS.sendBtn.addEventListener('click', () => handleChatObSend());
-    CHAT_OS.inputEl.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') handleChatObSend();
+    // 4. Shift+Enter = newline, Enter = send
+    CHAT_OS.inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatObSend(); }
     });
-    CHAT_OS.inputEl.addEventListener('input', () => {
-      CHAT_OS.sendBtn.disabled = !CHAT_OS.inputEl.value.trim() && !pendingChatAttachment;
+    CHAT_OS.inputEl.addEventListener('input', function() {
+      CHAT_OS.sendBtn.disabled = !this.value.trim() && !pendingChatAttachment;
+      // 4. Auto-grow textarea
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
     });
     document.getElementById('clear-chat-btn')?.addEventListener('click', clearChatSmart);
+    // 6. Scroll-to-bottom button visibility
+    CHAT_OS.messagesEl.addEventListener('scroll', () => {
+      const el = CHAT_OS.messagesEl;
+      const btn = document.getElementById('cos-scroll-btn');
+      if (!btn) return;
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      btn.classList.toggle('hidden', atBottom);
+    });
+    document.getElementById('cos-scroll-btn')?.addEventListener('click', scrollToBottomChatOs);
 
     // We no longer need finishChatOnboarding because it's a persistent OS
   </script>
