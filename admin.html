@@ -12045,7 +12045,17 @@ ${kbSummary}`,
           removeTypingIndicator();
           chatOsInitDone = true;
 
-          chatOsHistory = data.history || [];
+          // Normalize roles: backend uses "assistant", frontend uses "bot"
+          // Skip system/tool messages (not displayed in chat)
+          chatOsHistory = (data.history || [])
+            .filter(m => m.role !== 'system' && m.role !== 'tool')
+            .map(m => {
+              if (!m.role) {
+                console.warn('[ChatOS] missing role in history message', m);
+                return { ...m, role: 'bot' }; // safe fallback
+              }
+              return { ...m, role: m.role === 'assistant' ? 'bot' : m.role };
+            });
           if (chatOsHistory.length > 0) {
             renderChatOsHistory();
           }
@@ -12222,15 +12232,18 @@ ${kbSummary}`,
 
       const frag = document.createDocumentFragment();
       chatOsHistory.forEach(msg => {
-        const isGroup = msg.role === _lastChatRole;
+        // Normalize role: treat 'assistant' same as 'bot'; skip system/tool
+        const role = msg.role === 'assistant' ? 'bot' : (msg.role || 'bot');
+        if (role === 'system' || role === 'tool') return; // skip non-chat messages
+        const isGroup = role === _lastChatRole;
         const div = document.createElement('div');
-        div.className = (msg.role === 'bot' ? 'msg-bot' : 'msg-user') + (isGroup ? ' msg-grp' : '');
-        const html = msg.role === 'bot'
+        div.className = (role === 'bot' ? 'msg-bot' : 'msg-user') + (isGroup ? ' msg-grp' : '');
+        const html = role === 'bot'
           ? renderCosMarkdown(msg.content || '')
           : esc(msg.content || '').replace(/\n/g, '<br>');
         div.dataset.text = msg.content || '';
         div.innerHTML = `<div class="cos-content">${html}</div>`;
-        if (msg.role === 'bot') {
+        if (role === 'bot') {
           const txt = msg.content || '';
           const copyBtn = document.createElement('button');
           copyBtn.className = 'cos-copy-btn'; copyBtn.title = 'Копировать'; copyBtn.textContent = '⎘';
@@ -12249,7 +12262,7 @@ ${kbSummary}`,
         } else {
           frag.appendChild(div);
         }
-        _lastChatRole = msg.role;
+        _lastChatRole = role; // use normalized role for grouping
       });
       if (scrollBtn) CHAT_OS.messagesEl.insertBefore(frag, scrollBtn);
       else CHAT_OS.messagesEl.appendChild(frag);
