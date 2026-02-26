@@ -11854,12 +11854,14 @@ ${kbSummary}`,
       _flowState.stepId = nextStepId;
       _flowState.data = { ..._flowState.data, ...extraData };
       _flowState.active = nextStepId !== 'WELCOME';
+      _lastDynamicChips = null; // reset dynamic chips on step change
       renderFlowChips(nextStepId);
       if (isNewStep && _flowUid) {
         try {
           await db.collection('users').doc(_flowUid)
             .collection('chatosState').doc('flow')
             .set({ stepId: nextStepId, data: _flowState.data, active: _flowState.active,
+              lastChips: null, // clear saved dynamic chips on step advance
               updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
         } catch (_) {}
       }
@@ -11875,19 +11877,27 @@ ${kbSummary}`,
 
     async function initFlowEngine(uid) {
       _flowUid = uid;
+      let savedLastChips = null;
       try {
         const doc = await db.collection('users').doc(uid)
           .collection('chatosState').doc('flow').get();
         if (doc.exists) {
           const d = doc.data();
           _flowState = { stepId: d.stepId || 'WELCOME', data: d.data || {}, active: !!d.active };
+          if (_flowState.stepId === 'ACTIVE' && Array.isArray(d.lastChips) && d.lastChips.length > 0) {
+            savedLastChips = d.lastChips;
+          }
         } else {
           _flowState = { stepId: 'WELCOME', data: {}, active: false };
         }
       } catch (_) {
         _flowState = { stepId: 'WELCOME', data: {}, active: false };
       }
-      renderFlowChips(_flowState.stepId);
+      if (savedLastChips) {
+        applyDynamicChips(savedLastChips, true); // restore without re-saving
+      } else {
+        renderFlowChips(_flowState.stepId);
+      }
     }
 
     // ── KB SUGGESTIONS ──────────────────────────────────────────────────────────
@@ -12016,6 +12026,95 @@ ${kbSummary}`,
         form.remove();
         reactionsEl.querySelectorAll('.cos-react').forEach(b => b.classList.remove('active'));
       });
+    }
+
+    // ── DYNAMIC CHIPS ENGINE ─────────────────────────────────────────────────────
+    // Maps keywords in AI reply list items to contextual chip definitions
+    const LIST_CHIP_MAP = [
+      { test: /база знан|базу знан|knowledge|знани/i,          chip: { label: '📚 База знаний',    msg: 'Хочу добавить базу знаний боту' } },
+      { test: /поведен|тон|стиль|правил|persona|инструкц/i,    chip: { label: '🎛 Поведение',      msg: 'Хочу изменить поведение и тон бота' } },
+      { test: /telegram|токен|подключ|activat/i,               chip: { label: '✈️ Telegram',       msg: 'Хочу подключить Telegram к боту' } },
+      { test: /тест|сценар|проверить|test/i,                   chip: { label: '🧪 Тест',           msg: 'Хочу протестировать бота' } },
+      { test: /загрузить файл|upload|file/i,                   chip: { label: '📎 Загрузить файл', msg: null, action: 'file' } },
+      { test: /ссылк|url|сайт|link/i,                          chip: { label: '🔗 Ссылка',         msg: 'Хочу добавить ссылку в базу знаний' } },
+      { test: /текст.*знан|добавить текст|вставить/i,          chip: { label: '✏️ Текст',          msg: 'Хочу добавить текст в базу знаний' } },
+      { test: /имя|назван|назови|name.*bot|bot.*name/i,        chip: { label: '✏️ Назвать бота',   msg: 'Хочу задать имя и описание бота' } },
+      { test: /аудитори|целев|для кого/i,                      chip: { label: '🎯 Аудитория',      msg: 'Хочу описать целевую аудиторию бота' } },
+    ];
+
+    // Extract numbered/bulleted list items from text
+    function _parseListItems(text) {
+      if (!text) return [];
+      const lines = text.split('\n');
+      const items = [];
+      for (const line of lines) {
+        const m = line.match(/^[\d]+[.)]\s+(.+)/) || line.match(/^[-•*]\s+(.+)/);
+        if (m) items.push(m[1].trim());
+      }
+      return items;
+    }
+
+    let _lastDynamicChips = null;
+
+    // Infer chips from AI reply: returns chip array or null if nothing matched
+    function inferChipsFromReply(replyText, actionsFromApi) {
+      // Priority 1: explicit actions from API backend
+      if (Array.isArray(actionsFromApi) && actionsFromApi.length > 0) {
+        return actionsFromApi.slice(0, 4).map(a =>
+          (typeof a === 'string') ? { label: a, msg: a } : a
+        );
+      }
+      // Priority 2: match list items from reply against keyword map
+      const items = _parseListItems(replyText);
+      const chips = [];
+      const seen = new Set();
+      for (const item of items) {
+        for (const { test, chip } of LIST_CHIP_MAP) {
+          if (test.test(item) && !seen.has(chip.label)) {
+            seen.add(chip.label);
+            chips.push(chip);
+            break;
+          }
+        }
+        if (chips.length >= 4) break;
+      }
+      // Priority 3: if few chips found, scan full reply for additional matches
+      if (chips.length < 2) {
+        for (const { test, chip } of LIST_CHIP_MAP) {
+          if (test.test(replyText) && !seen.has(chip.label)) {
+            seen.add(chip.label);
+            chips.push(chip);
+            if (chips.length >= 3) break;
+          }
+        }
+      }
+      return chips.length > 0 ? chips : null;
+    }
+
+    // Render dynamic chips in the chip bar and persist them
+    function applyDynamicChips(chips, skipSave = false) {
+      if (!chips || !chips.length || !CHAT_OS.chipsEl) return;
+      _lastDynamicChips = chips;
+      const chipsEl = CHAT_OS.chipsEl;
+      chipsEl.innerHTML = '';
+      chips.forEach(chip => {
+        const btn = document.createElement('button');
+        btn.className = 'ob-chip'; btn.type = 'button';
+        btn.textContent = _chipLabel(chip);
+        btn.addEventListener('click', () => onFlowChipClick(chip, _flowState.stepId));
+        chipsEl.appendChild(btn);
+      });
+      chipsEl.style.display = 'flex';
+      if (!skipSave) _saveLastChips(chips);
+    }
+
+    async function _saveLastChips(chips) {
+      if (!_flowUid) return;
+      try {
+        await db.collection('users').doc(_flowUid)
+          .collection('chatosState').doc('flow')
+          .set({ lastChips: chips || null, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      } catch (_) {}
     }
 
     // Modified to always stay open for all users and fetch history from backend
@@ -12501,6 +12600,11 @@ ${kbSummary}`,
           addChatOsMsg('bot', 'Произошла ошибка (пустой ответ).');
         }
         handleFlowAfterAIResponse();
+        // Dynamic chips: infer contextual chips from AI reply (ACTIVE mode only)
+        if (_flowState.stepId === 'ACTIVE' && data.reply) {
+          const dynChips = inferChipsFromReply(data.reply, data.actions);
+          if (dynChips) applyDynamicChips(dynChips);
+        }
 
       } catch (err) {
         removeTypingIndicator();
