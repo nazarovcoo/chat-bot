@@ -11733,8 +11733,8 @@ ${kbSummary}`,
         <div class="tg-step"><div class="tg-icon tg-check">✓</div> Сообщение получено</div>
       `;
       if (window._tgListenerUnsub) { window._tgListenerUnsub(); window._tgListenerUnsub = null; }
-      // Advance wizard to Summary step now that TG is connected
-      if (_flowState && _flowState.stepId === 'BOT_TELEGRAM') advanceFlowStep('BOT_SUMMARY');
+      // Advance wizard to ACTIVE now that TG is connected
+      if (_flowState && _flowState.stepId !== 'ACTIVE') advanceFlowStep('ACTIVE');
       setTimeout(() => { handleChatObSend("Я только что отправил(а) /start боту и он заработал. Что дальше?"); }, 1500);
     }
 
@@ -11763,47 +11763,34 @@ ${kbSummary}`,
     }
 
     // ── FLOW ENGINE ─────────────────────────────────────────────────────────────
-    // Step-by-step wizard: Apple-style guided bot creation in the chat
+    // Each chip: { label (shown in UI), msg (sent to AI — full sentence for natural response) }
+    // Simplified flow: WELCOME → BOT_NAME → ACTIVE
+    // The AI drives the conversation; chips are contextual shortcuts
     const FLOW_STEPS = {
       WELCOME: {
-        chips: ['🤖 Создать бота', '🔧 Улучшить бота', '📚 База знаний', '✈️ Telegram'],
-        next: { '🤖 Создать бота': 'BOT_NAME', '🔧 Улучшить бота': 'ACTIVE', '📚 База знаний': 'ACTIVE', '✈️ Telegram': 'ACTIVE' }
+        chips: [
+          { label: '🤖 Создать бота',       msg: 'Хочу создать нового бота' },
+          { label: '🔧 Улучшить бота',      msg: 'Хочу улучшить существующего бота' },
+          { label: '📚 База знаний',         msg: 'Хочу добавить знания боту' },
+          { label: '✈️ Подключить Telegram', msg: 'Хочу подключить Telegram к боту' }
+        ],
+        next: { '🤖 Создать бота': 'BOT_NAME', '🔧 Улучшить бота': 'ACTIVE', '📚 База знаний': 'ACTIVE', '✈️ Подключить Telegram': 'ACTIVE' }
       },
       BOT_NAME: {
-        chips: [], placeholder: 'Напр.: «Помощник магазина» (до 40 символов)'
-      },
-      BOT_PURPOSE: {
-        chips: ['Поддержка клиентов', 'Продажи', 'FAQ / ответы', 'Другое'],
-        next: {}
-      },
-      BOT_PERSONA: {
-        chips: ['Дружелюбный', 'Деловой', 'Краткий', 'Подробный'],
-        next: {}
-      },
-      BOT_LANGUAGES: {
-        chips: ['🇷🇺 RU', '🇺🇿 UZ', '🇺🇸 EN', 'RU + EN'],
-        next: {}
-      },
-      BOT_KB: {
-        chips: ['📎 Загрузить файл', '🔗 Добавить ссылку', '✏️ Добавить текст', '⏩ Пропустить'],
-        next: { '⏩ Пропустить': 'BOT_TELEGRAM', '📎 Загрузить файл': null }
-      },
-      BOT_TELEGRAM: {
-        chips: ['✅ Подключить', '⏩ Позже'],
-        next: { '✅ Подключить': null, '⏩ Позже': 'BOT_SUMMARY' }
-        // null = stay on step; TG connection advances via Firestore listener
-      },
-      BOT_SUMMARY: {
-        chips: ['🚀 Запустить тест', '📚 Открыть базу знаний', '➕ Добавить знания'],
-        next: {}
+        chips: [],
+        placeholder: 'Опишите бота: название + для чего нужен + для кого'
       },
       ACTIVE: {
-        chips: ['➕ Добавить знания', '🔧 Настроить бота', '✈️ Telegram', '❓ Помощь'],
-        next: {}
+        chips: [
+          { label: '📎 Загрузить файл',   msg: null,                                        action: 'file' },
+          { label: '🔗 Добавить ссылку',  msg: 'Хочу добавить ссылку в базу знаний бота' },
+          { label: '✈️ Telegram',          msg: 'Хочу подключить Telegram к боту' },
+          { label: '❓ Что дальше?',       msg: 'Что ещё можно настроить или улучшить в боте?' }
+        ]
       }
     };
 
-    const FLOW_ORDER = ['WELCOME', 'BOT_NAME', 'BOT_PURPOSE', 'BOT_PERSONA', 'BOT_LANGUAGES', 'BOT_KB', 'BOT_TELEGRAM', 'BOT_SUMMARY', 'ACTIVE'];
+    const FLOW_ORDER = ['WELCOME', 'BOT_NAME', 'ACTIVE'];
 
     let _flowState = { stepId: 'WELCOME', data: {}, active: false };
     let _pendingNextStep = null;
@@ -11811,8 +11798,13 @@ ${kbSummary}`,
 
     function getDefaultNextStep(stepId) {
       const idx = FLOW_ORDER.indexOf(stepId);
-      return (idx >= 0 && idx < FLOW_ORDER.length - 1) ? FLOW_ORDER[idx + 1] : 'ACTIVE';
+      if (idx === -1) return 'ACTIVE'; // unknown/removed step → go to ACTIVE
+      return (idx < FLOW_ORDER.length - 1) ? FLOW_ORDER[idx + 1] : 'ACTIVE';
     }
+
+    // Extract label/msg from chip (supports string or {label, msg} format)
+    function _chipLabel(chip) { return (typeof chip === 'string') ? chip : chip.label; }
+    function _chipMsg(chip)   { return (typeof chip === 'string') ? chip : (chip.msg !== undefined ? chip.msg : chip.label); }
 
     function renderFlowChips(stepId) {
       const step = FLOW_STEPS[stepId] || FLOW_STEPS.ACTIVE;
@@ -11820,12 +11812,12 @@ ${kbSummary}`,
       if (!chipsEl) return;
       chipsEl.innerHTML = '';
       if (step.chips && step.chips.length > 0) {
-        step.chips.forEach(label => {
+        step.chips.forEach(chip => {
           const btn = document.createElement('button');
           btn.className = 'ob-chip';
           btn.type = 'button';
-          btn.textContent = label;
-          btn.addEventListener('click', () => onFlowChipClick(label, _flowState.stepId));
+          btn.textContent = _chipLabel(chip);
+          btn.addEventListener('click', () => onFlowChipClick(chip, _flowState.stepId));
           chipsEl.appendChild(btn);
         });
         chipsEl.style.display = 'flex';
@@ -11835,8 +11827,10 @@ ${kbSummary}`,
       CHAT_OS.inputEl.placeholder = step.placeholder || 'Напишите ответ...';
     }
 
-    function onFlowChipClick(label, stepId) {
-      const step = FLOW_STEPS[stepId];
+    function onFlowChipClick(chip, stepId) {
+      const label = _chipLabel(chip);
+      const msg   = _chipMsg(chip);   // full sentence → AI responds naturally
+      const step  = FLOW_STEPS[stepId];
       let nextStep;
       if (step && step.next && label in step.next) {
         nextStep = step.next[label]; // null = stay, string = advance
@@ -11845,14 +11839,14 @@ ${kbSummary}`,
       }
       if (nextStep !== null && nextStep !== undefined) _pendingNextStep = nextStep;
 
-      // Special handlers
-      if (label === '📎 Загрузить файл') {
+      // Special action chips
+      if (chip.action === 'file' || label === '📎 Загрузить файл') {
         document.getElementById('chat-ob-attach-btn')?.click();
-        _pendingNextStep = 'BOT_TELEGRAM'; // advance after file is uploaded & sent
+        _pendingNextStep = 'ACTIVE'; // stay in ACTIVE after file sent
         return;
       }
       if (label === '📚 Открыть базу знаний') { openKBDrawer(); }
-      handleChatObSend(label);
+      if (msg !== null) handleChatObSend(msg); // send contextual sentence, not bare label
     }
 
     async function advanceFlowStep(nextStepId, extraData = {}) {
@@ -12363,10 +12357,10 @@ ${kbSummary}`,
 
       if (text && !opts.hidden) addChatOsMsg('user', text);
 
-      // Flow engine: auto-advance on text for text-input steps (chips.length === 0)
-      // Excludes WELCOME (only chip-driven) and BOT_TELEGRAM (TG listener drives it)
+      // Flow engine: auto-advance for text-input steps (no chips shown)
+      // WELCOME is chip-only; ACTIVE stays in ACTIVE
       if (!opts.hidden && text && _pendingNextStep === null &&
-          _flowState.stepId !== 'ACTIVE' && _flowState.stepId !== 'WELCOME' && _flowState.stepId !== 'BOT_TELEGRAM') {
+          _flowState.stepId !== 'ACTIVE' && _flowState.stepId !== 'WELCOME') {
         const _curStep = FLOW_STEPS[_flowState.stepId];
         if (_curStep && _curStep.chips && _curStep.chips.length === 0) {
           _pendingNextStep = getDefaultNextStep(_flowState.stepId);
