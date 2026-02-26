@@ -36,3 +36,9 @@ Thumbs.db
 photo.jpg
 hh
 the wear
+
+# Claude Code local settings
+.claude/
+
+# Netlify build artifacts
+.netlify/

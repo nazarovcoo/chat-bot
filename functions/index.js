@@ -1625,13 +1625,26 @@ exports.chatOsHandler = onRequest(
 
       // If an attachment was sent with this message, save it directly to the active bot's Knowledge Base
       if (attachment && attachment.type === 'file' && currentSession.activeBotId) {
-        await db.collection("users").doc(uid).collection("bots").doc(currentSession.activeBotId).collection("knowledge_base").add({
+        const fileKbRef = db.collection("users").doc(uid).collection("bots").doc(currentSession.activeBotId).collection("knowledge_base").doc();
+        await fileKbRef.set({
           title: attachment.fileName || attachment.name || "Uploaded File",
           type: "file",
           fileUrl: attachment.fileUrl || attachment.downloadURL || null, // frontend sends downloadURL
           storagePath: attachment.storagePath,
           mimeType: attachment.mimeType,
           size: attachment.size,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Parallel write to unified knowledge_items for frontend UI
+        await db.collection("users").doc(uid).collection("bots").doc(currentSession.activeBotId).collection("knowledge_items").doc(fileKbRef.id).set({
+          name: attachment.fileName || attachment.name || "Uploaded File",
+          type: "file",
+          mimeType: attachment.mimeType,
+          size: attachment.size,
+          storagePath: attachment.storagePath,
+          downloadURL: attachment.fileUrl || attachment.downloadURL || null,
+          status: "active",
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
       }
@@ -2149,10 +2162,20 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
               if (!currentSession.activeBotId) {
                 toolResult = "Error: No active bot selected.";
               } else {
-                await db.collection("users").doc(uid).collection("bots").doc(currentSession.activeBotId).collection("knowledge_base").add({
+                const textKbRef = db.collection("users").doc(uid).collection("bots").doc(currentSession.activeBotId).collection("knowledge_base").doc();
+                await textKbRef.set({
                   title: args.title,
                   content: args.content,
                   type: "text",
+                  createdAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Parallel write to unified knowledge_items for frontend UI
+                await db.collection("users").doc(uid).collection("bots").doc(currentSession.activeBotId).collection("knowledge_items").doc(textKbRef.id).set({
+                  title: args.title,
+                  type: "text",
+                  contentPreview: typeof args.content === 'string' ? args.content.substring(0, 120) : '',
+                  status: "active",
                   createdAt: admin.firestore.FieldValue.serverTimestamp()
                 });
                 toolResult = "Knowledge added successfully to the active bot.";

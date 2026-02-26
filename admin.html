@@ -600,12 +600,138 @@
       background: none;
       border: none;
       color: var(--text-dim);
-      font-size: 1rem;
       cursor: pointer;
-      flex-shrink: 0;
-      padding: 0 2px;
-      line-height: 1;
+      position: absolute;
+      top: 10px;
+      right: 10px;
     }
+
+    /* ══ KB DRAWER, STATUS BAR & CONFIRM (scoped to chat overlay) ══ */
+
+    /* Status bar */
+    #onboarding-chat-overlay .chatos-statusbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(15,23,42,.07);
+      flex-shrink: 0;
+    }
+    #onboarding-chat-overlay .cs-left { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    #onboarding-chat-overlay .cs-pill {
+      font-size: 11.5px; font-weight: 650; color: #0f172a;
+      background: rgba(15,23,42,.04); border: 1px solid rgba(15,23,42,.08);
+      padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+    }
+    #onboarding-chat-overlay .cs-right { display: flex; align-items: center; gap: 6px; }
+    #onboarding-chat-overlay .cs-iconbtn {
+      width: 34px; height: 34px; border-radius: 10px;
+      border: 1px solid rgba(15,23,42,.10); background: #fff;
+      cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center;
+    }
+    #onboarding-chat-overlay .cs-iconbtn:hover { background: rgba(15,23,42,.04); }
+
+    /* KB backdrop */
+    #onboarding-chat-overlay .kb-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(2,6,23,.35); z-index: 80;
+    }
+    #onboarding-chat-overlay .kb-backdrop.hidden { display: none !important; }
+
+    /* KB drawer */
+    #onboarding-chat-overlay .kb-drawer {
+      position: fixed; top: 0; right: 0;
+      height: 100dvh; width: min(420px, 92vw);
+      z-index: 90; background: #fff;
+      border-left: 1px solid rgba(15,23,42,.08);
+      box-shadow: -20px 0 40px rgba(15,23,42,.12);
+      display: flex; flex-direction: column;
+    }
+    #onboarding-chat-overlay .kb-drawer.hidden { display: none !important; }
+
+    #onboarding-chat-overlay .kb-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; border-bottom: 1px solid rgba(15,23,42,.08);
+    }
+    #onboarding-chat-overlay .kb-title {
+      font-size: 14.5px; font-weight: 750; color: #0f172a;
+    }
+    #onboarding-chat-overlay .kb-close {
+      width: 34px; height: 34px; border-radius: 10px;
+      border: 1px solid rgba(15,23,42,.10); background: #fff; cursor: pointer;
+    }
+    #onboarding-chat-overlay .kb-close:hover { background: rgba(15,23,42,.04); }
+
+    #onboarding-chat-overlay .kb-body {
+      padding: 14px; overflow: auto; flex: 1 1 auto;
+    }
+    #onboarding-chat-overlay .kb-empty {
+      border: 1px dashed rgba(15,23,42,.18); border-radius: 14px;
+      padding: 16px; background: rgba(15,23,42,.02);
+    }
+    #onboarding-chat-overlay .kb-empty-title { font-weight: 750; font-size: 13.5px; color: #0f172a; }
+    #onboarding-chat-overlay .kb-empty-sub {
+      margin-top: 5px; font-size: 12.5px; color: #475569; line-height: 1.4;
+    }
+    #onboarding-chat-overlay .kb-empty-actions { margin-top: 12px; display: flex; gap: 8px; }
+
+    #onboarding-chat-overlay .kb-list { display: flex; flex-direction: column; gap: 10px; }
+
+    #onboarding-chat-overlay .kb-item {
+      border: 1px solid rgba(15,23,42,.08); border-radius: 14px; padding: 12px; background: #fff;
+    }
+    #onboarding-chat-overlay .kb-item-title {
+      font-weight: 700; font-size: 13px; color: #0f172a;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #onboarding-chat-overlay .kb-item-sub {
+      margin-top: 4px; font-size: 12px; color: #64748b;
+      display: flex; justify-content: space-between; gap: 8px;
+    }
+    #onboarding-chat-overlay .kb-item-actions { margin-top: 10px; display: flex; gap: 8px; }
+
+    #onboarding-chat-overlay .kb-btn {
+      border-radius: 10px; border: 1px solid rgba(15,23,42,.12);
+      background: #fff; padding: 7px 11px; cursor: pointer;
+      font-weight: 700; font-size: 12px;
+    }
+    #onboarding-chat-overlay .kb-btn:hover { background: rgba(15,23,42,.04); }
+    #onboarding-chat-overlay .kb-btn-delete { color: #ef4444; border-color: rgba(239,68,68,.25); }
+    #onboarding-chat-overlay .kb-btn-delete:hover { background: rgba(239,68,68,.05); }
+
+    #onboarding-chat-overlay .kb-refresh-btn {
+      border-radius: 10px; border: 1px solid rgba(15,23,42,.12);
+      background: #fff; padding: 8px 12px; cursor: pointer; font-weight: 700; font-size: 12.5px;
+    }
+    #onboarding-chat-overlay .kb-refresh-btn:hover { background: rgba(15,23,42,.04); }
+
+    /* In-chat confirm modal */
+    #onboarding-chat-overlay .chat-confirm {
+      position: fixed; inset: 0; z-index: 120;
+      background: rgba(2,6,23,.35);
+      display: flex; align-items: center; justify-content: center; padding: 18px;
+    }
+    #onboarding-chat-overlay .chat-confirm.hidden { display: none !important; }
+    #onboarding-chat-overlay .cc-card {
+      width: min(380px, 92vw); background: #fff;
+      border-radius: 18px; border: 1px solid rgba(15,23,42,.08);
+      box-shadow: 0 20px 50px rgba(15,23,42,.18); padding: 18px;
+    }
+    #onboarding-chat-overlay .cc-title { font-weight: 800; font-size: 14.5px; color: #0f172a; }
+    #onboarding-chat-overlay .cc-text { margin-top: 7px; font-size: 13px; color: #475569; line-height: 1.4; }
+    #onboarding-chat-overlay .cc-actions {
+      margin-top: 14px; display: flex; justify-content: flex-end; gap: 8px;
+    }
+    #onboarding-chat-overlay .cc-btn {
+      border-radius: 10px; border: 1px solid rgba(15,23,42,.12);
+      background: #fff; padding: 9px 14px; cursor: pointer; font-weight: 800; font-size: 13px;
+    }
+    #onboarding-chat-overlay .cc-btn--ghost:hover { background: rgba(15,23,42,.04); }
+    #onboarding-chat-overlay .cc-btn--danger { border-color: rgba(239,68,68,.3); color: #ef4444; }
+    #onboarding-chat-overlay .cc-btn--danger:hover { background: rgba(239,68,68,.06); }
+
+    .hidden { display: none !important; }
+
 
     .guide-tip-close:hover {
       color: var(--text);
@@ -676,59 +802,26 @@
     }
 
     .chat-header-btn {
-      width: 36px; height: 36px;
+      width: 36px;
+      height: 36px;
       border-radius: 10px;
-      border: 1px solid rgba(15,23,42,.10);
+      border: 1px solid rgba(15, 23, 42, .10);
       background: #fff;
-      color: rgba(15,23,42,.65);
-      display: inline-flex; align-items: center; justify-content: center;
-      cursor: pointer; flex-shrink: 0;
+      color: rgba(15, 23, 42, .65);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
       transition: background .12s ease;
     }
-    .chat-header-btn:hover { background: rgba(15,23,42,.05); }
-    .chat-header-btn:active { transform: translateY(1px); }
 
-    /* ── In-chat confirm modal ── */
-    .chatos-modal {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; justify-content: center;
-      z-index: 200;
+    .chat-header-btn:hover {
+      background: rgba(15, 23, 42, .05);
     }
-    .chatos-modal[hidden] { display: none; }
-    .chatos-modal__backdrop {
-      position: absolute; inset: 0;
-      background: rgba(0,0,0,.45);
-      backdrop-filter: blur(2px);
-    }
-    .chatos-modal__card {
-      position: relative;
-      background: #fff;
-      border-radius: 16px;
-      padding: 24px 22px 20px;
-      width: min(320px, calc(100% - 32px));
-      box-shadow: 0 8px 32px rgba(0,0,0,.18);
-      display: flex; flex-direction: column; gap: 8px;
-    }
-    .chatos-modal__title {
-      font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0;
-    }
-    .chatos-modal__text {
-      font-size: 0.875rem; color: #707579; margin: 0; line-height: 1.45;
-    }
-    .chatos-modal__actions {
-      display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;
-    }
-    .chatos-btn {
-      padding: 8px 18px; border-radius: 10px; border: none;
-      font-size: 0.875rem; font-weight: 600; cursor: pointer;
-      transition: opacity .12s ease;
-    }
-    .chatos-btn:hover { opacity: .85; }
-    .chatos-btn--cancel {
-      background: #f0f2f5; color: #0f172a;
-    }
-    .chatos-btn--ok {
-      background: #ff3b30; color: #fff;
+
+    .chat-header-btn:active {
+      transform: translateY(1px);
     }
 
     .chat-ob-messages {
@@ -791,101 +884,247 @@
       border-radius: 18px;
       border: 1px solid #e5e7eb;
       background:
-        radial-gradient(120% 120% at 0% 0%, rgba(88,166,255,.18) 0%, rgba(255,255,255,.72) 55%, rgba(255,255,255,.92) 100%),
-        linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.92));
-      box-shadow: 0 12px 28px rgba(15,23,42,.10);
+        radial-gradient(120% 120% at 0% 0%, rgba(88, 166, 255, .18) 0%, rgba(255, 255, 255, .72) 55%, rgba(255, 255, 255, .92) 100%),
+        linear-gradient(180deg, rgba(255, 255, 255, .78), rgba(255, 255, 255, .92));
+      box-shadow: 0 12px 28px rgba(15, 23, 42, .10);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       padding: 12px 12px 10px;
       animation: msgPop 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
     }
-    .ub-row { display: flex; gap: 12px; align-items: flex-start; }
+
+    .ub-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
     .ub-icon {
-      width: 44px; height: 44px;
+      width: 44px;
+      height: 44px;
       border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
       color: #fff;
-      box-shadow: 0 8px 18px rgba(0,0,0,.12);
+      box-shadow: 0 8px 18px rgba(0, 0, 0, .12);
       user-select: none;
       flex: 0 0 auto;
     }
-    .ub-icon[data-kind="pdf"] { background: linear-gradient(135deg, #ff4d4d, #d11b1b); }
-    .ub-icon[data-kind="doc"] { background: linear-gradient(135deg, #2f80ff, #1f5eff); }
-    .ub-icon[data-kind="img"] { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
-    .ub-icon[data-kind="zip"] { background: linear-gradient(135deg, #f59e0b, #d97706); }
-    .ub-icon[data-kind="txt"] { background: linear-gradient(135deg, #10b981, #059669); }
-    .ub-icon[data-kind="csv"] { background: linear-gradient(135deg, #10b981, #059669); }
-    .ub-main { flex: 1 1 auto; min-width: 0; }
+
+    .ub-icon[data-kind="pdf"] {
+      background: linear-gradient(135deg, #ff4d4d, #d11b1b);
+    }
+
+    .ub-icon[data-kind="doc"] {
+      background: linear-gradient(135deg, #2f80ff, #1f5eff);
+    }
+
+    .ub-icon[data-kind="img"] {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+    }
+
+    .ub-icon[data-kind="zip"] {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .ub-icon[data-kind="txt"] {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .ub-icon[data-kind="csv"] {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .ub-main {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
     .ub-title {
-      font-size: 14px; font-weight: 650;
-      color: #0f172a; line-height: 1.2;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-size: 14px;
+      font-weight: 650;
+      color: #0f172a;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       margin-top: 2px;
     }
+
     .ub-sub {
-      margin-top: 6px; display: flex;
-      justify-content: space-between; gap: 10px;
-      color: #64748b; font-size: 12px;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: #64748b;
+      font-size: 12px;
     }
-    .ub-status { font-weight: 600; }
-    .ub-meta { white-space: nowrap; }
+
+    .ub-status {
+      font-weight: 600;
+    }
+
+    .ub-meta {
+      white-space: nowrap;
+    }
+
     .ub-bar {
-      margin-top: 8px; width: 100%; height: 7px;
-      border-radius: 999px; background: rgba(15,23,42,.08);
+      margin-top: 8px;
+      width: 100%;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, .08);
       overflow: hidden;
     }
+
     .ub-bar-fill {
-      height: 100%; border-radius: 999px;
+      height: 100%;
+      border-radius: 999px;
       background: linear-gradient(90deg, #2f80ff, #58a6ff);
-      box-shadow: 0 4px 12px rgba(47,128,255,.22);
+      box-shadow: 0 4px 12px rgba(47, 128, 255, .22);
       transition: width .18s ease;
     }
+
     .ub-x {
-      flex: 0 0 auto; width: 28px; height: 28px;
-      border-radius: 8px; border: 1px solid rgba(15,23,42,.10);
-      background: rgba(255,255,255,.55); color: rgba(15,23,42,.55);
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      font-size: 12px; transition: background .12s ease;
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 23, 42, .10);
+      background: rgba(255, 255, 255, .55);
+      color: rgba(15, 23, 42, .55);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: background .12s ease;
     }
-    .ub-x:hover { background: rgba(255,255,255,.9); }
-    .ub-processing, .ub-done, .ub-error {
-      display: none; margin-top: 10px;
-      font-size: 12px; gap: 8px; align-items: center;
+
+    .ub-x:hover {
+      background: rgba(255, 255, 255, .9);
     }
-    .ub-done { color: rgba(16,185,129,.95); font-weight: 600; }
-    .ub-error { color: rgba(239,68,68,.95); font-weight: 600; }
+
+    .ub-processing,
+    .ub-done,
+    .ub-error {
+      display: none;
+      margin-top: 10px;
+      font-size: 12px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .ub-done {
+      color: rgba(16, 185, 129, .95);
+      font-weight: 600;
+    }
+
+    .ub-error {
+      color: rgba(239, 68, 68, .95);
+      font-weight: 600;
+    }
+
     .ub-spinner {
-      width: 14px; height: 14px; border-radius: 50%;
-      border: 2px solid rgba(47,128,255,.25);
-      border-top-color: rgba(47,128,255,.95);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(47, 128, 255, .25);
+      border-top-color: rgba(47, 128, 255, .95);
       display: inline-block;
       animation: ubSpin .8s linear infinite;
     }
-    @keyframes ubSpin { to { transform: rotate(360deg); } }
-    .ub-check, .ub-warn {
-      width: 18px; height: 18px; border-radius: 999px;
-      display: inline-flex; align-items: center; justify-content: center;
+
+    @keyframes ubSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .ub-check,
+    .ub-warn {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       font-size: 11px;
     }
-    .ub-check { background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.35); }
-    .ub-warn  { background: rgba(239,68,68,.12);  border: 1px solid rgba(239,68,68,.35); }
+
+    .ub-check {
+      background: rgba(16, 185, 129, .15);
+      border: 1px solid rgba(16, 185, 129, .35);
+    }
+
+    .ub-warn {
+      background: rgba(239, 68, 68, .12);
+      border: 1px solid rgba(239, 68, 68, .35);
+    }
+
     /* State machine */
-    .upload-bubble[data-state="uploading"] .ub-bar    { display: block; }
-    .upload-bubble[data-state="uploading"] .ub-sub    { display: flex; }
-    .upload-bubble[data-state="uploading"] .ub-x      { display: flex; }
-    .upload-bubble[data-state="processing"] .ub-bar   { display: none; }
-    .upload-bubble[data-state="processing"] .ub-sub   { display: none; }
-    .upload-bubble[data-state="processing"] .ub-x     { display: none; }
-    .upload-bubble[data-state="processing"] .ub-processing { display: flex; }
-    .upload-bubble[data-state="done"] .ub-bar         { display: none; }
-    .upload-bubble[data-state="done"] .ub-sub         { display: none; }
-    .upload-bubble[data-state="done"] .ub-x           { display: none; }
-    .upload-bubble[data-state="done"] .ub-done        { display: flex; }
-    .upload-bubble[data-state="error"] .ub-bar        { display: none; }
-    .upload-bubble[data-state="error"] .ub-sub        { display: none; }
-    .upload-bubble[data-state="error"] .ub-x          { display: none; }
-    .upload-bubble[data-state="error"] .ub-error      { display: flex; }
+    .upload-bubble[data-state="uploading"] .ub-bar {
+      display: block;
+    }
+
+    .upload-bubble[data-state="uploading"] .ub-sub {
+      display: flex;
+    }
+
+    .upload-bubble[data-state="uploading"] .ub-x {
+      display: flex;
+    }
+
+    .upload-bubble[data-state="processing"] .ub-bar {
+      display: none;
+    }
+
+    .upload-bubble[data-state="processing"] .ub-sub {
+      display: none;
+    }
+
+    .upload-bubble[data-state="processing"] .ub-x {
+      display: none;
+    }
+
+    .upload-bubble[data-state="processing"] .ub-processing {
+      display: flex;
+    }
+
+    .upload-bubble[data-state="done"] .ub-bar {
+      display: none;
+    }
+
+    .upload-bubble[data-state="done"] .ub-sub {
+      display: none;
+    }
+
+    .upload-bubble[data-state="done"] .ub-x {
+      display: none;
+    }
+
+    .upload-bubble[data-state="done"] .ub-done {
+      display: flex;
+    }
+
+    .upload-bubble[data-state="error"] .ub-bar {
+      display: none;
+    }
+
+    .upload-bubble[data-state="error"] .ub-sub {
+      display: none;
+    }
+
+    .upload-bubble[data-state="error"] .ub-x {
+      display: none;
+    }
+
+    .upload-bubble[data-state="error"] .ub-error {
+      display: flex;
+    }
 
     .chat-ob-chips {
       padding: 10px 20px;
@@ -4850,80 +5089,121 @@
             <div style="font-size:0.8rem;color:#707579;">Chat-based bot builder</div>
           </div>
         </div>
-        <!-- Header actions -->
-        <div style="display:flex;align-items:center;gap:8px;">
-          <button id="clear-chat-btn" class="chat-header-btn" title="Очистить чат" aria-label="Очистить чат">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-              <path d="M9 3h6m-8 4h10m-9 0 1 16h6l1-16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-          <button class="btn-ghost" style="padding:6px 10px;font-size:0.85rem;color:#707579;"
-            onclick="auth.signOut()">Выйти</button>
-        </div>
       </div>
 
-      <div class="chat-ob-messages" id="chat-ob-messages">
-        <!-- Messages injected via JS -->
+      <!-- Header actions -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button id="btn-open-kb" class="chat-header-btn" title="База знаний" aria-label="База знаний"
+          style="padding:4px 8px;display:flex;align-items:center;gap:6px;font-size:0.85rem;color:#3390ec;background:rgba(51,144,236,0.1);border-radius:12px;"
+          onclick="openKBDrawer()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+          </svg>
+          <span style="font-weight:600;">База знаний</span>
+        </button>
+        <button id="clear-chat-btn" class="chat-header-btn" title="Очистить чат" aria-label="Очистить чат">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <path d="M9 3h6m-8 4h10m-9 0 1 16h6l1-16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+          </svg>
+        </button>
+        <button class="btn-ghost" style="padding:6px 10px;font-size:0.85rem;color:#707579;"
+          onclick="auth.signOut()">Выйти</button>
       </div>
+    </div>
 
-      <div class="chat-ob-chips" id="chat-ob-chips">
-        <!-- Fast options injected via JS -->
+    <!-- ══ STATUS BAR ══ -->
+    <div id="chatos-statusbar" class="chatos-statusbar">
+      <div class="cs-left">
+        <span class="cs-pill" id="cs-activebot">● Bot: —</span>
+        <span class="cs-pill" id="cs-kb">📚 KB: —</span>
+        <span class="cs-pill" id="cs-tg">✈ TG: —</span>
       </div>
+      <div class="cs-right">
+        <button id="btn-kb" class="cs-iconbtn" type="button" title="База знаний">📚</button>
+      </div>
+    </div>
 
-      <div class="chat-ob-input-area">
-        <div id="chat-ob-attachment-pill"
-          style="display:none; padding:8px 12px; background:#f0f2f5; border-radius:12px; margin-bottom:8px; align-items:center; justify-content:space-between; font-size:0.85rem;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-              <polyline points="13 2 13 9 20 9"></polyline>
-            </svg>
-            <span id="chat-ob-attachment-name"
-              style="font-weight:600; color:#000; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
-            <span id="chat-ob-attachment-size" style="color:#707579;"></span>
+    <!-- ══ KB DRAWER & BACKDROP ══ -->
+    <div id="kb-backdrop" class="kb-backdrop hidden"></div>
+    <aside id="kb-drawer" class="kb-drawer hidden" aria-hidden="true">
+      <div class="kb-header">
+        <div class="kb-title">База знаний</div>
+        <button id="kb-close" class="kb-close" type="button" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="kb-body">
+        <div id="kb-empty" class="kb-empty">
+          <div class="kb-empty-title">Здесь появятся источники знаний</div>
+          <div class="kb-empty-sub">Загрузите файл или добавьте текст — и бот начнёт отвечать точнее.</div>
+          <div class="kb-empty-actions">
+            <button id="kb-refresh" class="kb-refresh-btn" type="button">Обновить</button>
           </div>
-          <button onclick="clearChatAttachment()"
-            style="background:none; border:none; color:#ff3b30; cursor:pointer; padding:4px; display:flex;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
         </div>
-        <div class="chat-ob-input-row" style="display:flex;align-items:center;">
-          <button id="chat-ob-attach-btn"
-            style="background:none;border:none;color:#8e8e93;cursor:pointer;padding:8px 4px 8px 8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round">
-              <path
-                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48">
-              </path>
-            </svg>
-          </button>
-          <input type="file" id="chat-ob-file-input" style="display:none" accept=".txt,.pdf,.csv,.docx,.md,.jpg,.png">
-          <input type="text" id="chat-ob-input" class="chat-ob-input" placeholder="Подключаем аккаунт..."
-            autocomplete="off" disabled>
-          <button id="chat-ob-send" class="chat-ob-send" disabled>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-            </svg>
-          </button>
-        </div>
+        <div id="kb-list" class="kb-list hidden"></div>
       </div>
+    </aside>
+
+    <div class="chat-ob-messages" id="chat-ob-messages">
+      <!-- Messages injected via JS -->
     </div>
 
-    <!-- In-chat confirm modal -->
-    <div id="chatos-modal" class="chatos-modal" hidden aria-modal="true" role="dialog">
-      <div class="chatos-modal__backdrop" id="chatos-modal-backdrop"></div>
-      <div class="chatos-modal__card">
-        <p class="chatos-modal__title" id="chatos-modal-title"></p>
-        <p class="chatos-modal__text" id="chatos-modal-text"></p>
-        <div class="chatos-modal__actions">
-          <button class="chatos-btn chatos-btn--cancel" id="chatos-modal-cancel"></button>
-          <button class="chatos-btn chatos-btn--ok" id="chatos-modal-ok"></button>
+    <div class="chat-ob-chips" id="chat-ob-chips">
+      <!-- Fast options injected via JS -->
+    </div>
+
+    <div class="chat-ob-input-area">
+      <div id="chat-ob-attachment-pill"
+        style="display:none; padding:8px 12px; background:#f0f2f5; border-radius:12px; margin-bottom:8px; align-items:center; justify-content:space-between; font-size:0.85rem;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+            <polyline points="13 2 13 9 20 9"></polyline>
+          </svg>
+          <span id="chat-ob-attachment-name"
+            style="font-weight:600; color:#000; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+          <span id="chat-ob-attachment-size" style="color:#707579;"></span>
         </div>
+        <button onclick="clearChatAttachment()"
+          style="background:none; border:none; color:#ff3b30; cursor:pointer; padding:4px; display:flex;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="chat-ob-input-row" style="display:flex;align-items:center;">
+        <button id="chat-ob-attach-btn"
+          style="background:none;border:none;color:#8e8e93;cursor:pointer;padding:8px 4px 8px 8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48">
+            </path>
+          </svg>
+        </button>
+        <input type="file" id="chat-ob-file-input" style="display:none" accept=".txt,.pdf,.csv,.docx,.md,.jpg,.png">
+        <input type="text" id="chat-ob-input" class="chat-ob-input" placeholder="Подключаем аккаунт..."
+          autocomplete="off" disabled>
+        <button id="chat-ob-send" class="chat-ob-send" disabled>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+          </svg>
+        </button>
       </div>
     </div>
+  </div>
+
+  <!-- In-chat confirm modal -->
+  <div id="chat-confirm" class="chat-confirm hidden" role="dialog" aria-modal="true">
+    <div class="cc-card">
+      <div class="cc-title" id="cc-title">Подтвердить действие</div>
+      <div class="cc-text" id="cc-text">Вы уверены?</div>
+      <div class="cc-actions">
+        <button id="cc-cancel" class="cc-btn cc-btn--ghost" type="button">Отмена</button>
+        <button id="cc-ok" class="cc-btn cc-btn--danger" type="button">ОК</button>
+      </div>
+    </div>
+  </div>
   </div>
 
   <div class="sidebar">
@@ -8546,6 +8826,195 @@
       fsDel('topics', id);
     }
 
+    /* ══ KNOWLEDGE BASE DRAWER LOGIC (UX Pack v1) ══ */
+
+    // ── Status bar ──
+    function updateStatusBar({ activeBotName, kbCount, tgConnected } = {}) {
+      const elBot = document.getElementById('cs-activebot');
+      const elKb  = document.getElementById('cs-kb');
+      const elTg  = document.getElementById('cs-tg');
+      if (elBot) elBot.textContent = `● Bot: ${activeBotName || '—'}`;
+      if (elKb)  elKb.textContent  = `📚 KB: ${typeof kbCount === 'number' ? kbCount : '—'}`;
+      if (elTg)  elTg.textContent  = `✈ TG: ${tgConnected ? 'подключён' : '—'}`;
+    }
+
+    // ── Drawer open / close ──
+    function openKBDrawer() {
+      const drawer   = document.getElementById('kb-drawer');
+      const backdrop = document.getElementById('kb-backdrop');
+      if (!drawer || !backdrop) return;
+      drawer.classList.remove('hidden');
+      backdrop.classList.remove('hidden');
+      drawer.setAttribute('aria-hidden', 'false');
+      loadKBListSafe();
+    }
+    function closeKBDrawer() {
+      const drawer   = document.getElementById('kb-drawer');
+      const backdrop = document.getElementById('kb-backdrop');
+      if (!drawer || !backdrop) return;
+      drawer.classList.add('hidden');
+      backdrop.classList.add('hidden');
+      drawer.setAttribute('aria-hidden', 'true');
+    }
+
+    // ── Render helpers ──
+    function renderKBList(items, botId) {
+      const emptyEl = document.getElementById('kb-empty');
+      const listEl  = document.getElementById('kb-list');
+      if (!emptyEl || !listEl) return;
+
+      if (!items || items.length === 0) {
+        emptyEl.classList.remove('hidden');
+        listEl.classList.add('hidden');
+        listEl.innerHTML = '';
+        return;
+      }
+      emptyEl.classList.add('hidden');
+      listEl.classList.remove('hidden');
+      listEl.innerHTML = '';
+
+      const frag = document.createDocumentFragment();
+      items.forEach(it => {
+        const card = document.createElement('div');
+        card.className = 'kb-item';
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'kb-item-title';
+        titleEl.textContent = it.title || it.name || it.url || 'Без названия';
+
+        const subEl = document.createElement('div');
+        subEl.className = 'kb-item-sub';
+        const typeLabel = it.type === 'file' ? '📄 файл' : it.type === 'url' ? '🔗 ссылка' : '📝 текст';
+        subEl.innerHTML = `<span>${typeLabel}</span><span>${it.createdAtText || ''}</span>`;
+
+        const actEl = document.createElement('div');
+        actEl.className = 'kb-item-actions';
+
+        const btnOpen = document.createElement('button');
+        btnOpen.className = 'kb-btn'; btnOpen.type = 'button'; btnOpen.textContent = 'Открыть';
+        btnOpen.onclick = () => {
+          const link = it.fileUrl || it.downloadURL || it.url;
+          if (link) window.open(link, '_blank', 'noopener,noreferrer');
+        };
+
+        const btnDel = document.createElement('button');
+        btnDel.className = 'kb-btn kb-btn-delete'; btnDel.type = 'button'; btnDel.textContent = 'Удалить';
+        btnDel.onclick = () => deleteKBItem(botId || it._botId, it._id);
+
+        actEl.appendChild(btnOpen);
+        actEl.appendChild(btnDel);
+        card.appendChild(titleEl);
+        card.appendChild(subEl);
+        card.appendChild(actEl);
+        frag.appendChild(card);
+      });
+      listEl.appendChild(frag);
+    }
+
+    // ── Firestore load ──
+    async function loadKBListSafe() {
+      try {
+        const sessionSnap = await db.collection("users").doc(window.resolvedUid)
+          .collection("chat_os_sessions").doc("default").get();
+        const activeBotId = sessionSnap.exists ? sessionSnap.data().activeBotId : null;
+        if (activeBotId) {
+          await loadKBList(activeBotId);
+        } else {
+          renderKBList([]);
+        }
+      } catch (e) {
+        console.error('[ChatOS][KB] loadKBListSafe error', e);
+        renderKBList([]);
+      }
+    }
+
+    async function loadKBList(botId) {
+      renderKBList([]); // show empty while loading
+      try {
+        const snap = await db.collection("users").doc(window.resolvedUid)
+          .collection("bots").doc(botId)
+          .collection("knowledge_base")
+          .orderBy("createdAt", "desc")
+          .get();
+
+        const items = snap.docs.map(doc => {
+          const d = doc.data();
+          const dateStr = d.createdAt ? d.createdAt.toDate().toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : '';
+          return { ...d, _id: doc.id, _botId: botId, createdAtText: dateStr };
+        });
+        renderKBList(items, botId);
+      } catch (e) {
+        console.error('[ChatOS][KB] loadKBList error', e);
+        renderKBList([]);
+      }
+    }
+
+    async function deleteKBItem(botId, itemId) {
+      if (!botId || !itemId) return;
+      const ok = await showInlineConfirm({
+        title: 'Удалить источник?',
+        text: 'Источник будет удалён из базы знаний.',
+        okText: 'Удалить', cancelText: 'Отмена'
+      });
+      if (!ok) return;
+      try {
+        await db.collection("users").doc(window.resolvedUid)
+          .collection("bots").doc(botId)
+          .collection("knowledge_base").doc(itemId).delete();
+        await loadKBList(botId);
+        // Update KB count in status bar
+        const snap = await db.collection("users").doc(window.resolvedUid)
+          .collection("bots").doc(botId).collection("knowledge_base").get();
+        const elKb = document.getElementById('cs-kb');
+        if (elKb) elKb.textContent = `📚 KB: ${snap.size}`;
+      } catch (e) {
+        console.error('[ChatOS][KB] deleteKBItem error', e);
+        showToast('Ошибка удаления');
+      }
+    }
+
+    // ── In-chat confirm (replaces window.confirm) ──
+    let __confirmResolve = null;
+    function showInlineConfirm({ title, text, okText, cancelText } = {}) {
+      const modal  = document.getElementById('chat-confirm');
+      if (!modal) return Promise.resolve(false);
+      const t = document.getElementById('cc-title');
+      const d = document.getElementById('cc-text');
+      const ok = document.getElementById('cc-ok');
+      const cancel = document.getElementById('cc-cancel');
+      if (t) t.textContent = title || 'Подтвердить действие';
+      if (d) d.textContent = text  || 'Вы уверены?';
+      if (ok) ok.textContent = okText || 'ОК';
+      if (cancel) cancel.textContent = cancelText || 'Отмена';
+      modal.classList.remove('hidden');
+      return new Promise(resolve => { __confirmResolve = resolve; });
+    }
+    function hideInlineConfirm(result) {
+      const modal = document.getElementById('chat-confirm');
+      if (modal) modal.classList.add('hidden');
+      if (__confirmResolve) { __confirmResolve(!!result); __confirmResolve = null; }
+    }
+    // Bindings for confirm buttons (safe — run after DOM ready)
+    (function bindConfirmButtons() {
+      const ok = document.getElementById('cc-ok');
+      const cancel = document.getElementById('cc-cancel');
+      if (ok)     ok.addEventListener('click', () => hideInlineConfirm(true));
+      if (cancel) cancel.addEventListener('click', () => hideInlineConfirm(false));
+    })();
+    // Bindings for KB drawer buttons
+    (function bindKBButtons() {
+      const btnKb    = document.getElementById('btn-kb');
+      const btnOpen  = document.getElementById('btn-open-kb');
+      const kbClose  = document.getElementById('kb-close');
+      const backdrop = document.getElementById('kb-backdrop');
+      const refresh  = document.getElementById('kb-refresh');
+      if (btnKb)    btnKb.addEventListener('click',    openKBDrawer);
+      if (btnOpen)  btnOpen.addEventListener('click',  openKBDrawer);
+      if (kbClose)  kbClose.addEventListener('click',  closeKBDrawer);
+      if (backdrop) backdrop.addEventListener('click', closeKBDrawer);
+      if (refresh)  refresh.addEventListener('click',  loadKBListSafe);
+    })();
+
     /* ══ CHATS ══ */
     let _chatViewUnsub = null;
     let _handoffTimerInterval = null;
@@ -10936,6 +11405,20 @@ ${kbSummary}`,
             renderChatOsHistory();
           }
 
+          // Update status bar asynchronously (non-blocking)
+          ;(async () => {
+            try {
+              if (data.activeBotId) {
+                const botDoc = await db.collection("users").doc(uid).collection("bots").doc(data.activeBotId).get();
+                const b = botDoc.data() || {};
+                const kbSnap = await db.collection("users").doc(uid).collection("bots").doc(data.activeBotId).collection("knowledge_base").get();
+                updateStatusBar({ activeBotName: b.name || 'Bot', kbCount: kbSnap.size, tgConnected: !!b.token });
+              } else {
+                updateStatusBar({ activeBotName: '—', kbCount: undefined, tgConnected: false });
+              }
+            } catch (_) { updateStatusBar({ activeBotName: '—', kbCount: undefined, tgConnected: false }); }
+          })();
+
           // Enable UI after valid backend response
           CHAT_OS.inputEl.disabled = false;
           CHAT_OS.inputEl.placeholder = "Напишите ответ...";
@@ -10955,35 +11438,6 @@ ${kbSummary}`,
       }
     }
 
-    // In-chat confirm modal — returns Promise<boolean>
-    function openChatOsConfirm({ title = '', text = '', okText = 'OK', cancelText = 'Отмена' } = {}) {
-      return new Promise((resolve) => {
-        const modal = document.getElementById('chatos-modal');
-        document.getElementById('chatos-modal-title').textContent = title;
-        document.getElementById('chatos-modal-text').textContent = text;
-        const okBtn = document.getElementById('chatos-modal-ok');
-        const cancelBtn = document.getElementById('chatos-modal-cancel');
-        const backdrop = document.getElementById('chatos-modal-backdrop');
-        okBtn.textContent = okText;
-        cancelBtn.textContent = cancelText;
-
-        function close(result) {
-          modal.hidden = true;
-          okBtn.removeEventListener('click', onOk);
-          cancelBtn.removeEventListener('click', onCancel);
-          backdrop.removeEventListener('click', onCancel);
-          resolve(result);
-        }
-        function onOk() { close(true); }
-        function onCancel() { close(false); }
-
-        okBtn.addEventListener('click', onOk);
-        cancelBtn.addEventListener('click', onCancel);
-        backdrop.addEventListener('click', onCancel);
-        modal.hidden = false;
-      });
-    }
-
     // Smart Reset: clears history in Firestore (lastSeq stays monotonic), refreshes UI
     async function clearChatSmart() {
       // Auth guard — retry if uid not ready
@@ -10998,7 +11452,7 @@ ${kbSummary}`,
         return;
       }
 
-      const ok = await openChatOsConfirm({
+      const ok = await showInlineConfirm({
         title: 'Подтвердите действие',
         text: 'Очистить историю чата? Бот и настройки останутся.',
         okText: 'Очистить',
@@ -11018,7 +11472,7 @@ ${kbSummary}`,
         });
 
         let data = {};
-        try { data = await resp.json(); } catch (_) {}
+        try { data = await resp.json(); } catch (_) { }
 
         if (!resp.ok || !data.success) {
           console.error('[ChatOS] clear_chat failed', { status: resp.status, data });
@@ -11113,7 +11567,7 @@ ${kbSummary}`,
       if (pendingChatAttachment) {
         // Determine icon kind from file extension
         const _ext = pendingChatAttachment.name.split('.').pop().toLowerCase();
-        const _iconMap = { pdf:'pdf', jpg:'img', jpeg:'img', png:'img', gif:'img', webp:'img', svg:'img', zip:'zip', rar:'zip', '7z':'zip', tar:'zip', gz:'zip', txt:'txt', csv:'csv', md:'txt' };
+        const _iconMap = { pdf: 'pdf', jpg: 'img', jpeg: 'img', png: 'img', gif: 'img', webp: 'img', svg: 'img', zip: 'zip', rar: 'zip', '7z': 'zip', tar: 'zip', gz: 'zip', txt: 'txt', csv: 'csv', md: 'txt' };
         const _iconKind = _iconMap[_ext] || 'doc';
         const _iconLabel = _ext.toUpperCase().slice(0, 4);
         const _sizeMB = (pendingChatAttachment.size / 1024 / 1024).toFixed(1);
@@ -11154,16 +11608,16 @@ ${kbSummary}`,
           const _storageRef = firebase.storage().ref().child(_storagePath);
           const _task = _storageRef.put(file, { contentType: file.type || 'application/octet-stream' });
 
-          const _fillEl   = uploadBubble.querySelector('.ub-bar-fill');
-          const _pctEl    = uploadBubble.querySelector('.ub-percent');
+          const _fillEl = uploadBubble.querySelector('.ub-bar-fill');
+          const _pctEl = uploadBubble.querySelector('.ub-percent');
           const _statusEl = uploadBubble.querySelector('.ub-status');
 
           await new Promise((resolve, reject) => {
             _task.on('state_changed',
               (snap) => {
                 const pct = snap.totalBytes ? Math.round((snap.bytesTransferred / snap.totalBytes) * 100) : 0;
-                if (_fillEl)   _fillEl.style.width = pct + '%';
-                if (_pctEl)    _pctEl.textContent  = pct + '%';
+                if (_fillEl) _fillEl.style.width = pct + '%';
+                if (_pctEl) _pctEl.textContent = pct + '%';
                 if (_statusEl) _statusEl.textContent = 'Загрузка…';
               },
               (err) => reject(err),
