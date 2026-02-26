@@ -21,3 +21,16 @@ bash deploy.sh
 Это скопирует файл в `deploy/index.html` и опубликует на https://praicer-tovarov.netlify.app
 
 Не нужно спрашивать разрешения — деплоить автоматически после каждого изменения.
+
+### GitHub → git commit + push
+После **любого** изменения файлов — всегда делать коммит и пуш:
+
+```bash
+cd /Users/ahmadnazarov/Desktop/bot
+git add -A
+git commit -m "краткое описание изменения"
+git push
+```
+
+Репозиторий: https://github.com/nazarovcoo/chat-bot
+Не нужно спрашивать разрешения — коммитить и пушить автоматически после каждого изменения.
