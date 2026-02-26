@@ -1419,6 +1419,47 @@
       background: #f0f7ff;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
     }
+    .ob-chip.active { background: #3390ec; color: #fff; box-shadow: 0 1px 4px rgba(51,144,236,.3); }
+
+    /* ── 👎 Feedback form ── */
+    .cos-feedback-form {
+      margin: 4px 0 8px; background: #fff; border-radius: 10px;
+      padding: 10px 12px; box-shadow: 0 1px 5px rgba(0,0,0,.10); max-width: 320px;
+    }
+    .cos-feedback-label { font-size: 12px; color: #707579; margin-bottom: 6px; }
+    .cos-feedback-input {
+      width: 100%; box-sizing: border-box; border: 1px solid #dde1e7;
+      border-radius: 8px; padding: 8px 10px; font-size: 0.83rem;
+      resize: none; font-family: inherit; line-height: 1.4;
+    }
+    .cos-feedback-input:focus { outline: none; border-color: #3390ec; }
+    .cos-feedback-btns { display: flex; gap: 6px; margin-top: 7px; }
+    .cos-fb-send, .cos-fb-cancel { font-size: 0.8rem; padding: 5px 12px; border-radius: 8px; border: none; cursor: pointer; }
+    .cos-fb-send { background: #3390ec; color: #fff; font-weight: 600; }
+    .cos-fb-send:hover { background: #2778d0; }
+    .cos-fb-cancel { background: #f0f2f5; color: #707579; }
+
+    /* ── KB Suggestions section ── */
+    #onboarding-chat-overlay .kb-sug-divider { border: none; border-top: 1px solid rgba(15,23,42,.07); margin: 10px 0; }
+    #onboarding-chat-overlay .kb-suggestions { padding: 0 14px 10px; }
+    #onboarding-chat-overlay .kb-suggestions-hdr {
+      font-size: 11.5px; font-weight: 700; color: #8d9ea9;
+      text-transform: uppercase; letter-spacing: .04em; margin-bottom: 10px;
+    }
+    #onboarding-chat-overlay .kb-sug-card {
+      background: #fff; border: 1px solid rgba(15,23,42,.08);
+      border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+    }
+    #onboarding-chat-overlay .kb-sug-meta { font-size: 11px; color: #8d9ea9; margin-bottom: 4px; }
+    #onboarding-chat-overlay .kb-sug-text { font-size: 13px; color: #0f172a; line-height: 1.4; margin-bottom: 8px; }
+    #onboarding-chat-overlay .kb-sug-actions { display: flex; gap: 6px; }
+    #onboarding-chat-overlay .kb-sug-btn {
+      font-size: 12px; padding: 4px 10px; border-radius: 8px;
+      border: 1px solid rgba(15,23,42,.12); background: #fff; cursor: pointer; font-weight: 600;
+    }
+    #onboarding-chat-overlay .kb-sug-btn.approve { background: #dcf8c6; border-color: #4caf50; color: #2e7d32; }
+    #onboarding-chat-overlay .kb-sug-btn.reject  { background: #fef0f0; border-color: #ef4444; color: #b91c1c; }
+    #onboarding-chat-overlay .kb-sug-btn:hover { opacity: .85; }
 
     .chat-ob-input-area {
       width: 100%;
@@ -5403,6 +5444,11 @@
             </div>
           </div>
           <div id="kb-list" class="kb-list hidden"></div>
+          <hr class="kb-sug-divider" id="kb-sug-divider" style="display:none">
+          <div id="kb-suggestions-section" class="kb-suggestions hidden">
+            <div class="kb-suggestions-hdr" id="kb-sug-title">На подтверждение</div>
+            <div id="kb-suggestions-list"></div>
+          </div>
         </div>
       </aside>
 
@@ -9190,6 +9236,7 @@
         const activeBotId = sessionSnap.exists ? sessionSnap.data().activeBotId : null;
         if (activeBotId) {
           await loadKBList(activeBotId);
+          loadKbSuggestions(activeBotId); // load pending suggestions tab
         } else {
           renderKBList([]);
         }
@@ -11686,6 +11733,8 @@ ${kbSummary}`,
         <div class="tg-step"><div class="tg-icon tg-check">✓</div> Сообщение получено</div>
       `;
       if (window._tgListenerUnsub) { window._tgListenerUnsub(); window._tgListenerUnsub = null; }
+      // Advance wizard to Summary step now that TG is connected
+      if (_flowState && _flowState.stepId === 'BOT_TELEGRAM') advanceFlowStep('BOT_SUMMARY');
       setTimeout(() => { handleChatObSend("Я только что отправил(а) /start боту и он заработал. Что дальше?"); }, 1500);
     }
 
@@ -11711,6 +11760,268 @@ ${kbSummary}`,
             }
           });
         });
+    }
+
+    // ── FLOW ENGINE ─────────────────────────────────────────────────────────────
+    // Step-by-step wizard: Apple-style guided bot creation in the chat
+    const FLOW_STEPS = {
+      WELCOME: {
+        chips: ['🤖 Создать бота', '🔧 Улучшить бота', '📚 База знаний', '✈️ Telegram'],
+        next: { '🤖 Создать бота': 'BOT_NAME', '🔧 Улучшить бота': 'ACTIVE', '📚 База знаний': 'ACTIVE', '✈️ Telegram': 'ACTIVE' }
+      },
+      BOT_NAME: {
+        chips: [], placeholder: 'Напр.: «Помощник магазина» (до 40 символов)'
+      },
+      BOT_PURPOSE: {
+        chips: ['Поддержка клиентов', 'Продажи', 'FAQ / ответы', 'Другое'],
+        next: {}
+      },
+      BOT_PERSONA: {
+        chips: ['Дружелюбный', 'Деловой', 'Краткий', 'Подробный'],
+        next: {}
+      },
+      BOT_LANGUAGES: {
+        chips: ['🇷🇺 RU', '🇺🇿 UZ', '🇺🇸 EN', 'RU + EN'],
+        next: {}
+      },
+      BOT_KB: {
+        chips: ['📎 Загрузить файл', '🔗 Добавить ссылку', '✏️ Добавить текст', '⏩ Пропустить'],
+        next: { '⏩ Пропустить': 'BOT_TELEGRAM', '📎 Загрузить файл': null }
+      },
+      BOT_TELEGRAM: {
+        chips: ['✅ Подключить', '⏩ Позже'],
+        next: { '✅ Подключить': null, '⏩ Позже': 'BOT_SUMMARY' }
+        // null = stay on step; TG connection advances via Firestore listener
+      },
+      BOT_SUMMARY: {
+        chips: ['🚀 Запустить тест', '📚 Открыть базу знаний', '➕ Добавить знания'],
+        next: {}
+      },
+      ACTIVE: {
+        chips: ['➕ Добавить знания', '🔧 Настроить бота', '✈️ Telegram', '❓ Помощь'],
+        next: {}
+      }
+    };
+
+    const FLOW_ORDER = ['WELCOME', 'BOT_NAME', 'BOT_PURPOSE', 'BOT_PERSONA', 'BOT_LANGUAGES', 'BOT_KB', 'BOT_TELEGRAM', 'BOT_SUMMARY', 'ACTIVE'];
+
+    let _flowState = { stepId: 'WELCOME', data: {}, active: false };
+    let _pendingNextStep = null;
+    let _flowUid = null;
+
+    function getDefaultNextStep(stepId) {
+      const idx = FLOW_ORDER.indexOf(stepId);
+      return (idx >= 0 && idx < FLOW_ORDER.length - 1) ? FLOW_ORDER[idx + 1] : 'ACTIVE';
+    }
+
+    function renderFlowChips(stepId) {
+      const step = FLOW_STEPS[stepId] || FLOW_STEPS.ACTIVE;
+      const chipsEl = CHAT_OS.chipsEl;
+      if (!chipsEl) return;
+      chipsEl.innerHTML = '';
+      if (step.chips && step.chips.length > 0) {
+        step.chips.forEach(label => {
+          const btn = document.createElement('button');
+          btn.className = 'ob-chip';
+          btn.type = 'button';
+          btn.textContent = label;
+          btn.addEventListener('click', () => onFlowChipClick(label, _flowState.stepId));
+          chipsEl.appendChild(btn);
+        });
+        chipsEl.style.display = 'flex';
+      } else {
+        chipsEl.style.display = 'none';
+      }
+      CHAT_OS.inputEl.placeholder = step.placeholder || 'Напишите ответ...';
+    }
+
+    function onFlowChipClick(label, stepId) {
+      const step = FLOW_STEPS[stepId];
+      let nextStep;
+      if (step && step.next && label in step.next) {
+        nextStep = step.next[label]; // null = stay, string = advance
+      } else {
+        nextStep = getDefaultNextStep(stepId);
+      }
+      if (nextStep !== null && nextStep !== undefined) _pendingNextStep = nextStep;
+
+      // Special handlers
+      if (label === '📎 Загрузить файл') {
+        document.getElementById('chat-ob-attach-btn')?.click();
+        _pendingNextStep = 'BOT_TELEGRAM'; // advance after file is uploaded & sent
+        return;
+      }
+      if (label === '📚 Открыть базу знаний') { openKBDrawer(); }
+      handleChatObSend(label);
+    }
+
+    async function advanceFlowStep(nextStepId, extraData = {}) {
+      const isNewStep = nextStepId !== _flowState.stepId;
+      _flowState.stepId = nextStepId;
+      _flowState.data = { ..._flowState.data, ...extraData };
+      _flowState.active = nextStepId !== 'WELCOME';
+      renderFlowChips(nextStepId);
+      if (isNewStep && _flowUid) {
+        try {
+          await db.collection('users').doc(_flowUid)
+            .collection('chatosState').doc('flow')
+            .set({ stepId: nextStepId, data: _flowState.data, active: _flowState.active,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        } catch (_) {}
+      }
+    }
+
+    function handleFlowAfterAIResponse() {
+      if (_pendingNextStep) {
+        const next = _pendingNextStep;
+        _pendingNextStep = null;
+        advanceFlowStep(next);
+      }
+    }
+
+    async function initFlowEngine(uid) {
+      _flowUid = uid;
+      try {
+        const doc = await db.collection('users').doc(uid)
+          .collection('chatosState').doc('flow').get();
+        if (doc.exists) {
+          const d = doc.data();
+          _flowState = { stepId: d.stepId || 'WELCOME', data: d.data || {}, active: !!d.active };
+        } else {
+          _flowState = { stepId: 'WELCOME', data: {}, active: false };
+        }
+      } catch (_) {
+        _flowState = { stepId: 'WELCOME', data: {}, active: false };
+      }
+      renderFlowChips(_flowState.stepId);
+    }
+
+    // ── KB SUGGESTIONS ──────────────────────────────────────────────────────────
+    async function submitKbSuggestion(assistantMsg, proposedFix) {
+      if (!window.resolvedUid) return;
+      try {
+        const sessionSnap = await db.collection("users").doc(window.resolvedUid)
+          .collection("chat_os_sessions").doc("default").get();
+        const botId = sessionSnap.exists ? sessionSnap.data().activeBotId : null;
+        if (!botId) {
+          addChatOsMsg('bot', 'Не удалось определить активного бота. Попробуйте позже.');
+          return;
+        }
+        await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId)
+          .collection('kb_suggestions').add({
+            source: 'chat',
+            assistantMsg: (assistantMsg || '').slice(0, 2000),
+            proposedFix: (proposedFix || '').slice(0, 1000),
+            status: 'pending',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        addChatOsMsg('bot', '✅ Предложение сохранено. Найдёте его в «База знаний → На подтверждение».');
+      } catch (e) {
+        console.error('[ChatOS] submitKbSuggestion error', e);
+        addChatOsMsg('bot', 'Не удалось сохранить предложение. Попробуйте ещё раз.');
+      }
+    }
+
+    async function loadKbSuggestions(botId) {
+      const listEl = document.getElementById('kb-suggestions-list');
+      const section = document.getElementById('kb-suggestions-section');
+      const divider = document.getElementById('kb-sug-divider');
+      const titleEl = document.getElementById('kb-sug-title');
+      if (!listEl || !section || !window.resolvedUid) return;
+      try {
+        const snap = await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId)
+          .collection('kb_suggestions')
+          .where('status', '==', 'pending')
+          .orderBy('createdAt', 'desc')
+          .get();
+        if (snap.empty) {
+          section.classList.add('hidden');
+          if (divider) divider.style.display = 'none';
+          return;
+        }
+        section.classList.remove('hidden');
+        if (divider) divider.style.display = '';
+        if (titleEl) titleEl.textContent = `На подтверждение (${snap.size})`;
+        listEl.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        snap.docs.forEach(doc => {
+          const d = doc.data();
+          const card = document.createElement('div');
+          card.className = 'kb-sug-card';
+          card.innerHTML = `
+            <div class="kb-sug-meta">💬 Из чата · предложение</div>
+            <div class="kb-sug-text">${esc(d.proposedFix || '')}</div>
+            <div class="kb-sug-actions">
+              <button class="kb-sug-btn approve">✓ Добавить в KB</button>
+              <button class="kb-sug-btn reject">✕ Отклонить</button>
+            </div>
+          `;
+          card.querySelector('.approve').addEventListener('click', () => approveSuggestion(botId, doc.id, d.proposedFix, card));
+          card.querySelector('.reject').addEventListener('click', () => rejectSuggestion(botId, doc.id, card));
+          frag.appendChild(card);
+        });
+        listEl.appendChild(frag);
+      } catch (e) {
+        console.error('[ChatOS] loadKbSuggestions error', e);
+      }
+    }
+
+    async function approveSuggestion(botId, sugId, text, cardEl) {
+      try {
+        await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId)
+          .collection('knowledge_base').add({
+            type: 'text', content: text, title: (text || '').slice(0, 60),
+            source: 'suggestion', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId)
+          .collection('kb_suggestions').doc(sugId)
+          .update({ status: 'approved' });
+        cardEl.style.opacity = '0.4';
+        cardEl.querySelector('.kb-sug-actions').innerHTML = '<span style="font-size:12px;color:#4caf50;font-weight:600;">✓ Добавлено в базу знаний</span>';
+      } catch (e) { console.error('[ChatOS] approveSuggestion error', e); }
+    }
+
+    async function rejectSuggestion(botId, sugId, cardEl) {
+      try {
+        await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId)
+          .collection('kb_suggestions').doc(sugId)
+          .update({ status: 'rejected' });
+        cardEl.style.opacity = '0';
+        setTimeout(() => cardEl.remove(), 200);
+      } catch (e) { console.error('[ChatOS] rejectSuggestion error', e); }
+    }
+
+    function showSuggestionForm(reactionsEl) {
+      const existing = reactionsEl.nextElementSibling;
+      if (existing && existing.classList.contains('cos-feedback-form')) existing.remove();
+      const msgEl = reactionsEl.previousElementSibling;
+      const form = document.createElement('div');
+      form.className = 'cos-feedback-form';
+      form.innerHTML = `
+        <div class="cos-feedback-label">Что исправить? Напишите 1–2 предложения:</div>
+        <textarea class="cos-feedback-input" placeholder="Напр.: «Нужно добавить, что работаем с 9 до 18»" rows="2"></textarea>
+        <div class="cos-feedback-btns">
+          <button class="cos-fb-send" type="button">Отправить предложение</button>
+          <button class="cos-fb-cancel" type="button">Отмена</button>
+        </div>
+      `;
+      reactionsEl.insertAdjacentElement('afterend', form);
+      form.querySelector('.cos-feedback-input').focus();
+      form.querySelector('.cos-fb-send').addEventListener('click', () => {
+        const feedback = form.querySelector('.cos-feedback-input').value.trim();
+        if (!feedback) return;
+        submitKbSuggestion(msgEl?.dataset?.text || '', feedback);
+        form.remove();
+      });
+      form.querySelector('.cos-fb-cancel').addEventListener('click', () => {
+        form.remove();
+        reactionsEl.querySelectorAll('.cos-react').forEach(b => b.classList.remove('active'));
+      });
     }
 
     // Modified to always stay open for all users and fetch history from backend
@@ -11768,6 +12079,8 @@ ${kbSummary}`,
           CHAT_OS.inputEl.disabled = false;
           CHAT_OS.inputEl.placeholder = "Напишите ответ...";
           document.getElementById('chat-ob-attach-btn').disabled = false;
+          // Init flow engine: reads saved step from Firestore, renders chips
+          initFlowEngine(uid);
           // Auto-start: bot initiates conversation when history is empty
           if (chatOsHistory.length === 0) {
             handleChatObSend('Привет', { hidden: true });
@@ -11865,13 +12178,19 @@ ${kbSummary}`,
       return s;
     }
 
-    // 9. Reaction toggle
+    // 9. Reaction toggle (👎 also shows suggestion form)
     function cosReactClick(e) {
       const btn = e.currentTarget;
       const container = btn.closest('.cos-reactions');
       const wasActive = btn.classList.contains('active');
       container.querySelectorAll('.cos-react').forEach(b => b.classList.remove('active'));
-      if (!wasActive) btn.classList.add('active');
+      // Remove any existing feedback form
+      const existingForm = container.nextElementSibling;
+      if (existingForm && existingForm.classList.contains('cos-feedback-form')) existingForm.remove();
+      if (!wasActive) {
+        btn.classList.add('active');
+        if (btn.dataset.v === '-1') showSuggestionForm(container);
+      }
     }
 
     function _buildMsgEl(role, content, isGroup) {
@@ -12044,6 +12363,16 @@ ${kbSummary}`,
 
       if (text && !opts.hidden) addChatOsMsg('user', text);
 
+      // Flow engine: auto-advance on text for text-input steps (chips.length === 0)
+      // Excludes WELCOME (only chip-driven) and BOT_TELEGRAM (TG listener drives it)
+      if (!opts.hidden && text && _pendingNextStep === null &&
+          _flowState.stepId !== 'ACTIVE' && _flowState.stepId !== 'WELCOME' && _flowState.stepId !== 'BOT_TELEGRAM') {
+        const _curStep = FLOW_STEPS[_flowState.stepId];
+        if (_curStep && _curStep.chips && _curStep.chips.length === 0) {
+          _pendingNextStep = getDefaultNextStep(_flowState.stepId);
+        }
+      }
+
       let attachmentMeta = null;
       let uploadBubble = null;
 
@@ -12164,6 +12493,7 @@ ${kbSummary}`,
         } else {
           addChatOsMsg('bot', 'Произошла ошибка (пустой ответ).');
         }
+        handleFlowAfterAIResponse();
 
       } catch (err) {
         removeTypingIndicator();
