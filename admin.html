@@ -13781,7 +13781,7 @@ ${kbSummary}`,
       const token = document.getElementById('kap-tg-token')?.value.trim();
       if (!token) return;
       const panel = document.getElementById('kb-add-panel');
-      panel.innerHTML = \`<div class="kap-status-bar kap-pending"><span>⏳</span><span>Проверяю токен, пожалуйста, подождите...</span></div>\`;
+      panel.innerHTML = `<div class="kap-status-bar kap-pending"><span>⏳</span><span>Проверяю токен, пожалуйста, подождите...</span></div>`;
       
       CHAT_OS.inputEl.disabled = false;
       CHAT_OS.inputEl.placeholder = "Напишите ответ...";
