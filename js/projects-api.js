@@ -34,9 +34,42 @@
   }
 
   async function getAuthToken() {
+    function waitForAuthUser(timeoutMs) {
+      return new Promise(function (resolve) {
+        var done = false;
+        var t = setTimeout(function () {
+          if (done) return;
+          done = true;
+          resolve(null);
+        }, timeoutMs || 8000);
+        try {
+          if (typeof firebase !== "undefined" && firebase.auth) {
+            var unsub = firebase.auth().onAuthStateChanged(function (u) {
+              if (done) return;
+              if (!u) return;
+              done = true;
+              clearTimeout(t);
+              try { unsub && unsub(); } catch (_) {}
+              resolve(u);
+            });
+          } else {
+            done = true;
+            clearTimeout(t);
+            resolve(null);
+          }
+        } catch (_) {
+          if (done) return;
+          done = true;
+          clearTimeout(t);
+          resolve(null);
+        }
+      });
+    }
+
     try {
       if (typeof firebase !== "undefined" && firebase.auth) {
         var user = firebase.auth().currentUser;
+        if (!user) user = await waitForAuthUser(8000);
         if (user) return await user.getIdToken();
       }
     } catch (_) {}

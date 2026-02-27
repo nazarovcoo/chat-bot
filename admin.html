@@ -7,7 +7,7 @@
   <title>BotPanel — Создайте AI-бота для Telegram за 5 минут</title>
 
   <script>
-    window.BUILD_VERSION = "2026-02-27.3";
+    window.BUILD_VERSION = "2026-02-27.4";
     window.FORCE_PROJECTS_MAIN = true;
     // GLOBAL ERROR HANDLING
     function logClientError(msg, source, lineno, colno, error, type = "Error") {
@@ -15286,13 +15286,46 @@ ${kbSummary}`,
         });
       }
 
+      function waitForProjectsAuth(timeoutMs = 12000) {
+        return new Promise((resolve) => {
+          try {
+            if (window.firebase?.auth?.().currentUser) {
+              resolve(true);
+              return;
+            }
+            const started = Date.now();
+            const unsub = window.firebase?.auth?.().onAuthStateChanged((u) => {
+              if (u) {
+                try { unsub && unsub(); } catch (_) { }
+                resolve(true);
+              }
+            });
+            const timer = setInterval(() => {
+              if (window.firebase?.auth?.().currentUser) {
+                clearInterval(timer);
+                try { unsub && unsub(); } catch (_) { }
+                resolve(true);
+                return;
+              }
+              if (Date.now() - started >= timeoutMs) {
+                clearInterval(timer);
+                try { unsub && unsub(); } catch (_) { }
+                resolve(false);
+              }
+            }, 180);
+          } catch (_) {
+            resolve(false);
+          }
+        });
+      }
+
       (async () => {
         try {
           await loadScript('/js/projects-api.js');
           await loadScript('/js/projects-ui.js');
           if (!window.ProjectsUI) throw new Error('Projects UI module not loaded');
-          // Wait a moment for auth bootstrap to resolve, but always mount Projects UI.
-          await new Promise((resolve) => setTimeout(resolve, 600));
+          // In Telegram Mini App auth can lag; wait for user token before mounting API-driven UI.
+          await waitForProjectsAuth(12000);
           window.__projectsUiMounted = window.ProjectsUI.mount(root, {});
         } catch (e) {
           console.error('[ProjectsUI] init failed:', e);
