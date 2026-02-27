@@ -1541,7 +1541,6 @@ exports.projectsApi = onRequest(
         if (req.method === "GET") {
           const snap = await db.collection(`users/${uid}/project_sources`)
             .where("projectId", "==", projectId)
-            .orderBy("createdAt", "desc")
             .get();
           let sources = snap.docs.map((d) => {
             const s = d.data() || {};
@@ -1580,6 +1579,12 @@ exports.projectsApi = onRequest(
               }
             }
           }
+          // Sort in memory to avoid requiring a composite Firestore index
+          sources.sort((a, b) => {
+            const aT = a.createdAt || "";
+            const bT = b.createdAt || "";
+            return bT.localeCompare(aT);
+          });
           res.json({ ok: true, sources });
           return;
         }
