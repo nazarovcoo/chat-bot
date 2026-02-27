@@ -13844,6 +13844,10 @@ ${kbSummary}`,
     function showKbAddPanel(step) {
       const panel = document.getElementById('kb-add-panel');
       if (!panel) return;
+      if (step === 'kb-file' && isWaitingForAI) {
+        showToast('⏳ Дождитесь ответа перед загрузкой файла.');
+        return;
+      }
       _kbPanelActive = true;
       panel.classList.remove('hidden');
       if (CHAT_OS.chipsEl) CHAT_OS.chipsEl.style.display = 'none';
@@ -13879,14 +13883,17 @@ ${kbSummary}`,
     }
 
     function hideKbAddPanel() {
+      const wasActive = _kbPanelActive;
       _kbPanelActive = false;
-      _kbPanelCooldownTs = Date.now();
+      if (wasActive) _kbPanelCooldownTs = Date.now(); // only reset cooldown when panel was actually shown
       const panel = document.getElementById('kb-add-panel');
       if (panel) { panel.innerHTML = ''; panel.classList.add('hidden'); }
       renderFlowChips(_flowState.stepId);
     }
 
     function goBack() {
+      _pendingNextStep = null; // cancel any pending AI-driven step advance (Bug #7)
+      if (_kbPanelActive) hideKbAddPanel(); // close KB panel if open (Bug #6)
       if (_navHistory.length > 0) {
         const prev = _navHistory.pop();
         if (prev.dynamicChips && prev.dynamicChips.length > 0) {
@@ -14000,8 +14007,8 @@ ${kbSummary}`,
       if (btn) { btn.disabled = true; btn.textContent = 'Добавляю…'; }
       try {
         const data = await addKbLinkDirect(inp.value.trim());
-        _kbPanelSetDone('✅', 'Ссылка добавлена в базу знаний', 'Добавить ещё ссылку', 'kb-link');
-        addChatOsMsg('bot', `✅ Ссылка добавлена в базу знаний: ${data.title || data.url}`);
+        _kbPanelSetDone('✅', 'Ссылка получена. Контент обрабатывается…', 'Добавить ещё ссылку', 'kb-link');
+        addChatOsMsg('bot', `✅ Ссылка принята в базу знаний: ${data.title || data.url}`);
       } catch (e) {
         inp.classList.add('kap-error');
         showToast(e.message || 'Ошибка добавления ссылки');
@@ -14789,6 +14796,17 @@ ${kbSummary}`,
           const _storagePath = `users/${window.resolvedUid}/bots/${_botId}/uploads/${Date.now()}_${_safeName}`;
           const _storageRef = firebase.storage().ref().child(_storagePath);
           const _task = _storageRef.put(file, { contentType: file.type || 'application/octet-stream' });
+
+          // Wire up cancel button
+          const _cancelBtn = uploadBubble.querySelector('.ub-x');
+          if (_cancelBtn) {
+            _cancelBtn.addEventListener('click', () => {
+              _task.cancel();
+              uploadBubble.dataset.state = 'error';
+              const _errText = uploadBubble.querySelector('.ub-error-text');
+              if (_errText) _errText.textContent = 'Загрузка отменена.';
+            });
+          }
 
           const _fillEl = uploadBubble.querySelector('.ub-bar-fill');
           const _pctEl = uploadBubble.querySelector('.ub-percent');

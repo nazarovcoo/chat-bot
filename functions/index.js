@@ -2252,6 +2252,7 @@ exports.chatOsHandler = onRequest(
         const tgTokenRegex = /^[0-9]+:[A-Za-z0-9_-]+$/;
         if (s.state === "connecting_telegram" && tgTokenRegex.test(message.trim())) {
           // LLM is already verifying it, ignore duplicate token submission
+          currentSession = { ...s }; // ensure currentSession is defined for post-transaction checks
           return;
         } else if (s.state === "waiting_token" && tgTokenRegex.test(message.trim())) {
           s.state = "connecting_telegram";
