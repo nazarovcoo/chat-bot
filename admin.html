@@ -1000,6 +1000,44 @@
       display: none !important;
     }
 
+    /* ── Skeleton loader ── */
+    .cos-skeleton-wrap {
+      display: flex; flex-direction: column; gap: 7px;
+      max-width: 68%; align-self: flex-start; padding: 10px 14px;
+      background: #fff; border-radius: 0 10px 10px 10px;
+    }
+    .cos-skeleton-wrap + .cos-skeleton-wrap { margin-top: 4px; border-top-left-radius: 3px; }
+    .cos-skeleton-line {
+      height: 13px; border-radius: 6px;
+      background: linear-gradient(90deg, #f0f2f5 25%, #e4e8ec 50%, #f0f2f5 75%);
+      background-size: 200% 100%;
+      animation: cosSkeletonShimmer 1.6s infinite;
+    }
+    @keyframes cosSkeletonShimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ── Connection status ── */
+    #cos-conn-status {
+      display: none; text-align: center; font-size: 11.5px; color: #707579;
+      padding: 5px 12px; background: rgba(255,193,7,.1);
+      border-bottom: 1px solid rgba(255,193,7,.25);
+    }
+    #cos-conn-status.visible { display: block; }
+
+    /* ── Message send-status ── */
+    .cos-send-status {
+      display: inline-block; font-size: 10px; color: #a8b8c0;
+      margin-left: 3px; vertical-align: middle; user-select: none;
+    }
+    .cos-send-status.failed {
+      color: #ef4444; cursor: pointer; text-decoration: underline dotted;
+    }
+
+    /* ── Refresh button ── */
+    #refresh-chat-btn { font-size: 15px; }
+
 
     .guide-tip-close:hover {
       color: var(--text);
@@ -5407,6 +5445,7 @@
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
             </svg>
           </button>
+          <button id="refresh-chat-btn" class="chat-header-btn" title="Обновить чат" aria-label="Обновить чат">↻</button>
           <button id="clear-chat-btn" class="chat-header-btn" title="Очистить чат" aria-label="Очистить чат">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M9 3h6m-8 4h10m-9 0 1 16h6l1-16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -5418,6 +5457,9 @@
             onclick="auth.signOut()">Выйти</button>
         </div>
       </div>
+
+      <!-- ══ CONNECTION STATUS ══ -->
+      <div id="cos-conn-status"></div>
 
       <!-- ══ STATUS BAR ══ -->
       <div id="chatos-statusbar" class="chatos-statusbar">
@@ -12277,8 +12319,8 @@ ${kbSummary}`,
           if (sidebar) sidebar.style.display = 'none';
         }
 
-        // Load visual history from Backend Session
-        CHAT_OS.messagesEl.innerHTML = '<div id="chat-os-typing" class="msg-bot">...загрузка сессии...</div>';
+        // Show skeleton loader while fetching history (non-blocking, no text clutter)
+        _showCosSkeleton();
 
         try {
           const res = await fetch(CHAT_OS_HANDLER_URL, {
@@ -12287,7 +12329,7 @@ ${kbSummary}`,
             body: JSON.stringify({ uid: uid, action: 'init' })
           });
           const data = await res.json();
-          removeTypingIndicator();
+          _clearCosSkeleton();
           chatOsInitDone = true;
 
           // Normalize roles: backend uses "assistant", frontend uses "bot"
@@ -12335,7 +12377,7 @@ ${kbSummary}`,
             handleChatObSend('Привет', { hidden: true });
           }
         } catch (e) {
-          removeTypingIndicator();
+          _clearCosSkeleton();
           addChatOsMsg('bot', forceReload ? 'Ошибка обновления. Попробуйте ещё раз.' : 'Привет. Ошибка загрузки истории, но я готов к работе.');
           chatOsInitDone = true;
           CHAT_OS.inputEl.disabled = false;
@@ -12407,6 +12449,28 @@ ${kbSummary}`,
 
     // ── Chat OS UX v2 state ──
     let _lastChatRole = null;
+    let _lastUserMsgEl = null; // tracks last user bubble for send-status updates
+
+    // Skeleton loader shown during history fetch
+    function _showCosSkeleton() {
+      const frag = document.createDocumentFragment();
+      // Three skeleton bubbles with different widths to look natural
+      [[65, 85], [80, 50], [55, 72]].forEach(([w1, w2]) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'cos-skeleton-wrap';
+        wrap.innerHTML = `<div class="cos-skeleton-line" style="width:${w1}%"></div><div class="cos-skeleton-line" style="width:${w2}%"></div>`;
+        frag.appendChild(wrap);
+      });
+      const scrollBtn = document.getElementById('cos-scroll-btn');
+      const emptyEl = document.getElementById('cos-empty');
+      if (emptyEl) emptyEl.classList.add('hidden');
+      if (scrollBtn) CHAT_OS.messagesEl.insertBefore(frag, scrollBtn);
+      else CHAT_OS.messagesEl.appendChild(frag);
+    }
+
+    function _clearCosSkeleton() {
+      CHAT_OS.messagesEl.querySelectorAll('.cos-skeleton-wrap').forEach(el => el.remove());
+    }
 
     // 5. Markdown renderer
     function renderCosMarkdown(text) {
@@ -12540,7 +12604,10 @@ ${kbSummary}`,
           : esc(content).replace(/\n/g, '<br>');
         const time = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
         div.dataset.text = content;
-        div.innerHTML = `<div class="cos-content">${html}</div><div class="cos-time">${time}</div>`;
+        // User messages get a ⏳ send-status that updates to ✓ after AI responds
+        const statusHtml = role === 'user' ? '<span class="cos-send-status">⏳</span>' : '';
+        div.innerHTML = `<div class="cos-content">${html}</div><div class="cos-time">${time}${statusHtml}</div>`;
+        if (role === 'user') _lastUserMsgEl = div;
         if (role === 'bot') {
           const copyBtn = document.createElement('button');
           copyBtn.className = 'cos-copy-btn'; copyBtn.title = 'Копировать'; copyBtn.textContent = '⎘';
@@ -12590,7 +12657,12 @@ ${kbSummary}`,
         // Queue retry — preserve text and file so the message isn't lost
         const _savedText = overrideText || CHAT_OS.inputEl.value.trim();
         const _savedFile = pendingChatAttachment;
-        addChatOsMsg('bot', 'Авторизация… повторю через секунду.');
+        // Show subtle loading note (not "Авторизация" which is confusing during normal history load)
+        if (!chatOsInitDone && authReady) {
+          addChatOsMsg('bot', 'Загружаю историю, отправлю через секунду…');
+        } else {
+          addChatOsMsg('bot', 'Авторизация… повторю через секунду.');
+        }
         const _retryTimer = setInterval(() => {
           if (authReady && chatOsInitDone && window.resolvedUid) {
             clearInterval(_retryTimer);
@@ -12761,6 +12833,12 @@ ${kbSummary}`,
         } else {
           addChatOsMsg('bot', 'Произошла ошибка (пустой ответ).');
         }
+        // Update last user message: ⏳ → ✓
+        if (_lastUserMsgEl) {
+          const s = _lastUserMsgEl.querySelector('.cos-send-status');
+          if (s) s.textContent = '✓';
+          _lastUserMsgEl = null;
+        }
         handleFlowAfterAIResponse();
         // Dynamic chips: infer contextual chips from AI reply (ACTIVE mode only)
         if (_flowState.stepId === 'ACTIVE' && data.reply) {
@@ -12773,6 +12851,17 @@ ${kbSummary}`,
         if (uploadBubble) uploadBubble.dataset.state = 'error';
         clearChatAttachment();
         addChatOsMsg('bot', 'Ошибка сети. Попробуйте еще раз. Если файл большой, используйте текст/ссылку.');
+        // Update last user message: ⏳ → ↻ Повторить
+        if (_lastUserMsgEl) {
+          const s = _lastUserMsgEl.querySelector('.cos-send-status');
+          if (s) {
+            const savedText = _lastUserMsgEl.dataset.text;
+            s.textContent = '↻ Повторить'; s.className = 'cos-send-status failed';
+            s.title = 'Нажмите, чтобы отправить снова';
+            s.addEventListener('click', () => { s.remove(); handleChatObSend(savedText); }, { once: true });
+          }
+          _lastUserMsgEl = null;
+        }
         console.error(err);
       } finally {
         CHAT_OS.inputEl.disabled = false;
@@ -12809,6 +12898,34 @@ ${kbSummary}`,
       btn.classList.toggle('hidden', atBottom);
     });
     document.getElementById('cos-scroll-btn')?.addEventListener('click', scrollToBottomChatOs);
+
+    // ↻ Refresh button: soft reload — no full page reload
+    document.getElementById('refresh-chat-btn')?.addEventListener('click', async () => {
+      if (isWaitingForAI) { showToast('Дождитесь ответа перед обновлением.'); return; }
+      if (!window.resolvedUid) return;
+      const btn = document.getElementById('refresh-chat-btn');
+      if (btn) { btn.style.opacity = '0.4'; btn.style.pointerEvents = 'none'; }
+      chatOsInitDone = false;
+      _lastChatRole = null;
+      _lastUserMsgEl = null;
+      try {
+        await initChatOnboarding(window.resolvedUid, null, /*forceReload=*/true);
+      } finally {
+        if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+      }
+    });
+
+    // Online/offline reconnect status
+    const _cosConnEl = document.getElementById('cos-conn-status');
+    window.addEventListener('offline', () => {
+      if (_cosConnEl) { _cosConnEl.textContent = '📡 Нет соединения…'; _cosConnEl.classList.add('visible'); }
+    });
+    window.addEventListener('online', () => {
+      if (_cosConnEl) {
+        _cosConnEl.textContent = '✓ Соединение восстановлено';
+        setTimeout(() => _cosConnEl.classList.remove('visible'), 2500);
+      }
+    });
 
     // We no longer need finishChatOnboarding because it's a persistent OS
   </script>
