@@ -60,6 +60,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="./js/state.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/ui.js"></script>
   <style>
     *,
     *::before,
@@ -8757,33 +8760,7 @@
     let currentUser = null;
 
     /* ══ STATE ══ */
-    const STATE = {
-      theme: localStorage.getItem('theme') || 'light',
-      bots: [],
-      currentBotId: null,
-      kbItems: [],
-      kbQA: [],
-      kbJobs: [],
-      kbSources: [],
-      chatHistory: [],
-      chats: [],
-      selectedChatId: null,
-      unanswered: [],
-      topics: [],
-      agentActive: true,
-      rules: '',
-      analyticsPeriod: 90,
-      currentTab: 'auto',
-      currentAgentScreen: 'analytics',
-      kbTab: 'topics',
-      aiUsage: [],
-      aiUsagePeriod: 7,
-      pendingFiles: [],
-      unsubs: [],
-      plan: null,
-      autoReplies: [],
-      botPhotos: {},
-    };
+    const STATE = window.AppState.createInitialState();
 
     /* ── Firestore helpers ── */
     function col(name) {
@@ -9249,12 +9226,8 @@
 
     async function registerTelegramWebhook(uid, botId, token, remove) {
       try {
-        const r = await fetch('/api/register-webhook', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid, botId, token, remove }),
-        });
-        return await r.json();
+        const res = await window.AppApi.registerTelegramWebhook(uid, botId, token, remove);
+        return res.ok ? res.data : null;
       } catch (e) { console.warn('registerWebhook error:', e); return null; }
     }
 
@@ -11179,7 +11152,7 @@ ${kbSummary}`,
     }
 
     /* ══ AI SETTINGS (multi-provider) ══ */
-    const PROVIDERS = ['openai', 'gemini', 'claude'];
+    const PROVIDERS = window.AppState.PROVIDERS;
 
     function toggleVis(id) {
       const inp = document.getElementById(id);
@@ -11208,21 +11181,20 @@ ${kbSummary}`,
       const key = document.getElementById(p + '-key')?.value.trim();
       const span = document.getElementById(p + '-test');
       if (!key) { if (span) span.textContent = '⚠️ Введите ключ'; return; }
-      if (span) span.textContent = '⏳...';
+      window.AppUI.setProviderTestStatus(span, '⏳...');
       try {
-        if (p === 'openai') {
-          const r = await fetch('https://api.openai.com/v1/models', { headers: { Authorization: 'Bearer ' + key } });
-          span.textContent = r.ok ? '✅ Подключён' : '❌ Неверный ключ';
-          span.style.color = r.ok ? 'var(--green)' : 'var(--red)';
-        } else if (p === 'gemini') {
-          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-          span.textContent = r.ok ? '✅ Подключён' : '❌ Неверный ключ';
-          span.style.color = r.ok ? 'var(--green)' : 'var(--red)';
-        } else {
-          span.textContent = '⚠️ Проверка при запуске бота';
-          span.style.color = 'var(--yellow)';
+        if (p === 'claude') {
+          window.AppUI.setProviderTestStatus(span, '⚠️ Проверка при запуске бота', 'var(--yellow)');
+          return;
         }
-      } catch (e) { span.textContent = '❌ Ошибка'; span.style.color = 'var(--red)'; }
+
+        const res = await window.AppApi.verifyProviderKey(p, key);
+        if (res.ok && res.data && res.data.ok) {
+          window.AppUI.setProviderTestStatus(span, '✅ Подключён', 'var(--green)');
+        } else {
+          window.AppUI.setProviderTestStatus(span, '❌ Неверный ключ', 'var(--red)');
+        }
+      } catch (e) { window.AppUI.setProviderTestStatus(span, '❌ Ошибка', 'var(--red)'); }
     }
 
     async function saveAllProviders() {
@@ -12445,27 +12417,7 @@ ${kbSummary}`,
       const list = document.getElementById('ar-list');
       if (!list) return;
       const rules = STATE.autoReplies || [];
-      if (!rules.length) {
-        list.innerHTML = '<div class="empty-state" style="padding:30px;"><div class="empty-icon">⚡</div><div class="empty-sub">Нет правил. Добавьте первое правило выше.</div></div>';
-        return;
-      }
-      list.innerHTML = rules.map((r, i) => `
-      <div class="rules-card" style="padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-            <span style="font-size:0.78rem;font-weight:700;color:var(--text);">${r.keyword}</span>
-            <span style="font-size:0.6rem;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--text-dim);">${r.matchType === 'exact' ? 'точное' : 'содержит'}</span>
-            ${!r.enabled ? '<span style="font-size:0.6rem;background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:1px 6px;color:#ef4444;">выкл</span>' : ''}
-          </div>
-          <div style="font-size:0.75rem;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.response}</div>
-        </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button class="chat-ctrl-btn" onclick="toggleAutoReply(${i})">${r.enabled ? 'Выкл' : 'Вкл'}</button>
-          <button class="chat-ctrl-btn" onclick="showAddAutoReply(${i})">✏️</button>
-          <button class="chat-ctrl-btn" style="color:var(--red);" onclick="deleteAutoReply(${i})">🗑️</button>
-        </div>
-      </div>
-    `).join('');
+      list.innerHTML = window.AppUI.renderAutoRepliesHtml(rules);
     }
 
     // ══ NOTIFICATIONS SETTINGS ════════════════════════════════════════════════
@@ -13230,9 +13182,9 @@ ${kbSummary}`,
       addChatOsMsg('bot', '...');
 
       try {
-        // 1. Validate token via Telegram getMe
-        const meRes = await fetch(`https://api.telegram.org/bot${token}/getMe`);
-        const meData = await meRes.json();
+        // 1. Validate token via backend proxy
+        const verifyRes = await window.AppApi.verifyTelegramToken(token);
+        const meData = verifyRes.ok ? (verifyRes.data || {}) : { ok: false };
 
         if (!meData.ok) {
           removeTypingIndicator();
@@ -13267,7 +13219,7 @@ ${kbSummary}`,
         _tgWizardStatus = 'connected';
         exitTgWizard();
 
-        const botUsername = meData.result.username ? `@${meData.result.username}` : 'боту';
+        const botUsername = meData.result?.username ? `@${meData.result.username}` : 'боту';
         addChatOsMsg('bot',
           `✅ Telegram успешно подключён!\n\nНапишите /start ${botUsername} для проверки.\nЯ покажу подтверждение, когда сообщение придёт.`
         );
@@ -13848,37 +13800,15 @@ ${kbSummary}`,
       if (CHAT_OS.chipsEl) CHAT_OS.chipsEl.style.display = 'none';
 
       if (step === 'kb-choose') {
-        panel.innerHTML = `
-        < div class="kap-btns" >
-            <button class="kap-btn" onclick="showKbAddPanel('kb-text')"><span class="kap-icon">📝</span><span>Вставить текст</span></button>
-            <button class="kap-btn" onclick="showKbAddPanel('kb-file')"><span class="kap-icon">📎</span><span>Загрузить файл</span></button>
-            <button class="kap-btn" onclick="showKbAddPanel('kb-link')"><span class="kap-icon">🔗</span><span>Добавить ссылку</span></button>
-          </div >
-          <div class="kap-hint-row">
-            <span class="kap-hint">Файл = PDF/DOCX/TXT · Ссылка = сайт · Текст = вставить вручную</span>
-            <button class="kap-help-btn" onclick="showInfoPopover('kb_add_flow')">ℹ️ Как это работает?</button>
-          </div>
-          <span class="kap-back-link" onclick="hideKbAddPanel()">← Закрыть</span>`;
+        panel.innerHTML = window.AppUI.kbPanelMarkup('kb-choose');
       } else if (step === 'kb-file') {
-        panel.innerHTML = `
-        < div class="kap-status-bar kap-pending" ><span>📎</span><span>Выберите файл (PDF, DOCX, TXT)…</span></div >
-          <span class="kap-back-link" onclick="showKbAddPanel('kb-choose')">← Назад</span>`;
+        panel.innerHTML = window.AppUI.kbPanelMarkup('kb-file');
         document.getElementById('chat-ob-attach-btn')?.click();
       } else if (step === 'kb-link') {
-        panel.innerHTML = `
-            < input type = "url" id = "kap-link-input" class="kap-url-input" placeholder = "https://example.com" oninput = "_kbLinkChange()" >
-          <div class="kap-actions-row">
-            <button class="kap-submit-btn" id="kap-link-submit" onclick="_kbAddLink()" disabled>Добавить →</button>
-          </div>
-          <span class="kap-back-link" onclick="showKbAddPanel('kb-choose')">← Назад</span>`;
+        panel.innerHTML = window.AppUI.kbPanelMarkup('kb-link');
         setTimeout(() => document.getElementById('kap-link-input')?.focus(), 50);
       } else if (step === 'kb-text') {
-        panel.innerHTML = `
-        < textarea id = "kap-text-input" class="kap-textarea" placeholder = "Вставьте FAQ, правила, описание услуг…" rows = "4" ></textarea >
-          <div class="kap-actions-row">
-            <button class="kap-submit-btn" onclick="_kbAddText()">Сохранить →</button>
-          </div>
-          <span class="kap-back-link" onclick="showKbAddPanel('kb-choose')">← Назад</span>`;
+        panel.innerHTML = window.AppUI.kbPanelMarkup('kb-text');
         setTimeout(() => document.getElementById('kap-text-input')?.focus(), 50);
       }
     }
@@ -13886,18 +13816,13 @@ ${kbSummary}`,
     function _kbPanelSetDone(icon, line1, againLabel, againStep) {
       const panel = document.getElementById('kb-add-panel');
       if (!panel) return;
-      panel.innerHTML = `
-        < div class="kap-status-bar kap-success" ><span>${icon}</span><span>${line1}</span></div >
-          <div class="kap-done-row">
-            <button class="kap-ghost-btn" onclick="showKbAddPanel('${againStep}')">${againLabel}</button>
-            <button class="kap-primary-btn" onclick="hideKbAddPanel()">Готово ✓</button>
-          </div>`;
+      panel.innerHTML = window.AppUI.kbDoneMarkup(icon, line1, againLabel, againStep);
     }
 
     function _kbPanelOnFileSelected(filename) {
       const panel = document.getElementById('kb-add-panel');
       if (!panel) return;
-      panel.innerHTML = `< div class="kap-status-bar kap-pending" ><span>📎</span><span>${esc(filename)} — загружаем…</span></div > `;
+      panel.innerHTML = window.AppUI.kbUploadingMarkup(filename);
     }
 
     function _kbPanelOnFileUploaded() {
@@ -15048,7 +14973,7 @@ ${kbSummary}`,
       document.getElementById('ip-title').textContent = c.title;
       document.getElementById('ip-why').textContent = c.why;
       const howEl = document.getElementById('ip-how');
-      howEl.innerHTML = c.how.map(s => `<li>${s}</li>`).join('');
+      howEl.innerHTML = c.how.map(s => `<li>${window.AppUI.escHtml(s)}</li>`).join('');
       document.getElementById('ip-result').textContent = c.result;
       const overlay = document.getElementById('info-popover-overlay');
       overlay.classList.add('visible');

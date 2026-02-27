@@ -96,6 +96,10 @@ async function callAI(provider, model, system, messages, maxTokens = 800) {
       }),
     });
     const data = await resp.json();
+    if (!resp.ok) {
+      const providerMsg = data?.error?.message || `OpenAI request failed (${resp.status})`;
+      throw new Error(providerMsg);
+    }
     return {
       text: data.choices?.[0]?.message?.content?.trim() || "Нет ответа",
       inputTokens: data.usage?.prompt_tokens || 0,
@@ -120,6 +124,10 @@ async function callAI(provider, model, system, messages, maxTokens = 800) {
       }
     );
     const data = await resp.json();
+    if (!resp.ok) {
+      const providerMsg = data?.error?.message || `Gemini request failed (${resp.status})`;
+      throw new Error(providerMsg);
+    }
     return {
       text: data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Нет ответа",
       inputTokens: data.usageMetadata?.promptTokenCount || 0,
@@ -146,6 +154,10 @@ async function callAI(provider, model, system, messages, maxTokens = 800) {
       body: JSON.stringify(body),
     });
     const data = await resp.json();
+    if (!resp.ok) {
+      const providerMsg = data?.error?.message || `Anthropic request failed (${resp.status})`;
+      throw new Error(providerMsg);
+    }
     return {
       text: data.content?.[0]?.text?.trim() || "Нет ответа",
       inputTokens: data.usage?.input_tokens || 0,
@@ -248,6 +260,87 @@ exports.aiChat = onRequest(
     } catch (err) {
       console.error("AI error:", err);
       res.status(500).json({ error: err.message || "AI error" });
+    }
+  }
+);
+
+// ─── verifyProviderKey — validate provider API keys via backend proxy ─────────
+exports.verifyProviderKey = onRequest(
+  { cors: true, timeoutSeconds: 30 },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    const { provider, key } = req.body || {};
+    if (!provider || !key) {
+      res.status(400).json({ ok: false, error: "provider and key required" });
+      return;
+    }
+
+    try {
+      if (provider === "openai") {
+        const r = await fetch("https://api.openai.com/v1/models", {
+          headers: { Authorization: `Bearer ${key}` },
+        });
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          res.status(401).json({ ok: false, error: data?.error?.message || "Invalid OpenAI key" });
+          return;
+        }
+        res.json({ ok: true });
+        return;
+      }
+
+      if (provider === "gemini") {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          res.status(401).json({ ok: false, error: data?.error?.message || "Invalid Gemini key" });
+          return;
+        }
+        res.json({ ok: true });
+        return;
+      }
+
+      if (provider === "claude") {
+        res.json({ ok: true, note: "Claude key is validated at runtime." });
+        return;
+      }
+
+      res.status(400).json({ ok: false, error: "Unsupported provider" });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message || "Verification failed" });
+    }
+  }
+);
+
+// ─── verifyTelegramToken — validate Telegram bot token via backend proxy ─────
+exports.verifyTelegramToken = onRequest(
+  { cors: true, timeoutSeconds: 30 },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    const { token } = req.body || {};
+    if (!token) {
+      res.status(400).json({ ok: false, error: "token required" });
+      return;
+    }
+
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data?.ok) {
+        res.status(401).json({ ok: false, error: data?.description || "Invalid Telegram token" });
+        return;
+      }
+      res.json({ ok: true, result: data.result });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message || "Telegram verification failed" });
     }
   }
 );
@@ -2189,6 +2282,8 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
 
                     if (!setWhRes.ok || !setWhData.ok) {
                       toolResult = `Error: Token valid, but failed to set webhook: ${setWhData.description}`;
+                      currentSession.state = "waiting_token";
+                      currentSession.assistant_expectation = { type: "telegram_connect", persistent: false };
                     } else {
                       // 3. Save to Firestore
                       const tokenLast4 = args.token.slice(-4);
@@ -2216,6 +2311,8 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
                   }
                 } catch (e) {
                   toolResult = `Error connecting to Telegram API: ${e.message}`;
+                  currentSession.state = "waiting_token";
+                  currentSession.assistant_expectation = { type: "telegram_connect", persistent: false };
                 }
               }
             }

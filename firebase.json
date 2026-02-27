@@ -31,6 +31,14 @@
         "function": "processKnowledge"
       },
       {
+        "source": "/api/verify-provider-key",
+        "function": "verifyProviderKey"
+      },
+      {
+        "source": "/api/verify-telegram-token",
+        "function": "verifyTelegramToken"
+      },
+      {
         "source": "/api/transcribe",
         "function": "transcribeYouTube"
       },
