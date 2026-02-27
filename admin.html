@@ -7,7 +7,7 @@
   <title>BotPanel — Создайте AI-бота для Telegram за 5 минут</title>
 
   <script>
-    window.BUILD_VERSION = "2026-02-27.2";
+    window.BUILD_VERSION = "2026-02-27.3";
     window.FORCE_PROJECTS_MAIN = true;
     // GLOBAL ERROR HANDLING
     function logClientError(msg, source, lineno, colno, error, type = "Error") {
@@ -11714,6 +11714,9 @@ ${kbSummary}`,
         });
       }
 
+      // Projects-only mode: do not start legacy listeners/screens to keep UI fast and stable.
+      if (window.FORCE_PROJECTS_MAIN) return;
+
       db.collection('users').doc(user.uid).collection('settings').doc('agent').get().then(d => {
         if (d.exists) { STATE.agentActive = d.data().active !== false; applyAgentStatus(); }
       });
@@ -15275,7 +15278,8 @@ ${kbSummary}`,
       function loadScript(src) {
         return new Promise((resolve, reject) => {
           const s = document.createElement('script');
-          s.src = src;
+          const v = encodeURIComponent(window.BUILD_VERSION || 'dev');
+          s.src = src + (src.includes('?') ? '&' : '?') + 'v=' + v;
           s.onload = () => resolve();
           s.onerror = () => reject(new Error(`Failed to load ${src}`));
           document.body.appendChild(s);

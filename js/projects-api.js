@@ -5,6 +5,34 @@
     root.ProjectsApi = factory();
   }
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  var _cache = new Map();
+  var CACHE_TTL_MS = 45000;
+
+  function _cacheKey(path, options) {
+    var method = (options && options.method) || "GET";
+    return method + ":" + path;
+  }
+
+  function _readCache(key) {
+    var rec = _cache.get(key);
+    if (!rec) return null;
+    if (Date.now() > rec.expiresAt) {
+      _cache.delete(key);
+      return null;
+    }
+    return rec.value;
+  }
+
+  function _writeCache(key, val) {
+    _cache.set(key, { value: val, expiresAt: Date.now() + CACHE_TTL_MS });
+  }
+
+  function _invalidateCacheByPrefix(prefix) {
+    Array.from(_cache.keys()).forEach(function (k) {
+      if (k.indexOf(prefix) !== -1) _cache.delete(k);
+    });
+  }
+
   async function getAuthToken() {
     try {
       if (typeof firebase !== "undefined" && firebase.auth) {
@@ -16,8 +44,15 @@
   }
 
   async function request(path, options) {
-    var token = await getAuthToken();
     var opts = options || {};
+    var method = (opts.method || "GET").toUpperCase();
+    var key = _cacheKey(path, opts);
+    if (method === "GET") {
+      var c = _readCache(key);
+      if (c) return c;
+    }
+
+    var token = await getAuthToken();
     var headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
     if (token) headers.Authorization = "Bearer " + token;
     var resp = await fetch(path, Object.assign({}, opts, { headers: headers }));
@@ -31,6 +66,8 @@
       err.data = data;
       throw err;
     }
+    if (method === "GET") _writeCache(key, data);
+    if (method !== "GET") _invalidateCacheByPrefix("/api/projects");
     return data;
   }
 
@@ -57,8 +94,18 @@
     return request("/api/projects/" + encodeURIComponent(id), { method: "DELETE" });
   }
 
-  function listSources(projectId) {
-    return request("/api/projects/" + encodeURIComponent(projectId) + "/sources");
+  function listSources(projectId, query) {
+    var params = new URLSearchParams();
+    var q = (query && query.q) || "";
+    var type = (query && query.type) || "";
+    var limit = (query && query.limit) || "";
+    var cursor = (query && query.cursor) || "";
+    if (q) params.set("q", q);
+    if (type) params.set("type", type);
+    if (limit) params.set("limit", String(limit));
+    if (cursor) params.set("cursor", String(cursor));
+    var suffix = params.toString() ? ("?" + params.toString()) : "";
+    return request("/api/projects/" + encodeURIComponent(projectId) + "/sources" + suffix);
   }
 
   function addSource(projectId, payload) {
@@ -76,8 +123,12 @@
     var params = new URLSearchParams();
     var q = (query && query.q) || "";
     var sort = (query && query.sort) || "newest";
+    var limit = (query && query.limit) || "";
+    var cursor = (query && query.cursor) || "";
     if (q) params.set("q", q);
     if (sort) params.set("sort", sort);
+    if (limit) params.set("limit", String(limit));
+    if (cursor) params.set("cursor", String(cursor));
     var suffix = params.toString() ? ("?" + params.toString()) : "";
     return request("/api/projects/" + encodeURIComponent(projectId) + "/chats" + suffix);
   }
@@ -100,4 +151,3 @@
     listMessages: listMessages,
   };
 });
-

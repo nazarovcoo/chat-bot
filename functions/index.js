@@ -1327,6 +1327,33 @@ function _asIso(ts) {
   return null;
 }
 
+function _safeLimit(v, def = 30, max = 100) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return def;
+  return Math.min(Math.floor(n), max);
+}
+
+function _decodeCursor(cursor) {
+  if (!cursor) return 0;
+  const n = Number(Buffer.from(String(cursor), "base64").toString("utf8"));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function _encodeCursor(num) {
+  return Buffer.from(String(num), "utf8").toString("base64");
+}
+
+function _tokenizeSearchText(input) {
+  const words = String(input || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s@._-]+/gu, " ")
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 2)
+    .slice(0, 25);
+  return Array.from(new Set(words));
+}
+
 async function ensureDefaultProject(uid) {
   const db = admin.firestore();
   const projectsCol = db.collection(`users/${uid}/projects`);
@@ -1348,6 +1375,8 @@ async function ensureDefaultProject(uid) {
     botHost: defaultHost,
     instructions: defaultInstructions,
     legacyDefault: true,
+    sourcesCount: 0,
+    chatsCount: 0,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
@@ -1370,8 +1399,10 @@ async function ensureDefaultProject(uid) {
           type: item.type === "url" ? "url" : (item.type === "file" ? "file" : "text"),
           title: item.title || item.name || "Legacy source",
           contentRef: item.url || item.content || item.path || "",
+          searchTokens: _tokenizeSearchText(`${item.title || item.name || ""} ${item.url || ""} ${item.content || ""}`),
           status: item.status === "error" ? "error" : "ready",
           legacyRef: `users/${uid}/bots/${botId}/knowledge_base/${d.id}`,
+          createdAtMs: item.createdAt?.toMillis?.() || Date.now(),
           createdAt: item.createdAt || admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
@@ -1394,6 +1425,8 @@ async function ensureDefaultProject(uid) {
         name: cd.name || "",
         username: cd.username || "",
         lastMessage: cd.lastMessage || "",
+        searchTokens: _tokenizeSearchText(`${cd.name || ""} ${cd.username || ""} ${c.id || ""} ${cd.lastMessage || ""}`),
+        lastMessageAtMs: cd.lastTs?.toMillis?.() || cd._ts?.toMillis?.() || Date.now(),
         lastMessageAt: cd.lastTs || cd._ts || admin.firestore.FieldValue.serverTimestamp(),
         createdAt: cd._ts || admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -1424,6 +1457,12 @@ async function ensureDefaultProject(uid) {
     await b.commit();
   }
 
+  await projectRef.set({
+    sourcesCount: batchWrites.filter((w) => String(w.ref.path).includes("/project_sources/")).length,
+    chatsCount: batchWrites.filter((w) => String(w.ref.path).includes("/project_chats/") && !String(w.ref.path).includes("/messages/")).length,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+
   return projectId;
 }
 
@@ -1434,6 +1473,8 @@ function _projectPublic(id, d) {
     botHost: d.botHost || "",
     instructions: d.instructions || "",
     legacyDefault: !!d.legacyDefault,
+    sourcesCount: Number(d.sourcesCount || 0),
+    chatsCount: Number(d.chatsCount || 0),
     createdAt: _asIso(d.createdAt),
     updatedAt: _asIso(d.updatedAt),
   };
@@ -1475,6 +1516,8 @@ exports.projectsApi = onRequest(
           name: String(name).trim(),
           botHost: String(botHost).trim(),
           instructions: String(instructions || "").trim(),
+          sourcesCount: 0,
+          chatsCount: 0,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -1539,9 +1582,19 @@ exports.projectsApi = onRequest(
         if (!(await pRef.get()).exists) { res.status(404).json({ error: "Project not found" }); return; }
 
         if (req.method === "GET") {
-          const snap = await db.collection(`users/${uid}/project_sources`)
-            .where("projectId", "==", projectId)
-            .get();
+          const limit = _safeLimit(req.query.limit, 30, 100);
+          const cursor = _decodeCursor(req.query.cursor);
+          const q = String(req.query.q || "").toLowerCase().trim();
+          const type = String(req.query.type || "").toLowerCase().trim();
+          const qToken = q.split(/\s+/).find(Boolean) || "";
+          let query = db.collection(`users/${uid}/project_sources`)
+            .where("projectId", "==", projectId);
+          if (type) query = query.where("type", "==", type);
+          if (qToken) query = query.where("searchTokens", "array-contains", qToken);
+          query = query.orderBy("createdAtMs", "desc");
+          if (cursor > 0) query = query.startAfter(cursor);
+          query = query.limit(limit + 1);
+          const snap = await query.get();
           let sources = snap.docs.map((d) => {
             const s = d.data() || {};
             return {
@@ -1551,12 +1604,35 @@ exports.projectsApi = onRequest(
               title: s.title || "",
               contentRef: s.contentRef || "",
               status: s.status || "pending",
+              createdAtMs: Number(s.createdAtMs || 0),
               createdAt: _asIso(s.createdAt),
               updatedAt: _asIso(s.updatedAt),
             };
           });
+          if (qToken && sources.length === 0 && !cursor) {
+            let fallbackQuery = db.collection(`users/${uid}/project_sources`)
+              .where("projectId", "==", projectId);
+            if (type) fallbackQuery = fallbackQuery.where("type", "==", type);
+            const fallbackSnap = await fallbackQuery.orderBy("createdAtMs", "desc").limit(Math.min(limit * 4, 120)).get();
+            sources = fallbackSnap.docs.map((d) => {
+              const s = d.data() || {};
+              return {
+                id: d.id,
+                projectId: s.projectId,
+                type: s.type || "text",
+                title: s.title || "",
+                contentRef: s.contentRef || "",
+                status: s.status || "pending",
+                createdAtMs: Number(s.createdAtMs || 0),
+                createdAt: _asIso(s.createdAt),
+                updatedAt: _asIso(s.updatedAt),
+              };
+            });
+          }
+          let hasMore = sources.length > limit;
+          if (hasMore) sources = sources.slice(0, limit);
           // Non-breaking fallback for legacy users: read bot knowledge directly
-          if (sources.length === 0) {
+          if (sources.length === 0 && !cursor) {
             const p = (await pRef.get()).data() || {};
             if (p.legacyDefault) {
               const botSnap = await db.collection(`users/${uid}/bots`).limit(1).get();
@@ -1572,6 +1648,7 @@ exports.projectsApi = onRequest(
                     title: s.title || s.name || "Legacy source",
                     contentRef: s.url || s.content || s.path || "",
                     status: s.status || "ready",
+                    createdAtMs: 0,
                     createdAt: _asIso(s.createdAt),
                     updatedAt: _asIso(s.updatedAt) || _asIso(s.createdAt),
                   };
@@ -1579,13 +1656,20 @@ exports.projectsApi = onRequest(
               }
             }
           }
-          // Sort in memory to avoid requiring a composite Firestore index
-          sources.sort((a, b) => {
-            const aT = a.createdAt || "";
-            const bT = b.createdAt || "";
-            return bT.localeCompare(aT);
+          if (q) {
+            sources = sources.filter((s) =>
+              `${s.title} ${s.contentRef} ${s.type} ${s.status}`.toLowerCase().includes(q));
+          }
+          const items = sources.slice(0, limit);
+          const nextCursor = hasMore
+            ? _encodeCursor(items.length ? (items[items.length - 1].createdAtMs || (items[items.length - 1].createdAt ? Date.parse(items[items.length - 1].createdAt) : 0)) : 0)
+            : null;
+          const result = items.map((s) => {
+            const out = { ...s };
+            delete out.createdAtMs;
+            return out;
           });
-          res.json({ ok: true, sources });
+          res.json({ ok: true, sources: result, nextCursor, hasMore });
           return;
         }
 
@@ -1605,11 +1689,16 @@ exports.projectsApi = onRequest(
             type: String(type),
             title: String(title).trim(),
             contentRef: String(contentRef).trim(),
+            searchTokens: _tokenizeSearchText(`${title} ${contentRef}`),
             status,
+            createdAtMs: Date.now(),
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
-          await pRef.set({ updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          await pRef.set({
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            sourcesCount: admin.firestore.FieldValue.increment(1),
+          }, { merge: true });
           const fresh = await ref.get();
           const d = fresh.data() || {};
           res.status(201).json({
@@ -1637,10 +1726,17 @@ exports.projectsApi = onRequest(
         if (!(await pRef.get()).exists) { res.status(404).json({ error: "Project not found" }); return; }
         const q = String(req.query.q || "").toLowerCase().trim();
         const sort = String(req.query.sort || "newest");
-        const snap = await db.collection(`users/${uid}/project_chats`)
-          .where("projectId", "==", projectId)
-          .limit(200)
-          .get();
+        const limit = _safeLimit(req.query.limit, 30, 100);
+        const cursor = _decodeCursor(req.query.cursor);
+        const qToken = q.split(/\s+/).find(Boolean) || "";
+        const dir = sort === "oldest" ? "asc" : "desc";
+        let query = db.collection(`users/${uid}/project_chats`)
+          .where("projectId", "==", projectId);
+        if (qToken) query = query.where("searchTokens", "array-contains", qToken);
+        query = query.orderBy("lastMessageAtMs", dir);
+        if (cursor > 0) query = query.startAfter(cursor);
+        query = query.limit(limit + 1);
+        const snap = await query.get();
         let chats = snap.docs.map((d) => {
           const c = d.data() || {};
           return {
@@ -1651,22 +1747,41 @@ exports.projectsApi = onRequest(
             name: c.name || "",
             username: c.username || "",
             lastMessage: c.lastMessage || "",
+            lastMessageAtMs: Number(c.lastMessageAtMs || 0),
             lastMessageAt: _asIso(c.lastMessageAt),
             createdAt: _asIso(c.createdAt),
           };
         });
-        // Sort in memory to avoid requiring a composite Firestore index
-        chats.sort((a, b) => {
-          const aT = a.lastMessageAt || "";
-          const bT = b.lastMessageAt || "";
-          return sort === "oldest" ? aT.localeCompare(bT) : bT.localeCompare(aT);
-        });
-        if (chats.length === 0) {
+        if (qToken && chats.length === 0 && !cursor) {
+          const fallbackSnap = await db.collection(`users/${uid}/project_chats`)
+            .where("projectId", "==", projectId)
+            .orderBy("lastMessageAtMs", dir)
+            .limit(Math.min(limit * 4, 120))
+            .get();
+          chats = fallbackSnap.docs.map((d) => {
+            const c = d.data() || {};
+            return {
+              id: d.id,
+              projectId: c.projectId,
+              channel: c.channel || "web",
+              userExternalId: c.userExternalId || "",
+              name: c.name || "",
+              username: c.username || "",
+              lastMessage: c.lastMessage || "",
+              lastMessageAtMs: Number(c.lastMessageAtMs || 0),
+              lastMessageAt: _asIso(c.lastMessageAt),
+              createdAt: _asIso(c.createdAt),
+            };
+          });
+        }
+        let hasMore = chats.length > limit;
+        if (hasMore) chats = chats.slice(0, limit);
+        if (chats.length === 0 && !cursor) {
           const p = (await pRef.get()).data() || {};
           if (p.legacyDefault) {
             const legacyChats = await db.collection(`users/${uid}/chats`)
               .orderBy("lastTs", sort === "oldest" ? "asc" : "desc")
-              .limit(200)
+              .limit(limit + 1)
               .get();
             chats = legacyChats.docs.map((d) => {
               const c = d.data() || {};
@@ -1678,17 +1793,29 @@ exports.projectsApi = onRequest(
                 name: c.name || "",
                 username: c.username || "",
                 lastMessage: c.lastMessage || "",
+                lastMessageAtMs: c.lastTs?.toMillis?.() || c._ts?.toMillis?.() || 0,
                 lastMessageAt: _asIso(c.lastTs || c._ts),
                 createdAt: _asIso(c._ts),
               };
             });
+            hasMore = chats.length > limit;
+            if (hasMore) chats = chats.slice(0, limit);
           }
         }
         if (q) {
           chats = chats.filter((c) =>
             `${c.name} ${c.username} ${c.userExternalId} ${c.lastMessage}`.toLowerCase().includes(q));
         }
-        res.json({ ok: true, chats });
+        const items = chats.slice(0, limit);
+        const nextCursor = hasMore
+          ? _encodeCursor(items.length ? (items[items.length - 1].lastMessageAtMs || (items[items.length - 1].lastMessageAt ? Date.parse(items[items.length - 1].lastMessageAt) : 0)) : 0)
+          : null;
+        const result = items.map((c) => {
+          const out = { ...c };
+          delete out.lastMessageAtMs;
+          return out;
+        });
+        res.json({ ok: true, chats: result, nextCursor, hasMore });
         return;
       }
 
@@ -1697,8 +1824,16 @@ exports.projectsApi = onRequest(
       if (ds && req.method === "DELETE") {
         const id = decodeURIComponent(ds[1]);
         const ref = db.doc(`users/${uid}/project_sources/${id}`);
-        if (!(await ref.get()).exists) { res.status(404).json({ error: "Source not found" }); return; }
+        const snap = await ref.get();
+        if (!snap.exists) { res.status(404).json({ error: "Source not found" }); return; }
+        const projectId = snap.data().projectId;
         await ref.delete();
+        if (projectId) {
+          await db.doc(`users/${uid}/projects/${projectId}`).set({
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            sourcesCount: admin.firestore.FieldValue.increment(-1),
+          }, { merge: true });
+        }
         res.json({ ok: true });
         return;
       }

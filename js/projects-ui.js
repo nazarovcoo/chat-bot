@@ -49,6 +49,9 @@
       ".projects-card{border:1px solid #e5e7eb;border-radius:16px;padding:14px;background:#fff}",
       ".projects-grid{display:grid;gap:12px}",
       ".projects-list-items{display:flex;flex-direction:column;gap:10px;margin-top:12px}",
+      ".projects-virtual{position:relative;height:560px;overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff}",
+      ".projects-virtual-spacer{position:relative;width:100%}",
+      ".projects-load-more{margin-top:10px;display:flex;justify-content:center}",
       ".projects-item{border:1px solid #e5e7eb;border-radius:14px;padding:12px;display:flex;justify-content:space-between;gap:12px}",
       ".projects-item h4{margin:0;font-size:14px}",
       ".projects-item p{margin:4px 0 0;font-size:12px;color:#6b7280}",
@@ -77,9 +80,26 @@
       activeProjectId: null,
       tab: "chats",
       chats: [],
+      chatsCursor: null,
+      chatsHasMore: false,
+      chatsQuery: "",
+      chatsRequestSeq: 0,
       sources: [],
-      q: "",
+      sourcesCursor: null,
+      sourcesHasMore: false,
+      sourcesQuery: "",
+      sourcesRequestSeq: 0,
       sort: "newest",
+      sourcesType: "",
+    };
+  }
+
+  function debounce(fn, wait) {
+    var t = null;
+    return function () {
+      var args = arguments;
+      clearTimeout(t);
+      t = setTimeout(function () { fn.apply(null, args); }, wait || 250);
     };
   }
 
@@ -150,6 +170,14 @@
           "<div class='project-pill'>" + (p.legacyDefault ? "default" : "project") + "</div>";
         el.addEventListener("click", function () {
           state.activeProjectId = p.id;
+          state.chats = [];
+          state.sources = [];
+          state.chatsCursor = null;
+          state.sourcesCursor = null;
+          state.chatsQuery = "";
+          state.sourcesQuery = "";
+          state.sort = "newest";
+          state.sourcesType = "";
           renderSidebar();
           renderHeader();
           renderTab();
@@ -169,7 +197,9 @@
         return;
       }
       nodes.title.textContent = p.name;
-      nodes.meta.textContent = "IP/Домен: " + (p.botHost || "—");
+      var sourcesCount = Number(p.sourcesCount || 0);
+      var chatsCount = Number(p.chatsCount || 0);
+      nodes.meta.textContent = "IP/Домен: " + (p.botHost || "—") + " • Источники: " + sourcesCount + " • Чаты: " + chatsCount;
       nodes.tabs.style.display = "flex";
       nodes.btnTopSrc.style.display = "inline-flex";
       nodes.btnTopChats.style.display = "inline-flex";
@@ -202,9 +232,18 @@
       await loadSettings();
     }
 
-    async function loadChats() {
-      var data = await ProjectsApi.listChats(state.activeProjectId, { q: state.q, sort: state.sort });
-      state.chats = data.chats || [];
+    async function loadChats(append) {
+      var reqId = ++state.chatsRequestSeq;
+      var data = await ProjectsApi.listChats(state.activeProjectId, {
+        q: state.chatsQuery,
+        sort: state.sort,
+        limit: 30,
+        cursor: append ? state.chatsCursor : "",
+      });
+      if (reqId !== state.chatsRequestSeq) return;
+      state.chats = append ? state.chats.concat(data.chats || []) : (data.chats || []);
+      state.chatsCursor = data.nextCursor || null;
+      state.chatsHasMore = !!data.hasMore;
       if (!state.chats.length) {
         nodes.content.innerHTML = "<div class='projects-empty'><div><h3>Чатов пока нет</h3><p>Здесь будут реальные диалоги клиентов проекта.</p></div></div>";
         return;
@@ -212,25 +251,45 @@
       nodes.content.innerHTML = "<div class='projects-card'><div class='projects-tools'>" +
         "<input id='projects-chat-q' placeholder='Поиск по чатам...' style='max-width:320px'>" +
         "<select id='projects-chat-sort' style='width:auto'><option value='newest'>Самый новый</option><option value='oldest'>Самый старый</option></select>" +
-        "</div></div><div class='projects-list-items' id='projects-chat-list'></div>";
+        "</div></div><div class='projects-virtual' id='projects-chat-virtual'><div class='projects-virtual-spacer' id='projects-chat-list'></div></div>" +
+        "<div class='projects-load-more'><button class='projects-btn' id='projects-chat-more' " + (state.chatsHasMore ? "" : "style='display:none'") + ">Показать ещё</button></div>";
       var qInp = root.querySelector("#projects-chat-q");
       var sSel = root.querySelector("#projects-chat-sort");
       var list = root.querySelector("#projects-chat-list");
-      qInp.value = state.q;
+      var vbox = root.querySelector("#projects-chat-virtual");
+      var more = root.querySelector("#projects-chat-more");
+      qInp.value = state.chatsQuery;
       sSel.value = state.sort;
-      qInp.addEventListener("input", function () { state.q = qInp.value.trim(); loadChats(); });
-      sSel.addEventListener("change", function () { state.sort = sSel.value; loadChats(); });
-      list.innerHTML = state.chats.map(function (c) {
+      var debouncedChatsSearch = debounce(function () {
+        state.chatsCursor = null;
+        loadChats(false);
+      }, 260);
+      qInp.addEventListener("input", function () {
+        state.chatsQuery = qInp.value.trim();
+        debouncedChatsSearch();
+      });
+      sSel.addEventListener("change", function () { state.sort = sSel.value; state.chatsCursor = null; loadChats(false); });
+      if (more) more.addEventListener("click", function () { loadChats(true); });
+      renderVirtualRows(vbox, list, state.chats, function (c) {
         var when = c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString("ru-RU") : "—";
         return "<div class='projects-item'><div><h4>" + esc(c.name || c.userExternalId || c.id) +
           "</h4><p>Последнее: " + esc(c.lastMessage || "") + "</p></div><div style='text-align:right'><div class='projects-status'>" +
           esc(when) + "</div></div></div>";
-      }).join("");
+      }, 88);
     }
 
-    async function loadSources() {
-      var data = await ProjectsApi.listSources(state.activeProjectId);
-      state.sources = data.sources || [];
+    async function loadSources(append) {
+      var reqId = ++state.sourcesRequestSeq;
+      var data = await ProjectsApi.listSources(state.activeProjectId, {
+        q: state.sourcesQuery,
+        type: state.sourcesType,
+        limit: 30,
+        cursor: append ? state.sourcesCursor : "",
+      });
+      if (reqId !== state.sourcesRequestSeq) return;
+      state.sources = append ? state.sources.concat(data.sources || []) : (data.sources || []);
+      state.sourcesCursor = data.nextCursor || null;
+      state.sourcesHasMore = !!data.hasMore;
       if (!state.sources.length) {
         nodes.content.innerHTML = "<div class='projects-empty'><div><h3>Дайте больше контекста</h3><p>Источники = база знаний проекта.</p>" +
           "<div style='margin-top:12px'><button class='projects-btn primary' id='projects-add-source-empty'>Добавить источник</button></div></div></div>";
@@ -238,23 +297,66 @@
         if (be) be.addEventListener("click", openSourcePrompt);
         return;
       }
-      nodes.content.innerHTML = "<div class='projects-tools'><button class='projects-btn primary' id='projects-add-source'>+ Добавить источник</button></div>" +
-        "<div class='projects-list-items'>" + state.sources.map(function (s) {
-          var d = s.createdAt ? new Date(s.createdAt).toLocaleDateString("ru-RU") : "—";
-          return "<div class='projects-item'><div><h4>" + esc(s.title) + "</h4><p>" + esc(s.type) + " • " + esc(d) +
-            "</p></div><div style='display:flex;flex-direction:column;gap:8px;align-items:flex-end'><div class='projects-status'>" + esc(s.status) +
-            "</div><button class='projects-btn' data-del-source='" + esc(s.id) + "'>Удалить</button></div></div>";
-        }).join("") + "</div>";
+      nodes.content.innerHTML = "<div class='projects-tools'><button class='projects-btn primary' id='projects-add-source'>+ Добавить источник</button>" +
+        "<input id='projects-sources-q' placeholder='Поиск по источникам...' style='max-width:280px'>" +
+        "<select id='projects-sources-type' style='width:auto'><option value=''>Все</option><option value='file'>file</option><option value='url'>url</option><option value='text'>text</option><option value='document'>document</option></select></div>" +
+        "<div class='projects-virtual' id='projects-sources-virtual'><div class='projects-virtual-spacer' id='projects-sources-list'></div></div>" +
+        "<div class='projects-load-more'><button class='projects-btn' id='projects-sources-more' " + (state.sourcesHasMore ? "" : "style='display:none'") + ">Показать ещё</button></div>";
       var addBtn = root.querySelector("#projects-add-source");
       if (addBtn) addBtn.addEventListener("click", openSourcePrompt);
-      root.querySelectorAll("[data-del-source]").forEach(function (b) {
-        b.addEventListener("click", async function () {
-          if (!confirm("Удалить источник?")) return;
-          await ProjectsApi.deleteSource(b.getAttribute("data-del-source"));
-          await loadSources();
-          await refreshProjects();
-        });
+      var qInp = root.querySelector("#projects-sources-q");
+      var tSel = root.querySelector("#projects-sources-type");
+      var list = root.querySelector("#projects-sources-list");
+      var vbox = root.querySelector("#projects-sources-virtual");
+      var more = root.querySelector("#projects-sources-more");
+      qInp.value = state.sourcesQuery;
+      tSel.value = state.sourcesType || "";
+      var debouncedSourcesSearch = debounce(function () {
+        state.sourcesCursor = null;
+        loadSources(false);
+      }, 260);
+      qInp.addEventListener("input", function () {
+        state.sourcesQuery = qInp.value.trim();
+        debouncedSourcesSearch();
       });
+      tSel.addEventListener("change", function () { state.sourcesType = tSel.value; state.sourcesCursor = null; loadSources(false); });
+      if (more) more.addEventListener("click", function () { loadSources(true); });
+      renderVirtualRows(vbox, list, state.sources, function (s) {
+        var d = s.createdAt ? new Date(s.createdAt).toLocaleDateString("ru-RU") : "—";
+        return "<div class='projects-item'><div><h4>" + esc(s.title) + "</h4><p>" + esc(s.type) + " • " + esc(d) +
+          "</p></div><div style='display:flex;flex-direction:column;gap:8px;align-items:flex-end'><div class='projects-status'>" + esc(s.status) +
+          "</div><button class='projects-btn' data-del-source='" + esc(s.id) + "'>Удалить</button></div></div>";
+      }, 92);
+      vbox.onclick = async function (evt) {
+        var btn = evt.target && evt.target.closest ? evt.target.closest("[data-del-source]") : null;
+        if (!btn) return;
+        if (!confirm("Удалить источник?")) return;
+        await ProjectsApi.deleteSource(btn.getAttribute("data-del-source"));
+        state.sourcesCursor = null;
+        await loadSources(false);
+        await refreshProjects();
+      };
+    }
+
+    function renderVirtualRows(viewport, spacer, rows, rowRenderer, rowHeight) {
+      if (!viewport || !spacer) return;
+      var h = rowHeight || 90;
+      var overscan = 8;
+      function paint() {
+        var top = viewport.scrollTop;
+        var vh = viewport.clientHeight || 560;
+        var start = Math.max(0, Math.floor(top / h) - overscan);
+        var end = Math.min(rows.length, Math.ceil((top + vh) / h) + overscan);
+        var html = "";
+        for (var i = start; i < end; i++) {
+          html += "<div style='position:absolute;left:0;right:0;top:" + (i * h) + "px;height:" + h + "px;padding:6px 8px'>" +
+            rowRenderer(rows[i], i) + "</div>";
+        }
+        spacer.style.height = (rows.length * h) + "px";
+        spacer.innerHTML = html;
+      }
+      viewport.onscroll = paint;
+      paint();
     }
 
     async function loadSettings() {
@@ -371,4 +473,3 @@
     mount: mount,
   };
 });
-
