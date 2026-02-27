@@ -1369,6 +1369,13 @@ function _encodeCursor(num) {
   return Buffer.from(String(num), "utf8").toString("base64");
 }
 
+function _safeRequestId(value) {
+  const v = String(value || "").trim();
+  if (!v) return "";
+  if (v.length > 120) return "";
+  return /^[A-Za-z0-9._:-]+$/.test(v) ? v : "";
+}
+
 function _tokenizeSearchText(input) {
   const words = String(input || "")
     .toLowerCase()
@@ -1539,21 +1546,73 @@ exports.projectsApi = onRequest(
       // POST /projects
       if (req.method === "POST" && path === "projects") {
         await ensureDefaultProject(uid);
-        const { name, botHost, instructions = "" } = req.body || {};
+        const { name, botHost, instructions = "", requestId } = req.body || {};
         if (!name || !String(name).trim()) { res.status(400).json({ error: "name required" }); return; }
         if (!botHost || !String(botHost).trim()) { res.status(400).json({ error: "botHost required" }); return; }
-        const ref = db.collection(`users/${uid}/projects`).doc();
-        await ref.set({
-          name: String(name).trim(),
-          botHost: String(botHost).trim(),
-          instructions: String(instructions || "").trim(),
-          sourcesCount: 0,
-          chatsCount: 0,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        const cleanRequestId = _safeRequestId(requestId);
+        const projectsCol = db.collection(`users/${uid}/projects`);
+
+        if (!cleanRequestId) {
+          const ref = projectsCol.doc();
+          await ref.set({
+            name: String(name).trim(),
+            botHost: String(botHost).trim(),
+            instructions: String(instructions || "").trim(),
+            sourcesCount: 0,
+            chatsCount: 0,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          const fresh = await ref.get();
+          res.status(201).json({ ok: true, project: _projectPublic(ref.id, fresh.data() || {}), idempotent: false });
+          return;
+        }
+
+        const reqRef = db.doc(`users/${uid}/project_create_requests/${cleanRequestId}`);
+        const result = await db.runTransaction(async (tx) => {
+          const reqSnap = await tx.get(reqRef);
+          if (reqSnap.exists) {
+            const existingProjectId = String(reqSnap.data().projectId || "");
+            if (existingProjectId) {
+              const pRef = projectsCol.doc(existingProjectId);
+              const pSnap = await tx.get(pRef);
+              if (pSnap.exists) {
+                return { projectId: existingProjectId, projectData: pSnap.data() || {}, reused: true };
+              }
+            }
+          }
+
+          const pRef = projectsCol.doc();
+          const now = admin.firestore.FieldValue.serverTimestamp();
+          const pData = {
+            name: String(name).trim(),
+            botHost: String(botHost).trim(),
+            instructions: String(instructions || "").trim(),
+            sourcesCount: 0,
+            chatsCount: 0,
+            createdAt: now,
+            updatedAt: now,
+          };
+          tx.set(pRef, pData);
+          tx.set(reqRef, {
+            requestId: cleanRequestId,
+            projectId: pRef.id,
+            name: String(name).trim(),
+            botHost: String(botHost).trim(),
+            createdAt: now,
+            updatedAt: now,
+          }, { merge: true });
+          return { projectId: pRef.id, projectData: pData, reused: false };
         });
-        const fresh = await ref.get();
-        res.status(201).json({ ok: true, project: _projectPublic(ref.id, fresh.data() || {}) });
+
+        const fresh = await db.doc(`users/${uid}/projects/${result.projectId}`).get();
+        const projectData = fresh.exists ? (fresh.data() || result.projectData || {}) : (result.projectData || {});
+        res.status(result.reused ? 200 : 201).json({
+          ok: true,
+          project: _projectPublic(result.projectId, projectData),
+          idempotent: true,
+          reused: !!result.reused,
+        });
         return;
       }
 

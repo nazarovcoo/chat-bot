@@ -42,6 +42,15 @@
       ".proj-dd-sep{height:1px;background:#e5e7eb;margin:4px 0}",
       ".proj-dd-danger{color:#dc2626}",
       ".proj-dd-danger:hover{background:#fef2f2}",
+      ".del-confirm-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:999999;padding:20px}",
+      ".del-confirm-modal{background:#fff;border-radius:20px;padding:24px 20px 20px;width:min(380px,100%);box-shadow:0 12px 48px rgba(0,0,0,.22)}",
+      ".del-confirm-title{font-size:19px;font-weight:700;margin:0 0 10px;color:#111827}",
+      ".del-confirm-body{font-size:14px;color:#374151;line-height:1.55;margin:0 0 20px}",
+      ".del-confirm-btns{display:flex;justify-content:flex-end;gap:10px}",
+      ".del-cancel-btn{background:#fff;border:1px solid #e5e7eb;border-radius:999px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:600;font-family:inherit}",
+      ".del-cancel-btn:hover{background:#f3f4f6}",
+      ".del-ok-btn{background:#dc2626;color:#fff;border:none;border-radius:999px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:700;font-family:inherit}",
+      ".del-ok-btn:hover{background:#b91c1c}",
       ".projects-main{display:flex;flex-direction:column;min-width:0}",
       ".projects-top{border-bottom:1px solid #e5e7eb;padding:16px 18px;display:flex;justify-content:space-between;gap:12px}",
       ".projects-top h1{margin:0;font-size:18px;line-height:1.2}",
@@ -121,6 +130,8 @@
       sourcesLoadedProjectId: null,
       sort: "newest",
       sourcesType: "",
+      createRequestId: null,
+      createInFlight: false,
     };
   }
 
@@ -136,6 +147,10 @@
   function isTelegramToken(value) {
     var v = String(value || "").trim();
     return /^\d{6,}:[A-Za-z0-9_-]{20,}$/.test(v);
+  }
+
+  function makeRequestId() {
+    return "prj-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
   }
 
   function notify(msg, isError) {
@@ -507,8 +522,26 @@
       await refreshProjects();
     }
 
+    function showDeleteConfirm(projectName) {
+      return new Promise(function (resolve) {
+        var overlay = document.createElement("div");
+        overlay.className = "del-confirm-bg";
+        overlay.innerHTML =
+          "<div class='del-confirm-modal'>" +
+          "<div class='del-confirm-title'>Удалить проект?</div>" +
+          "<div class='del-confirm-body'><strong>Это приведёт к безвозвратному удалению всех источников и чатов проекта «" + esc(projectName) + "».</strong> Это действие нельзя отменить.</div>" +
+          "<div class='del-confirm-btns'><button class='del-cancel-btn'>Отменить</button><button class='del-ok-btn'>Удалить</button></div>" +
+          "</div>";
+        document.body.appendChild(overlay);
+        overlay.querySelector(".del-cancel-btn").addEventListener("click", function () { overlay.remove(); resolve(false); });
+        overlay.querySelector(".del-ok-btn").addEventListener("click", function () { overlay.remove(); resolve(true); });
+        overlay.addEventListener("click", function (e) { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+      });
+    }
+
     async function doDeleteProject(p) {
-      if (!confirm('Удалить проект "' + p.name + '"? Это действие нельзя отменить.')) return;
+      var confirmed = await showDeleteConfirm(p.name);
+      if (!confirmed) return;
       await ProjectsApi.deleteProject(p.id);
       if (p.id === state.activeProjectId) state.activeProjectId = null;
       await refreshProjects();
@@ -793,7 +826,8 @@
         await refreshProjects();
       });
       root.querySelector("#projects-del").addEventListener("click", async function () {
-        if (!confirm("Удалить проект? Это действие нельзя отменить.")) return;
+        var confirmed = await showDeleteConfirm(p.name);
+        if (!confirmed) return;
         await ProjectsApi.deleteProject(state.activeProjectId);
         state.activeProjectId = null;
         await refreshProjects();
@@ -805,41 +839,68 @@
       nodes.createName.value = "";
       nodes.createHost.value = "";
       nodes.createKB.value = "skip";
+      state.createRequestId = makeRequestId();
+      state.createInFlight = false;
+      nodes.modalCreate.disabled = false;
+      nodes.modalCreate.textContent = "Создать проект";
       nodes.createName.focus();
     }
 
     function closeCreateModal() {
       nodes.modal.classList.remove("open");
+      state.createInFlight = false;
+      nodes.modalCreate.disabled = false;
+      nodes.modalCreate.textContent = "Создать проект";
+      state.createRequestId = null;
     }
 
     async function createProject() {
+      if (state.createInFlight) return;
       var name = nodes.createName.value.trim();
       var botHost = nodes.createHost.value.trim();
       if (name.length < 2) { alert("Введите название проекта"); return; }
       if (botHost.length < 3) { alert("Введите IP/домен"); return; }
-      var hostLooksLikeToken = isTelegramToken(botHost);
-      var created = await ProjectsApi.createProject({ name: name, botHost: hostLooksLikeToken ? "@pending_connect" : botHost });
-      state.activeProjectId = created.project.id;
-      if (hostLooksLikeToken) {
-        try {
-          var linked = await connectTelegramToken(botHost, created.project.id, name);
-          if (linked && linked.username) {
-            await ProjectsApi.updateProject(created.project.id, { botHost: linked.username });
+      if (!state.createRequestId) state.createRequestId = makeRequestId();
+      state.createInFlight = true;
+      nodes.modalCreate.disabled = true;
+      nodes.modalCreate.textContent = "Создаю...";
+      try {
+        var hostLooksLikeToken = isTelegramToken(botHost);
+        var created = await ProjectsApi.createProject({
+          name: name,
+          botHost: hostLooksLikeToken ? "@pending_connect" : botHost,
+          requestId: state.createRequestId,
+        });
+        state.activeProjectId = created.project.id;
+        if (hostLooksLikeToken) {
+          try {
+            var linked = await connectTelegramToken(botHost, created.project.id, name);
+            if (linked && linked.username) {
+              await ProjectsApi.updateProject(created.project.id, { botHost: linked.username });
+            }
+            notify("Telegram подключён" + (linked && linked.username ? (": " + linked.username) : ""));
+          } catch (e) {
+            notify("Проект создан, но Telegram не подключён: " + (e.message || "ошибка"), true);
           }
-          notify("Telegram подключён" + (linked && linked.username ? (": " + linked.username) : ""));
-        } catch (e) {
-          notify("Проект создан, но Telegram не подключён: " + (e.message || "ошибка"), true);
         }
-      }
-      closeCreateModal();
-      await refreshProjects();
-      if (nodes.createKB.value === "add") {
-        state.tab = "sources";
-        await renderTab();
-        openSourceModal();
-      } else {
-        state.tab = "settings";
-        await renderTab();
+        closeCreateModal();
+        await refreshProjects();
+        if (nodes.createKB.value === "add") {
+          state.tab = "sources";
+          await renderTab();
+          openSourceModal();
+        } else {
+          state.tab = "settings";
+          await renderTab();
+        }
+      } catch (e) {
+        notify(e.message || "Не удалось создать проект. Повторите попытку.", true);
+      } finally {
+        state.createInFlight = false;
+        if (nodes.modal.classList.contains("open")) {
+          nodes.modalCreate.disabled = false;
+          nodes.modalCreate.textContent = "Создать проект";
+        }
       }
     }
 
