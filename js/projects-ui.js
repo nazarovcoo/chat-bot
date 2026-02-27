@@ -616,7 +616,7 @@
       var chatsCount = Number(p.chatsCount || 0);
       nodes.meta.textContent = "IP/Домен: " + (p.botHost || "—") + " • Источники: " + sourcesCount + " • Чаты: " + chatsCount;
       nodes.tabs.style.display = "flex";
-      nodes.btnTopSrc.style.display = "inline-flex";
+      nodes.btnTopSrc.style.display = state.tab === "sources" ? "none" : "inline-flex";
       nodes.btnTopChats.style.display = "inline-flex";
       nodes.tabs.querySelectorAll(".projects-tab").forEach(function (t) {
         t.classList.toggle("active", t.getAttribute("data-tab") === state.tab);
