@@ -15228,29 +15228,48 @@ ${kbSummary}`,
       </div>
     </div>
   </div>
-  <script src="/js/projects-api.js"></script>
-  <script src="/js/projects-ui.js"></script>
   <script>
     (function () {
       const qp = new URLSearchParams(window.location.search);
       const byQuery = qp.get('projects') === '1';
       const byFlag = localStorage.getItem('projects_ui_v1') === '1';
       const enabled = byQuery || byFlag;
-      if (!enabled || !window.ProjectsUI) return;
+      if (!enabled) return;
 
-      const root = document.getElementById('projects-ui-root');
-      const onboarding = document.getElementById('onboarding-chat-overlay');
-      const main = document.getElementById('main-content');
-      const side = document.querySelector('.sidebar');
-      const mob = document.getElementById('mob-overlay');
-      const cta = document.querySelector('.mob-cta');
-      if (onboarding) onboarding.style.display = 'none';
-      if (main) main.style.display = 'none';
-      if (side) side.style.display = 'none';
-      if (mob) mob.style.display = 'none';
-      if (cta) cta.style.display = 'none';
-      root.style.display = 'block';
-      window.__projectsUiMounted = window.ProjectsUI.mount(root, {});
+      function loadScript(src) {
+        return new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = src;
+          s.onload = () => resolve();
+          s.onerror = () => reject(new Error(`Failed to load ${src}`));
+          document.body.appendChild(s);
+        });
+      }
+
+      (async () => {
+        try {
+          await loadScript('/js/projects-api.js');
+          await loadScript('/js/projects-ui.js');
+          if (!window.ProjectsUI) throw new Error('Projects UI module not loaded');
+
+          const root = document.getElementById('projects-ui-root');
+          const onboarding = document.getElementById('onboarding-chat-overlay');
+          const main = document.getElementById('main-content');
+          const side = document.querySelector('.sidebar');
+          const mob = document.getElementById('mob-overlay');
+          const cta = document.querySelector('.mob-cta');
+          if (onboarding) onboarding.style.display = 'none';
+          if (main) main.style.display = 'none';
+          if (side) side.style.display = 'none';
+          if (mob) mob.style.display = 'none';
+          if (cta) cta.style.display = 'none';
+          root.style.display = 'block';
+          window.__projectsUiMounted = window.ProjectsUI.mount(root, {});
+        } catch (e) {
+          console.error('[ProjectsUI] init failed:', e);
+          localStorage.removeItem('projects_ui_v1');
+        }
+      })();
     })();
   </script>
 </body>
