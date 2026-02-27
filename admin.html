@@ -2126,6 +2126,37 @@
       box-shadow: 0 1px 4px rgba(51, 144, 236, .3);
     }
 
+    /* ── KB Add Panel ── */
+    .kb-add-panel { background:#fff; border-top:1px solid rgba(0,0,0,.06); padding:10px 14px 12px; animation:kap-in .18s ease; }
+    .kb-add-panel.hidden { display:none; }
+    @keyframes kap-in { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    .kap-btns { display:flex; gap:8px; margin-bottom:10px; }
+    .kap-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; padding:10px 8px; background:#f7f8fa; border:1.5px solid #e8edf1; border-radius:12px; cursor:pointer; font-size:11.5px; font-weight:600; color:var(--text,#1a1a2e); transition:all .15s; }
+    .kap-btn:hover { background:#eef4ff; border-color:#93c5fd; }
+    .kap-btn:active { transform:scale(0.97); }
+    .kap-icon { font-size:22px; }
+    .kap-hint-row { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+    .kap-hint { font-size:11px; color:#94a3b8; line-height:1.5; }
+    .kap-help-btn { background:none; border:none; font-size:11px; color:#3390ec; cursor:pointer; padding:2px 0; white-space:nowrap; text-decoration:underline; text-underline-offset:2px; }
+    .kap-url-input,.kap-textarea { width:100%; border:1.5px solid #e2e8f0; border-radius:10px; padding:9px 12px; font-size:13px; outline:none; margin-bottom:8px; transition:border-color .15s; box-sizing:border-box; }
+    .kap-url-input:focus,.kap-textarea:focus { border-color:#3390ec; }
+    .kap-url-input.kap-error { border-color:#ef4444; }
+    .kap-textarea { resize:none; min-height:80px; max-height:140px; line-height:1.5; }
+    .kap-actions-row { display:flex; gap:8px; justify-content:flex-end; margin-bottom:8px; }
+    .kap-submit-btn { background:#3390ec; color:#fff; border:none; border-radius:10px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; transition:background .15s; }
+    .kap-submit-btn:hover { background:#2271c3; }
+    .kap-submit-btn:disabled { background:#a0c4f1; cursor:not-allowed; }
+    .kap-status-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:10px; font-size:12.5px; margin-bottom:8px; }
+    .kap-status-bar.kap-pending { background:rgba(51,144,236,.1); color:#2563eb; }
+    .kap-status-bar.kap-success { background:rgba(34,197,94,.1); color:#16a34a; }
+    .kap-status-bar.kap-error   { background:rgba(239,68,68,.08); color:#dc2626; }
+    .kap-done-row { display:flex; gap:8px; }
+    .kap-ghost-btn { flex:1; background:none; border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 12px; font-size:12.5px; cursor:pointer; color:var(--text,#1a1a2e); transition:border-color .15s; }
+    .kap-ghost-btn:hover { border-color:#94a3b8; }
+    .kap-primary-btn { flex:1; background:#3390ec; color:#fff; border:none; border-radius:10px; padding:8px 12px; font-size:12.5px; font-weight:600; cursor:pointer; }
+    .kap-back-link { display:inline-block; font-size:11.5px; color:#94a3b8; cursor:pointer; margin-top:4px; }
+    .kap-back-link:hover { color:#3390ec; }
+
     /* ── 👎 Feedback form ── */
     .cos-feedback-form {
       margin: 4px 0 8px;
@@ -6271,6 +6302,8 @@
       <div class="chat-ob-chips" id="chat-ob-chips">
         <!-- Fast options injected via JS -->
       </div>
+
+      <div id="kb-add-panel" class="kb-add-panel hidden"></div>
 
       <div class="chat-ob-input-area">
         <div id="chat-ob-attachment-pill"
@@ -12595,6 +12628,8 @@ ${kbSummary}`,
           }
           pendingChatAttachment = file;
           e.target.value = '';
+          // Notify KB panel if active
+          if (_kbPanelActive) _kbPanelOnFileSelected(file.name);
           // Auto-send immediately when file is selected
           handleChatObSend();
         });
@@ -13520,6 +13555,109 @@ ${kbSummary}`,
       }
     }
 
+    // ── KB ADD PANEL ─────────────────────────────────────────────────────────────
+    let _kbPanelActive = false;
+
+    function showKbAddPanel(step) {
+      const panel = document.getElementById('kb-add-panel');
+      if (!panel) return;
+      _kbPanelActive = true;
+      panel.classList.remove('hidden');
+      if (CHAT_OS.chipsEl) CHAT_OS.chipsEl.style.display = 'none';
+
+      if (step === 'kb-choose') {
+        panel.innerHTML = `
+          <div class="kap-btns">
+            <button class="kap-btn" onclick="showKbAddPanel('kb-text')"><span class="kap-icon">📝</span><span>Вставить текст</span></button>
+            <button class="kap-btn" onclick="showKbAddPanel('kb-file')"><span class="kap-icon">📎</span><span>Загрузить файл</span></button>
+            <button class="kap-btn" onclick="showKbAddPanel('kb-link')"><span class="kap-icon">🔗</span><span>Добавить ссылку</span></button>
+          </div>
+          <div class="kap-hint-row">
+            <span class="kap-hint">Файл = PDF/DOCX/TXT · Ссылка = сайт · Текст = вставить вручную</span>
+            <button class="kap-help-btn" onclick="showInfoPopover('kb_add_flow')">ℹ️ Как это работает?</button>
+          </div>`;
+      } else if (step === 'kb-file') {
+        panel.innerHTML = `
+          <div class="kap-status-bar kap-pending"><span>📎</span><span>Выберите файл (PDF, DOCX, TXT)…</span></div>
+          <span class="kap-back-link" onclick="showKbAddPanel('kb-choose')">← Назад</span>`;
+        document.getElementById('chat-ob-attach-btn')?.click();
+      } else if (step === 'kb-link') {
+        panel.innerHTML = `
+          <input type="url" id="kap-link-input" class="kap-url-input" placeholder="https://example.com" oninput="_kbLinkChange()">
+          <div class="kap-actions-row">
+            <button class="kap-submit-btn" id="kap-link-submit" onclick="_kbAddLink()" disabled>Добавить →</button>
+          </div>
+          <span class="kap-back-link" onclick="showKbAddPanel('kb-choose')">← Назад</span>`;
+        setTimeout(() => document.getElementById('kap-link-input')?.focus(), 50);
+      } else if (step === 'kb-text') {
+        panel.innerHTML = `
+          <textarea id="kap-text-input" class="kap-textarea" placeholder="Вставьте FAQ, правила, описание услуг…" rows="4"></textarea>
+          <div class="kap-actions-row">
+            <button class="kap-submit-btn" onclick="_kbAddText()">Сохранить →</button>
+          </div>
+          <span class="kap-back-link" onclick="showKbAddPanel('kb-choose')">← Назад</span>`;
+        setTimeout(() => document.getElementById('kap-text-input')?.focus(), 50);
+      }
+    }
+
+    function _kbPanelSetDone(icon, line1, againLabel, againStep) {
+      const panel = document.getElementById('kb-add-panel');
+      if (!panel) return;
+      panel.innerHTML = `
+        <div class="kap-status-bar kap-success"><span>${icon}</span><span>${line1}</span></div>
+        <div class="kap-done-row">
+          <button class="kap-ghost-btn" onclick="showKbAddPanel('${againStep}')">${againLabel}</button>
+          <button class="kap-primary-btn" onclick="hideKbAddPanel()">Готово ✓</button>
+        </div>`;
+    }
+
+    function _kbPanelOnFileSelected(filename) {
+      const panel = document.getElementById('kb-add-panel');
+      if (!panel) return;
+      panel.innerHTML = `<div class="kap-status-bar kap-pending"><span>📎</span><span>${esc(filename)} — загружаем…</span></div>`;
+    }
+
+    function _kbPanelOnFileUploaded() {
+      _kbPanelSetDone('✅', 'Файл получен. Обрабатываем…', 'Загрузить ещё файл', 'kb-file');
+    }
+
+    function hideKbAddPanel() {
+      _kbPanelActive = false;
+      const panel = document.getElementById('kb-add-panel');
+      if (panel) { panel.innerHTML = ''; panel.classList.add('hidden'); }
+      renderFlowChips(_flowState.stepId);
+    }
+
+    function _kbLinkChange() {
+      const inp = document.getElementById('kap-link-input');
+      const btn = document.getElementById('kap-link-submit');
+      if (!inp || !btn) return;
+      try { new URL(inp.value.trim()); btn.disabled = false; inp.classList.remove('kap-error'); }
+      catch { btn.disabled = true; }
+    }
+
+    function _kbAddLink() {
+      const inp = document.getElementById('kap-link-input');
+      if (!inp) return;
+      const url = inp.value.trim();
+      try { new URL(url); } catch { inp.classList.add('kap-error'); showToast('Введите корректный URL'); return; }
+      CHAT_OS.inputEl.value = 'Добавь в базу знаний содержимое страницы: ' + url;
+      CHAT_OS.sendBtn.disabled = false;
+      handleChatObSend();
+      _kbPanelSetDone('✅', 'Ссылка принята. Обрабатываем…', 'Добавить ещё ссылку', 'kb-link');
+    }
+
+    function _kbAddText() {
+      const ta = document.getElementById('kap-text-input');
+      if (!ta) return;
+      const text = ta.value.trim();
+      if (text.length < 10) { showToast('Введите не менее 10 символов'); ta.focus(); return; }
+      CHAT_OS.inputEl.value = 'Добавь в базу знаний следующий текст:\n' + text;
+      CHAT_OS.sendBtn.disabled = false;
+      handleChatObSend();
+      _kbPanelSetDone('✅', 'Текст принят. Обрабатываем…', 'Добавить ещё текст', 'kb-text');
+    }
+
     // ── KB SUGGESTIONS ──────────────────────────────────────────────────────────
     async function submitKbSuggestion(assistantMsg, proposedFix) {
       if (!window.resolvedUid) return;
@@ -13713,14 +13851,9 @@ ${kbSummary}`,
         const hasText = /\bтекст\b/i.test(replyText);
         const hasFile = /\bфайл\b/i.test(replyText);
         const hasLink = /\bссылк/i.test(replyText);
-        if (hasText && hasFile && hasLink) {
-          console.log('[DynChips] KB method choice detected — returning 4-chip set');
-          return [
-            { label: '📝 Текст', msg: 'Хочу добавить текст в базу знаний' },
-            { label: '📎 Файл', msg: null, action: 'file' },
-            { label: '🔗 Ссылка', msg: 'Хочу добавить ссылку в базу знаний' },
-            { label: '⬅ Назад', action: 'reset_to_active' },
-          ];
+        if (hasText && hasFile && hasLink && !_kbPanelActive) {
+          setTimeout(() => showKbAddPanel('kb-choose'), 0);
+          return null; // KB panel handles interaction
         }
       }
 
@@ -14301,6 +14434,7 @@ ${kbSummary}`,
 
           const _downloadURL = await _task.snapshot.ref.getDownloadURL();
           uploadBubble.dataset.state = 'processing'; // spinner while AI processes
+          if (_kbPanelActive) _kbPanelOnFileUploaded();
 
           attachmentMeta = {
             type: 'file',
@@ -14537,6 +14671,17 @@ ${kbSummary}`,
           'Проверьте результат в разделе «База знаний».',
         ],
         result: 'Текст страницы добавится в базу знаний. Бот сможет отвечать на основе этого контента.',
+      },
+      kb_add_flow: {
+        title: '📚 Как добавить базу знаний',
+        why: 'База знаний — это материалы, из которых бот черпает ответы. Чем полнее база — тем точнее бот.',
+        how: [
+          'Текст — вставьте FAQ, правила, описание услуг прямо в поле.',
+          'Файл — загрузите документ (PDF, DOCX, TXT до 20MB).',
+          'Ссылка — вставьте URL, мы прочитаем страницу автоматически.',
+          'После добавления бот покажет статус: Обрабатывается → Готово.',
+        ],
+        result: 'Бот начнёт использовать добавленные материалы при ответах на вопросы.',
       },
     };
 
