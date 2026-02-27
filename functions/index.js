@@ -1390,8 +1390,14 @@ function _tokenizeSearchText(input) {
 async function ensureDefaultProject(uid) {
   const db = admin.firestore();
   const projectsCol = db.collection(`users/${uid}/projects`);
+  const metaRef = db.doc(`users/${uid}/meta`);
+
   const existing = await projectsCol.limit(1).get();
   if (!existing.empty) return existing.docs[0].id;
+
+  // If migration already ran, the user intentionally deleted all projects — don't recreate
+  const metaSnap = await metaRef.get();
+  if (metaSnap.exists && metaSnap.data().projectsMigrated) return null;
 
   const [firstBotSnap, rulesSnap] = await Promise.all([
     db.collection(`users/${uid}/bots`).limit(1).get(),
@@ -1500,6 +1506,9 @@ async function ensureDefaultProject(uid) {
     chatsCount: batchWrites.filter((w) => String(w.ref.path).includes("/project_chats/") && !String(w.ref.path).includes("/messages/")).length,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
+
+  // Mark migration as done so we never auto-recreate if user deletes all projects
+  await metaRef.set({ projectsMigrated: true, migratedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
   return projectId;
 }
