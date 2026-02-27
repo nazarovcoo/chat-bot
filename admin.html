@@ -13952,30 +13952,54 @@ ${kbSummary}`,
       }
     }
 
+    async function addKbLinkDirect(url) {
+      const cleanUrl = (url || '').trim();
+      try { new URL(cleanUrl); } catch { throw new Error('Введите корректный URL'); }
+      if (!window.resolvedUid) throw new Error('Сначала авторизуйтесь');
+      const botId = await _resolveActiveBotForKb();
+      if (!botId) throw new Error('Сначала выберите/создайте бота');
+
+      const resp = await fetch('/api/import-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid: window.resolvedUid, botId, url: cleanUrl }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data.ok) throw new Error(data.error || 'Не удалось добавить ссылку');
+      return { ...data, url: cleanUrl };
+    }
+
+    async function addKbTextDirect(text) {
+      const cleanText = (text || '').trim();
+      if (cleanText.length < 10) throw new Error('Введите не менее 10 символов');
+      if (!window.resolvedUid) throw new Error('Сначала авторизуйтесь');
+      const botId = await _resolveActiveBotForKb();
+      if (!botId) throw new Error('Сначала выберите/создайте бота');
+
+      const ref = await db.collection('users').doc(window.resolvedUid)
+        .collection('bots').doc(botId)
+        .collection('knowledge_base').add({
+          type: 'text',
+          source: 'manual_text',
+          title: cleanText.slice(0, 80),
+          content: cleanText,
+          status: 'active',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      return { id: ref.id, text: cleanText };
+    }
+
     async function _kbAddLink() {
       const inp = document.getElementById('kap-link-input');
       if (!inp) return;
-      const url = inp.value.trim();
-      try { new URL(url); } catch { inp.classList.add('kap-error'); showToast('Введите корректный URL'); return; }
-      if (!window.resolvedUid) { showToast('Сначала авторизуйтесь'); return; }
-      const botId = await _resolveActiveBotForKb();
-      if (!botId) { showToast('Сначала выберите/создайте бота'); return; }
-
       const btn = document.getElementById('kap-link-submit');
       if (btn) { btn.disabled = true; btn.textContent = 'Добавляю…'; }
       try {
-        const resp = await fetch('/api/import-url', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid: window.resolvedUid, botId, url }),
-        });
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok || !data.ok) {
-          throw new Error(data.error || 'Не удалось добавить ссылку');
-        }
+        const data = await addKbLinkDirect(inp.value.trim());
         _kbPanelSetDone('✅', 'Ссылка добавлена в базу знаний', 'Добавить ещё ссылку', 'kb-link');
-        addChatOsMsg('bot', `✅ Ссылка добавлена в базу знаний: ${data.title || url}`);
+        addChatOsMsg('bot', `✅ Ссылка добавлена в базу знаний: ${data.title || data.url}`);
       } catch (e) {
+        inp.classList.add('kap-error');
         showToast(e.message || 'Ошибка добавления ссылки');
       } finally {
         if (btn) { btn.disabled = false; btn.textContent = 'Добавить →'; }
@@ -13985,23 +14009,8 @@ ${kbSummary}`,
     async function _kbAddText() {
       const ta = document.getElementById('kap-text-input');
       if (!ta) return;
-      const text = ta.value.trim();
-      if (text.length < 10) { showToast('Введите не менее 10 символов'); ta.focus(); return; }
-      if (!window.resolvedUid) { showToast('Сначала авторизуйтесь'); return; }
-      const botId = await _resolveActiveBotForKb();
-      if (!botId) { showToast('Сначала выберите/создайте бота'); return; }
-
       try {
-        await db.collection('users').doc(window.resolvedUid)
-          .collection('bots').doc(botId)
-          .collection('knowledge_base').add({
-            type: 'text',
-            source: 'manual_text',
-            title: text.slice(0, 80),
-            content: text,
-            status: 'active',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          });
+        await addKbTextDirect(ta.value.trim());
         _kbPanelSetDone('✅', 'Текст добавлен в базу знаний', 'Добавить ещё текст', 'kb-text');
         addChatOsMsg('bot', '✅ Текст добавлен в базу знаний.');
       } catch (e) {
@@ -15098,6 +15107,85 @@ ${kbSummary}`,
         window.open(target, '_blank');
       }
     }
+
+    async function _bridgeOpenChatOs() {
+      if (!window.resolvedUid) throw new Error('Сначала авторизуйтесь');
+      if (!chatOsInitDone) {
+        await initChatOnboarding(window.resolvedUid, null, false);
+      } else {
+        CHAT_OS.container.style.display = 'flex';
+        const mainContent = document.getElementById('main-content');
+        const sidebar = document.querySelector('.sidebar');
+        if (mainContent) mainContent.style.display = 'none';
+        if (sidebar) sidebar.style.display = 'none';
+      }
+    }
+
+    // Bridge for kb-design-v3 iframe -> real app logic
+    window.ChatOSBridge = {
+      async sendMessage(text) {
+        await _bridgeOpenChatOs();
+        handleChatObSend(text || '');
+        return true;
+      },
+      async openKbFile() {
+        await _bridgeOpenChatOs();
+        showKbAddPanel('kb-file');
+        return true;
+      },
+      async openKbText() {
+        await _bridgeOpenChatOs();
+        showKbAddPanel('kb-text');
+        return true;
+      },
+      async openKbLink() {
+        await _bridgeOpenChatOs();
+        showKbAddPanel('kb-link');
+        return true;
+      },
+      async addKbText(text) {
+        try {
+          await addKbTextDirect(text || '');
+          showToast('✅ Текст добавлен в базу знаний');
+          return true;
+        } catch (e) {
+          showToast(e.message || 'Ошибка добавления текста');
+          return false;
+        }
+      },
+      async addKbLink(url) {
+        try {
+          const data = await addKbLinkDirect(url || '');
+          showToast(`✅ Ссылка добавлена: ${data.title || data.url}`);
+          return true;
+        } catch (e) {
+          showToast(e.message || 'Ошибка добавления ссылки');
+          return false;
+        }
+      },
+      async openTelegram() {
+        await _bridgeOpenChatOs();
+        showTgInstructions();
+        return true;
+      },
+      async openTestMode() {
+        await _bridgeOpenChatOs();
+        showTestModeEntry();
+        return true;
+      },
+      async showKbStatus() {
+        await _bridgeOpenChatOs();
+        await showKbDebugInfo();
+        return true;
+      },
+      async saveRules(text) {
+        const ta = document.getElementById('rules-ta');
+        if (!ta) return false;
+        ta.value = text || '';
+        await saveRules();
+        return true;
+      },
+    };
 
     document.getElementById('info-popover-overlay')
       ?.addEventListener('click', _closeInfoPopoverOnBg);

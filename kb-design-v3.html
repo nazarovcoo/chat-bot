@@ -125,10 +125,11 @@
 
       <h4>Добавить информацию</h4>
       <div class="add-menu">
-        <button class="add-btn" data-open="modal-files">📤 Загрузить файлы</button>
-        <button class="add-btn" data-open="modal-text">✍ Написать вручную</button>
-        <button class="add-btn" data-open="modal-rules">📏 Правила общения</button>
-        <button class="add-btn" data-open="modal-kb-status">🔍 Статус KB</button>
+        <button class="add-btn" data-action="upload-file">📤 Загрузить файлы</button>
+        <button class="add-btn" data-action="add-link">🔗 Добавить ссылку</button>
+        <button class="add-btn" data-action="add-text">✍ Написать вручную</button>
+        <button class="add-btn" data-action="rules">📏 Правила общения</button>
+        <button class="add-btn" data-action="kb-status">🔍 Статус KB</button>
       </div>
 
       <div class="kpis">
@@ -154,17 +155,17 @@
         <div class="row"><div class="bubble">Отлично, отправьте ссылку, которую вы хотите добавить в базу знаний.</div></div>
 
         <div class="chips">
-          <button class="chip" data-open="modal-files">📎 Загрузить файл</button>
-          <button class="chip" data-open="modal-text">🔗 Добавить ссылку</button>
-          <button class="chip">✈ Telegram</button>
-          <button class="chip">🧪 Тестировать</button>
-          <button class="chip" data-open="modal-kb-status">🔍 Статус KB</button>
+          <button class="chip" data-action="upload-file">📎 Загрузить файл</button>
+          <button class="chip" data-action="add-link">🔗 Добавить ссылку</button>
+          <button class="chip" data-action="telegram">✈ Telegram</button>
+          <button class="chip" data-action="test">🧪 Тестировать</button>
+          <button class="chip" data-action="kb-status">🔍 Статус KB</button>
         </div>
       </section>
 
       <div class="composer">
-        <input placeholder="Напишите сообщение" />
-        <button class="send">➤</button>
+        <input id="v3-input" placeholder="Напишите сообщение" />
+        <button class="send" id="v3-send">➤</button>
       </div>
     </main>
 
@@ -197,12 +198,26 @@
     <div class="modal">
       <button class="x" data-close>×</button>
       <div class="m-title">Что хотите добавить?</div>
-      <div class="txt">Напишите или вставьте текст
+      <div class="txt"><textarea id="modal-text-content" style="width:100%;min-height:360px;border:0;outline:none;background:transparent;font:inherit;font-size:24px;color:#1f2937;resize:vertical;" placeholder="Напишите или вставьте текст"></textarea>
         <button class="voice">🎤</button>
       </div>
       <div class="m-actions">
         <button class="m-btn" data-close>Отменить</button>
-        <button class="m-btn primary">Добавить</button>
+        <button class="m-btn primary" id="modal-text-save">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="modal-link">
+    <div class="modal">
+      <button class="x" data-close>×</button>
+      <div class="m-title">Добавить ссылку</div>
+      <div class="txt">
+        <input id="modal-link-url" type="url" placeholder="https://example.com" style="width:100%;height:62px;border:1px solid #d8deea;border-radius:14px;padding:0 16px;font:inherit;font-size:24px;">
+      </div>
+      <div class="m-actions">
+        <button class="m-btn" data-close>Отменить</button>
+        <button class="m-btn primary" id="modal-link-save">Добавить</button>
       </div>
     </div>
   </div>
@@ -211,7 +226,10 @@
     <div class="modal">
       <button class="x" data-close>×</button>
       <div class="m-title">Добавить правила общения</div>
-      <div class="txt" style="color:#171923; font-size:20px;">Хорошо. Ниже production-ready системный промпт...<button class="voice">🎤</button></div>
+      <div class="txt" style="color:#171923; font-size:20px;">
+        <textarea id="modal-rules-content" style="width:100%;min-height:300px;border:0;outline:none;background:transparent;font:inherit;font-size:20px;color:#171923;resize:vertical;" placeholder="Опишите, как бот должен отвечать пользователям..."></textarea>
+        <button class="voice">🎤</button>
+      </div>
       <div style="margin-top:14px; color:#6b7280; font-size:17px;">Обычно добавляют</div>
       <div class="rules-suggest">
         <div class="rs-item">🔗 Выдай ссылку на ..., если есть подписка</div>
@@ -221,7 +239,7 @@
       </div>
       <div class="m-actions">
         <button class="m-btn" data-close>Отменить</button>
-        <button class="m-btn primary">Сохранить</button>
+        <button class="m-btn primary" id="modal-rules-save">Сохранить</button>
       </div>
     </div>
   </div>
@@ -241,9 +259,18 @@
 
   <script>
     (function () {
+      const bridge = (window.parent && window.parent !== window && window.parent.ChatOSBridge)
+        ? window.parent.ChatOSBridge
+        : null;
       const openers = document.querySelectorAll('[data-open]');
+      const actionBtns = document.querySelectorAll('[data-action]');
       const closers = document.querySelectorAll('[data-close]');
       const overlays = document.querySelectorAll('.overlay');
+      const chatInput = document.getElementById('v3-input');
+      const chatSend = document.getElementById('v3-send');
+      const textSave = document.getElementById('modal-text-save');
+      const linkSave = document.getElementById('modal-link-save');
+      const rulesSave = document.getElementById('modal-rules-save');
 
       function closeAll() {
         overlays.forEach(o => o.classList.remove('open'));
@@ -258,6 +285,99 @@
           modal.classList.add('open');
         });
       });
+
+      async function runAction(action) {
+        if (!action) return;
+        if (action === 'upload-file') {
+          if (bridge?.openKbFile) { await bridge.openKbFile(); return; }
+          document.getElementById('modal-files')?.classList.add('open');
+          return;
+        }
+        if (action === 'add-link') {
+          document.getElementById('modal-link')?.classList.add('open');
+          return;
+        }
+        if (action === 'add-text') {
+          document.getElementById('modal-text')?.classList.add('open');
+          return;
+        }
+        if (action === 'rules') {
+          document.getElementById('modal-rules')?.classList.add('open');
+          return;
+        }
+        if (action === 'kb-status') {
+          if (bridge?.showKbStatus) { await bridge.showKbStatus(); return; }
+          document.getElementById('modal-kb-status')?.classList.add('open');
+          return;
+        }
+        if (action === 'telegram') {
+          if (bridge?.openTelegram) { await bridge.openTelegram(); return; }
+          return;
+        }
+        if (action === 'test') {
+          if (bridge?.openTestMode) { await bridge.openTestMode(); return; }
+          return;
+        }
+      }
+
+      actionBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const action = btn.getAttribute('data-action');
+          runAction(action);
+        });
+      });
+
+      if (chatSend) {
+        chatSend.addEventListener('click', async () => {
+          const text = (chatInput?.value || '').trim();
+          if (!text) return;
+          if (bridge?.sendMessage) {
+            await bridge.sendMessage(text);
+            chatInput.value = '';
+          }
+        });
+      }
+      if (chatInput) {
+        chatInput.addEventListener('keydown', async (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            chatSend?.click();
+          }
+        });
+      }
+
+      if (textSave) {
+        textSave.addEventListener('click', async () => {
+          const text = (document.getElementById('modal-text-content')?.value || '').trim();
+          if (text.length < 10) return;
+          if (bridge?.addKbText) {
+            const ok = await bridge.addKbText(text);
+            if (ok) closeAll();
+          }
+        });
+      }
+
+      if (linkSave) {
+        linkSave.addEventListener('click', async () => {
+          const url = (document.getElementById('modal-link-url')?.value || '').trim();
+          if (!url) return;
+          if (bridge?.addKbLink) {
+            const ok = await bridge.addKbLink(url);
+            if (ok) closeAll();
+          }
+        });
+      }
+
+      if (rulesSave) {
+        rulesSave.addEventListener('click', async () => {
+          const text = (document.getElementById('modal-rules-content')?.value || '').trim();
+          if (!text) return;
+          if (bridge?.saveRules) {
+            const ok = await bridge.saveRules(text);
+            if (ok) closeAll();
+          }
+        });
+      }
 
       closers.forEach(btn => btn.addEventListener('click', closeAll));
       overlays.forEach(ov => {
