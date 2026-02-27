@@ -83,12 +83,12 @@
       ".src-modal-f{padding:14px 18px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px}",
       ".src-drop-zone{border:1.5px dashed #d1d5db;border-radius:14px;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}",
       ".src-drop-zone:hover,.src-drop-zone.drag-over{border-color:#0b0f19;background:#f8fafc}",
-      ".src-drop-icon{font-size:32px;opacity:.4}",
+      ".src-drop-icon{display:flex;align-items:center;justify-content:center;margin-bottom:2px}",
       ".src-drop-text{font-size:14px;color:#9ca3af;text-align:center;padding:0 16px}",
       ".src-type-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}",
       ".src-type-btn{border:1px solid #e5e7eb;border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;background:#f9fafb;transition:border-color .15s,background .15s}",
       ".src-type-btn:hover{border-color:#0b0f19;background:#fff}",
-      ".src-type-icon{font-size:24px;margin-bottom:6px}",
+      ".src-type-icon{display:flex;align-items:center;justify-content:center;margin-bottom:8px}",
       ".src-type-label{font-size:13px;font-weight:700;color:#111827}",
       "@media(max-width:980px){.projects-app{grid-template-columns:1fr}.projects-side{display:none}}",
     ].join("");
@@ -698,13 +698,13 @@
         // Main view
         "<div id='src-view-main' class='src-modal-b'>" +
         "<div class='src-drop-zone' id='src-drop-zone'>" +
-        "<div class='src-drop-icon'>📄</div>" +
+        "<div class='src-drop-icon'><svg width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='#9ca3af' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='12' y1='11' x2='12' y2='17'/><line x1='9' y1='14' x2='15' y2='14'/></svg></div>" +
         "<div class='src-drop-text'>Перетащите файл сюда</div>" +
         "</div>" +
         "<div class='src-type-btns'>" +
-        "<div class='src-type-btn' id='src-pick-file'><div class='src-type-icon'>⬆️</div><div class='src-type-label'>Загрузить файл</div></div>" +
-        "<div class='src-type-btn' id='src-pick-text'><div class='src-type-icon'>✏️</div><div class='src-type-label'>Вручную</div></div>" +
-        "<div class='src-type-btn' id='src-pick-url'><div class='src-type-icon'>🔗</div><div class='src-type-label'>По ссылке</div></div>" +
+        "<div class='src-type-btn' id='src-pick-file'><div class='src-type-icon'><svg width='26' height='26' viewBox='0 0 24 24' fill='none' stroke='#374151' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='17 8 12 3 7 8'/><line x1='12' y1='3' x2='12' y2='15'/></svg></div><div class='src-type-label'>Загрузить</div></div>" +
+        "<div class='src-type-btn' id='src-pick-text'><div class='src-type-icon'><svg width='26' height='26' viewBox='0 0 24 24' fill='none' stroke='#374151' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='3'/><line x1='7' y1='9' x2='17' y2='9'/><line x1='7' y1='13' x2='17' y2='13'/><line x1='7' y1='17' x2='13' y2='17'/></svg></div><div class='src-type-label'>Ввод текста</div></div>" +
+        "<div class='src-type-btn' id='src-pick-url'><div class='src-type-icon'><svg width='26' height='26' viewBox='0 0 24 24' fill='none' stroke='#374151' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/><path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/></svg></div><div class='src-type-label'>По ссылке</div></div>" +
         "</div>" +
         "</div>" +
         // Text sub-view
@@ -727,7 +727,7 @@
         "<div id='src-view-file' style='display:none'>" +
         "<div class='src-modal-b'>" +
         "<div class='src-drop-zone' id='src-file-zone'>" +
-        "<div class='src-drop-icon'>📁</div>" +
+        "<div class='src-drop-icon'><svg width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='#9ca3af' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='17 8 12 3 7 8'/><line x1='12' y1='3' x2='12' y2='15'/></svg></div>" +
         "<div class='src-drop-text' id='src-file-lbl'>Выберите или перетащите файл (.txt, .md, .csv)</div>" +
         "<input type='file' id='src-file-inp' accept='.txt,.md,.csv' style='display:none'>" +
         "</div>" +
