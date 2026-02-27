@@ -73,7 +73,7 @@
     }
     .main {
       display: grid;
-      grid-template-rows: auto auto 1fr auto;
+      grid-template-rows: auto 1fr auto;
     }
     .topbar {
       padding: 16px 18px;
@@ -82,7 +82,7 @@
       align-items: center;
       justify-content: space-between;
     }
-    .title { font-size: 24px; font-weight: 800; }
+    .title { font-size: 18px; font-weight: 800; }
     .chip {
       border: 1px solid var(--line);
       border-radius: 999px;
@@ -90,22 +90,6 @@
       font-size: 12px;
       background: #fff;
     }
-    .spaces {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .space {
-      border: 1px solid var(--line);
-      background: #fff;
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-    .space.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
     .chat-body {
       padding: 14px;
       background: #e8e5de;
@@ -222,20 +206,10 @@
     <main class="panel main">
       <div class="topbar">
         <div>
-          <div class="title">База знаний</div>
-          <div class="small">Бот: GulDokonu • Активный режим: KB-first</div>
+          <div class="title">● Bot: GulDokonu · 🗃 KB: 3 · ✈ TG: подключён</div>
+          <div class="small">ChatOS режим: быстрые действия внизу</div>
         </div>
-        <span class="chip">17 документов</span>
-      </div>
-
-      <div class="spaces">
-        <button class="space active">Все</button>
-        <button class="space">Продажи</button>
-        <button class="space">Доставка</button>
-        <button class="space">Оплата</button>
-        <button class="space">FAQ</button>
-        <button class="space">Акции</button>
-        <button class="space">+ Новый раздел</button>
+        <span class="chip">Онлайн</span>
       </div>
 
       <section class="chat-body">
