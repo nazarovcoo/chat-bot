@@ -764,7 +764,8 @@
         "<div class='projects-app'>" +
         "<aside class='projects-side'>" +
         "<div class='projects-brand'><div class='projects-logo'>CB</div><div><div style='font-weight:700;font-size:13px'>CreateBot AI</div><div style='font-size:12px;color:#6b7280'>Projects workspace</div></div></div>" +
-        "<div class='projects-head'><div class='projects-title'>Проекты</div><button class='projects-btn' id='projects-new'>+ Новый проект</button></div>" +
+        "<div class='projects-sec-hdr'>Проекты <svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round'><polyline points='6 9 12 15 18 9'/></svg></div>" +
+        "<button class='projects-new-row' id='projects-new'><svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' style='flex-shrink:0;opacity:.55'><path d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'/><line x1='12' y1='11' x2='12' y2='17'/><line x1='9' y1='14' x2='15' y2='14'/></svg>Новый проект</button>" +
         "<div class='projects-list' id='projects-list'></div>" +
         "</aside>" +
         "<main class='projects-main'>" +
