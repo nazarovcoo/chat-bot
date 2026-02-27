@@ -13123,6 +13123,7 @@ ${kbSummary}`,
     // ── TG WIZARD ────────────────────────────────────────────────────────────────
     // Guided Telegram token connection flow
     let _tgWizardStatus = 'idle'; // 'idle' | 'waiting_token' | 'verifying' | 'connected' | 'error'
+    let _chipsBeforeTgWizard = null;
 
     const TG_WIZARD_CHIPS = [
       { label: '🚀 Открыть BotFather', action: 'open_botfather' },
@@ -13146,6 +13147,12 @@ ${kbSummary}`,
 
     async function _enterTgWaiting() {
       _tgWizardStatus = 'waiting_token';
+      // Snapshot chips before wizard so "Назад" can restore previous context.
+      if (_chipsBeforeTgWizard === null) {
+        _chipsBeforeTgWizard = (_lastDynamicChips && _lastDynamicChips.length > 0)
+          ? [..._lastDynamicChips]
+          : null;
+      }
       applyDynamicChips(TG_WIZARD_CHIPS, true); // render wizard chips, skip re-save
       if (_flowUid) {
         try {
@@ -13158,12 +13165,14 @@ ${kbSummary}`,
 
     async function exitTgWizard() {
       _tgWizardStatus = 'idle';
-      // Restore flow step chips (or last dynamic chips)
-      if (_lastDynamicChips && _lastDynamicChips.length > 0) {
-        applyDynamicChips(_lastDynamicChips, true);
+      // Restore chips from before wizard entry.
+      if (_chipsBeforeTgWizard && _chipsBeforeTgWizard.length > 0) {
+        _lastDynamicChips = _chipsBeforeTgWizard;
+        applyDynamicChips(_chipsBeforeTgWizard, true);
       } else {
         renderFlowChips(_flowState.stepId);
       }
+      _chipsBeforeTgWizard = null;
       if (_flowUid) {
         try {
           await db.collection('users').doc(_flowUid)
