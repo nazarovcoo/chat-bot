@@ -15231,9 +15231,8 @@ ${kbSummary}`,
   <script>
     (function () {
       const qp = new URLSearchParams(window.location.search);
-      const byQuery = qp.get('projects') === '1';
-      const byFlag = localStorage.getItem('projects_ui_v1') === '1';
-      const enabled = byQuery || byFlag;
+      const forcedOff = qp.get('projects') === '0';
+      const enabled = !forcedOff;
       if (!enabled) return;
 
       function loadScript(src) {
