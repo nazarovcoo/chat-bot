@@ -19,7 +19,7 @@
     var s = document.createElement("style");
     s.id = "projects-ui-styles";
     s.textContent = [
-      ".projects-app{height:var(--app-height,100dvh);display:grid;grid-template-columns:260px 1fr;background:#fff;color:#111827;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}",
+      ".projects-app{height:var(--app-height,100dvh);display:grid;grid-template-columns:260px 1fr;background:#f6f7fb;color:#0f172a;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}",
       ".projects-side{border-right:1px solid #e5e7eb;padding:10px 8px;display:flex;flex-direction:column;gap:0}",
       ".projects-brand{display:flex;align-items:center;gap:9px;padding:8px 10px;margin-bottom:6px}",
       ".projects-logo{width:28px;height:28px;border-radius:10px;background:#0b0f19;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}",
@@ -51,24 +51,29 @@
       ".del-cancel-btn:hover{background:#f3f4f6}",
       ".del-ok-btn{background:#dc2626;color:#fff;border:none;border-radius:999px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:700;font-family:inherit}",
       ".del-ok-btn:hover{background:#b91c1c}",
-      ".projects-main{display:flex;flex-direction:column;min-width:0}",
-      ".projects-top{border-bottom:1px solid #e5e7eb;padding:16px 18px;display:flex;justify-content:space-between;gap:12px}",
-      ".projects-top h1{margin:0;font-size:18px;line-height:1.2}",
-      ".projects-meta{font-size:12px;color:#6b7280;margin-top:4px}",
-      ".projects-tabs{display:flex;gap:10px;padding:12px 18px;border-bottom:1px solid #e5e7eb}",
-      ".projects-tab{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:10px 13px;font-size:13px;font-weight:800;cursor:pointer}",
-      ".projects-tab.active{background:#0b0f19;color:#fff;border-color:#0b0f19}",
-      ".projects-content{padding:18px;overflow:auto;flex:1}",
+      ".projects-main{display:flex;flex-direction:column;min-width:0;padding:14px;gap:12px;overflow:hidden}",
+      ".projects-top{border:1px solid #e6e8ef;border-radius:22px;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,.06);padding:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}",
+      ".projects-top h1{margin:0;font-size:16px;line-height:1.2;letter-spacing:.2px}",
+      ".projects-meta{font-size:12px;color:#64748b;margin-top:4px}",
+      ".projects-tabs{display:flex;gap:10px;flex-wrap:wrap;padding:0}",
+      ".projects-tab{height:44px;border:1px solid #e6e8ef;background:#fff;border-radius:999px;padding:0 14px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center}",
+      ".projects-tab.active{background:#0f172a;color:#fff;border-color:transparent}",
+      ".projects-content{overflow:auto;flex:1;padding:0}",
       ".projects-empty{border:1px dashed #d1d5db;border-radius:20px;min-height:320px;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center}",
       ".projects-empty h3{margin:0;font-size:26px}",
       ".projects-empty p{margin:10px 0 0;color:#6b7280;line-height:1.45}",
-      ".projects-card{border:1px solid #e5e7eb;border-radius:16px;padding:14px;background:#fff}",
+      ".projects-card{border:1px solid #e6e8ef;border-radius:22px;padding:14px;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,.06)}",
+      ".cardHead{padding:0 0 12px;border-bottom:1px solid #e6e8ef;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}",
+      ".cardHead h2{margin:0;font-size:14px;letter-spacing:.2px}",
+      ".muted{color:#64748b;font-size:12px}",
+      ".search{flex:1;min-width:200px;height:44px;border-radius:14px;border:1px solid #e6e8ef;background:transparent;padding:0 12px;color:#0f172a;outline:none;font-size:14px}",
+      ".select{height:44px;border-radius:14px;border:1px solid #e6e8ef;background:transparent;padding:0 12px;color:#0f172a;outline:none;font-weight:600}",
       ".projects-grid{display:grid;gap:12px}",
       ".projects-list-items{display:flex;flex-direction:column;gap:10px;margin-top:12px}",
       ".projects-virtual{position:relative;height:560px;overflow:auto;border:1px solid #e5e7eb;border-radius:14px;background:#fff}",
       ".projects-virtual-spacer{position:relative;width:100%}",
       ".projects-load-more{margin-top:10px;display:flex;justify-content:center}",
-      ".projects-item{border:1px solid #e5e7eb;border-radius:14px;padding:12px;display:flex;justify-content:space-between;gap:12px}",
+      ".projects-item{border:1px solid #e6e8ef;border-radius:18px;padding:12px;display:flex;justify-content:space-between;gap:12px}",
       ".projects-item h4{margin:0;font-size:14px}",
       ".projects-item p{margin:4px 0 0;font-size:12px;color:#6b7280}",
       ".projects-status{border:1px solid #e5e7eb;border-radius:999px;padding:5px 9px;font-size:11px;background:#f9fafb}",
@@ -84,6 +89,14 @@
       ".projects-modal-f{padding:14px 16px;border-top:1px solid #e5e7eb;background:#f9fafb;display:flex;justify-content:flex-end;gap:10px}",
       ".projects-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}",
       ".projects-top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}",
+      ".projects-chat-grid{display:grid;grid-template-columns:1fr 340px;gap:14px}",
+      ".projects-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}",
+      ".projects-kpi{border:1px solid #e6e8ef;border-radius:16px;background:#f1f5f9;padding:10px;min-height:72px;display:flex;flex-direction:column;justify-content:space-between}",
+      ".projects-kpi-k{font-size:12px;color:#64748b;font-weight:700}",
+      ".projects-kpi-v{font-size:18px;font-weight:900}",
+      ".projects-hint{padding-top:12px;margin-top:12px;border-top:1px solid #e6e8ef;color:#64748b;font-size:13px;line-height:1.35}",
+      ".projects-bottom-bar{position:sticky;bottom:0;margin-top:12px;padding:10px;background:rgba(246,247,251,.92);backdrop-filter:blur(8px);border:1px solid #e6e8ef;border-radius:18px;display:none;gap:10px}",
+      ".projects-bottom-bar .projects-btn{flex:1;justify-content:center}",
       ".projects-danger{border:1px solid #fecaca;background:#fff;color:#b91c1c}",
       // Source modal styles
       ".src-modal-bg{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}",
@@ -106,7 +119,7 @@
       ".src-type-btn:hover{border-color:#0b0f19;background:#fff}",
       ".src-type-icon{display:flex;align-items:center;justify-content:center;margin-bottom:8px}",
       ".src-type-label{font-size:13px;font-weight:700;color:#111827}",
-      "@media(max-width:980px){.projects-app{grid-template-columns:1fr}.projects-side{display:none}}",
+      "@media(max-width:980px){.projects-app{grid-template-columns:1fr}.projects-side{display:none}.projects-chat-grid{grid-template-columns:1fr}.projects-bottom-bar{display:flex}}",
     ].join("");
     document.head.appendChild(s);
   }
@@ -190,6 +203,7 @@
       btnNew2: root.querySelector("#projects-new-empty"),
       btnTopSrc: root.querySelector("#projects-top-add-source"),
       btnTopChats: root.querySelector("#projects-top-open-chats"),
+      btnTopSettings: root.querySelector("#projects-top-settings"),
       modal: root.querySelector("#projects-create-modal"),
       modalClose: root.querySelector("#projects-create-close"),
       modalCancel: root.querySelector("#projects-create-cancel"),
@@ -236,7 +250,16 @@
     });
     nodes.modalCreate.addEventListener("click", createProject);
     nodes.btnTopSrc.addEventListener("click", function () { setTab("sources"); });
-    nodes.btnTopChats.addEventListener("click", function () { setTab("chats"); });
+    nodes.btnTopChats.addEventListener("click", function () {
+      var p = getActiveProject();
+      var host = String((p && p.botHost) || "").trim();
+      if (host.startsWith("@")) {
+        window.open("https://t.me/" + encodeURIComponent(host.replace(/^@/, "")), "_blank");
+      } else {
+        setTab("chats");
+      }
+    });
+    if (nodes.btnTopSettings) nodes.btnTopSettings.addEventListener("click", function () { setTab("settings"); });
     nodes.tabs.addEventListener("click", function (e) {
       var btn = e.target.closest("[data-tab]");
       if (!btn) return;
@@ -588,6 +611,7 @@
         nodes.tabs.style.display = "none";
         nodes.btnTopSrc.style.display = "none";
         nodes.btnTopChats.style.display = "none";
+        if (nodes.btnTopSettings) nodes.btnTopSettings.style.display = "none";
         return;
       }
       nodes.title.textContent = p.name;
@@ -597,6 +621,7 @@
       nodes.tabs.style.display = "flex";
       nodes.btnTopSrc.style.display = "inline-flex";
       nodes.btnTopChats.style.display = "inline-flex";
+      if (nodes.btnTopSettings) nodes.btnTopSettings.style.display = "inline-flex";
       nodes.tabs.querySelectorAll(".projects-tab").forEach(function (t) {
         t.classList.toggle("active", t.getAttribute("data-tab") === state.tab);
       });
@@ -639,20 +664,43 @@
     }
 
     function renderChatsView() {
+      var p = getActiveProject() || {};
+      var chatsCount = Number(p.chatsCount || state.chats.length || 0);
+      var sourcesCount = Number(p.sourcesCount || 0);
       if (!state.chats.length) {
         nodes.content.innerHTML = "<div class='projects-empty'><div><h3>Чатов пока нет</h3><p>Здесь будут реальные диалоги клиентов проекта.</p></div></div>";
         return;
       }
-      nodes.content.innerHTML = "<div class='projects-card'><div class='projects-tools'>" +
-        "<input id='projects-chat-q' placeholder='Поиск по чатам...' style='max-width:320px'>" +
-        "<select id='projects-chat-sort' style='width:auto'><option value='newest'>Самый новый</option><option value='oldest'>Самый старый</option></select>" +
-        "</div></div><div class='projects-virtual' id='projects-chat-virtual'><div class='projects-virtual-spacer' id='projects-chat-list'></div></div>" +
-        "<div class='projects-load-more'><button class='projects-btn' id='projects-chat-more' " + (state.chatsHasMore ? "" : "style='display:none'") + ">Показать ещё</button></div>";
+      nodes.content.innerHTML = "" +
+        "<div class='projects-chat-grid'>" +
+        "<div class='projects-card'>" +
+        "<div class='cardHead'><h2>Chats</h2><span class='muted'>Today: " + esc(String(chatsCount)) + " messages</span></div>" +
+        "<div class='projects-tools'>" +
+        "<input id='projects-chat-q' placeholder='Search chats…' style='max-width:320px' class='search'>" +
+        "<select id='projects-chat-sort' style='width:auto' class='select'><option value='newest'>Most recent</option><option value='oldest'>Oldest</option></select>" +
+        "</div>" +
+        "<div class='projects-virtual' id='projects-chat-virtual'><div class='projects-virtual-spacer' id='projects-chat-list'></div></div>" +
+        "<div class='projects-load-more'><button class='projects-btn' id='projects-chat-more' " + (state.chatsHasMore ? "" : "style='display:none'") + ">Show more</button></div>" +
+        "</div>" +
+        "<div class='projects-card'>" +
+        "<div class='cardHead'><h2>Status</h2><span class='muted'>Realtime</span></div>" +
+        "<div class='projects-status-grid'>" +
+        "<div class='projects-kpi'><div class='projects-kpi-k'>Chats</div><div class='projects-kpi-v'>" + esc(String(chatsCount)) + "</div></div>" +
+        "<div class='projects-kpi'><div class='projects-kpi-k'>Sources</div><div class='projects-kpi-v'>" + esc(String(sourcesCount)) + "</div></div>" +
+        "<div class='projects-kpi'><div class='projects-kpi-k'>Knowledge Base</div><div class='projects-kpi-v'>" + (sourcesCount > 0 ? "Ready" : "Empty") + "</div></div>" +
+        "<div class='projects-kpi'><div class='projects-kpi-k'>Telegram</div><div class='projects-kpi-v' style='color:#16a34a'>Connected</div></div>" +
+        "</div>" +
+        "<div class='projects-hint'>1) Press <b>Add Knowledge</b> to upload PDF / link / text.<br>2) Open your bot and test with <b>/start</b>.<br>3) Check analytics after first 10 chats.</div>" +
+        "</div>" +
+        "</div>" +
+        "<div class='projects-bottom-bar'><button class='projects-btn primary' id='projects-bottom-add'>Add Knowledge</button><button class='projects-btn' id='projects-bottom-open'>Open Bot</button></div>";
       var qInp = root.querySelector("#projects-chat-q");
       var sSel = root.querySelector("#projects-chat-sort");
       var list = root.querySelector("#projects-chat-list");
       var vbox = root.querySelector("#projects-chat-virtual");
       var more = root.querySelector("#projects-chat-more");
+      var bAdd = root.querySelector("#projects-bottom-add");
+      var bOpen = root.querySelector("#projects-bottom-open");
       qInp.value = state.chatsQuery;
       sSel.value = state.sort;
       var debouncedChatsSearch = debounce(function () {
@@ -671,6 +719,12 @@
         loadChats(false);
       });
       if (more) more.addEventListener("click", function () { loadChats(true); });
+      if (bAdd) bAdd.addEventListener("click", function () { setTab("sources"); });
+      if (bOpen) bOpen.addEventListener("click", function () {
+        var uname = String(p.botHost || "").replace(/^@/, "").trim();
+        if (!uname) return;
+        window.open("https://t.me/" + encodeURIComponent(uname), "_blank");
+      });
       renderVirtualRows(vbox, list, state.chats, function (c) {
         var when = c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString("ru-RU") : "—";
         return "<div class='projects-item'><div><h4>" + esc(c.name || c.userExternalId || c.id) +
@@ -915,12 +969,13 @@
         "</aside>" +
         "<main class='projects-main'>" +
         "<div class='projects-top'><div><h1 id='projects-active-title'>Выберите проект</h1><div class='projects-meta' id='projects-active-meta'>—</div></div>" +
-        "<div class='projects-top-actions'><button class='projects-btn' id='projects-top-add-source' style='display:none'>Добавить источник</button>" +
-        "<button class='projects-btn primary' id='projects-top-open-chats' style='display:none'>Открыть чаты</button></div></div>" +
+        "<div class='projects-top-actions'><button class='projects-btn primary' id='projects-top-add-source' style='display:none'>Add Knowledge</button>" +
+        "<button class='projects-btn' id='projects-top-open-chats' style='display:none'>Open Bot</button>" +
+        "<button class='projects-btn' id='projects-top-settings' style='display:none'>Settings</button></div></div>" +
         "<div class='projects-tabs' id='projects-tabs' style='display:none'>" +
-        "<button class='projects-tab active' data-tab='chats'>Чаты</button>" +
-        "<button class='projects-tab' data-tab='sources'>Источники</button>" +
-        "<button class='projects-tab' data-tab='settings'>Настройки</button>" +
+        "<button class='projects-tab active' data-tab='chats'>Chats</button>" +
+        "<button class='projects-tab' data-tab='sources'>Sources</button>" +
+        "<button class='projects-tab' data-tab='settings'>Settings</button>" +
         "</div><div class='projects-content' id='projects-content'></div></main></div>" +
         // Create project modal
         "<div class='projects-modal-bg' id='projects-create-modal'><div class='projects-modal'>" +
