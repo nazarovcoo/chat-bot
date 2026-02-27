@@ -375,7 +375,60 @@
       }
     });
 
-    function readFileAsText(file) {
+    function _loadScript(url) {
+      return new Promise(function (resolve, reject) {
+        if (document.querySelector('script[src="' + url + '"]')) { resolve(); return; }
+        var s = document.createElement("script");
+        s.src = url; s.onload = resolve; s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    async function _extractPDF(file) {
+      await _loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      var ab = await file.arrayBuffer();
+      var pdf = await window.pdfjsLib.getDocument({ data: ab }).promise;
+      var text = "";
+      for (var i = 1; i <= pdf.numPages; i++) {
+        var page = await pdf.getPage(i);
+        var content = await page.getTextContent();
+        text += content.items.map(function (it) { return it.str; }).join(" ") + "\n";
+      }
+      return text.trim();
+    }
+
+    async function _extractDOCX(file) {
+      await _loadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js");
+      var ab = await file.arrayBuffer();
+      var result = await window.mammoth.extractRawText({ arrayBuffer: ab });
+      return (result.value || "").trim();
+    }
+
+    async function _extractPPTX(file) {
+      await _loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js");
+      var ab = await file.arrayBuffer();
+      var zip = await window.JSZip.loadAsync(ab);
+      var slideKeys = Object.keys(zip.files)
+        .filter(function (n) { return /ppt\/slides\/slide\d+\.xml$/.test(n); })
+        .sort(function (a, b) {
+          return parseInt(a.match(/\d+/)[0]) - parseInt(b.match(/\d+/)[0]);
+        });
+      var text = "";
+      for (var i = 0; i < slideKeys.length; i++) {
+        var xml = await zip.files[slideKeys[i]].async("string");
+        var matches = xml.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+        text += matches.map(function (m) { return m.replace(/<[^>]+>/g, ""); }).join(" ") + "\n";
+      }
+      return text.trim();
+    }
+
+    async function readFileAsText(file) {
+      var ext = file.name.split(".").pop().toLowerCase();
+      if (ext === "pdf") return _extractPDF(file);
+      if (ext === "docx" || ext === "doc") return _extractDOCX(file);
+      if (ext === "pptx" || ext === "ppt") return _extractPPTX(file);
       return new Promise(function (resolve, reject) {
         var reader = new FileReader();
         reader.onload = function (e) { resolve(e.target.result || ""); };
@@ -391,7 +444,7 @@
       nodes.srcUrlTitle.value = "";
       nodes.srcUrlHref.value = "";
       nodes.srcFileInp.value = "";
-      nodes.srcFileLbl.textContent = "Выберите или перетащите файл (.txt, .md, .csv)";
+      nodes.srcFileLbl.textContent = "Выберите или перетащите файл (.txt, .md, .csv, .pdf, .docx, .pptx)";
       showSrcView("main");
       nodes.srcModal.classList.add("open");
     }
@@ -1017,8 +1070,8 @@
         "<div class='src-modal-b'>" +
         "<div class='src-drop-zone' id='src-file-zone'>" +
         "<div class='src-drop-icon'><svg width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='#9ca3af' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='17 8 12 3 7 8'/><line x1='12' y1='3' x2='12' y2='15'/></svg></div>" +
-        "<div class='src-drop-text' id='src-file-lbl'>Выберите или перетащите файл (.txt, .md, .csv)</div>" +
-        "<input type='file' id='src-file-inp' accept='.txt,.md,.csv' style='display:none'>" +
+        "<div class='src-drop-text' id='src-file-lbl'>Выберите или перетащите файл (.txt, .md, .csv, .pdf, .docx, .pptx)</div>" +
+        "<input type='file' id='src-file-inp' accept='.txt,.md,.csv,.pdf,.doc,.docx,.ppt,.pptx' style='display:none'>" +
         "</div>" +
         "</div>" +
         "<div class='src-modal-f'><button class='projects-btn' id='src-file-cancel'>Отмена</button><button class='projects-btn primary' id='src-file-ok'>Загрузить</button></div>" +
