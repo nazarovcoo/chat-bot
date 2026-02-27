@@ -891,7 +891,13 @@
         spacer.style.height = (rows.length * h) + "px";
         spacer.innerHTML = html;
       }
-      viewport.onscroll = paint;
+      var _rafPending = false;
+      viewport.onscroll = function () {
+        if (!_rafPending) {
+          _rafPending = true;
+          requestAnimationFrame(function () { _rafPending = false; paint(); });
+        }
+      };
       paint();
     }
 

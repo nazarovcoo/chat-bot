@@ -7273,7 +7273,7 @@
           <div id="kb-jobs-inline" style="margin-bottom:12px;display:flex;flex-direction:column;gap:6px;"></div>
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
             <input class="form-input" style="max-width:240px;margin:0;" placeholder="🔍 Поиск по теме" id="topic-search"
-              oninput="renderTopics()">
+              oninput="_dRenderTopics()">
             <span style="font-size:0.72rem;color:var(--text-dim);">↑↓ Популярность</span>
           </div>
           <div class="table-wrap">
@@ -11768,6 +11768,9 @@ ${kbSummary}`,
       const _dRenderKb = _mkDebounce(renderKb, 40);
       const _dRenderAnalytics = _mkDebounce(renderAnalytics, 40);
       const _dRenderTopics = _mkDebounce(renderTopics, 40);
+      const _dRenderSuggestions = _mkDebounce(renderSuggestions, 40);
+      const _dRenderUnanswered = _mkDebounce(renderUnanswered, 40);
+      const _dRenderJobsInline = _mkDebounce(renderJobsInline, 40);
 
       // Start Firestore real-time listeners
       listen('bots', data => {
@@ -11795,10 +11798,10 @@ ${kbSummary}`,
         setTimeout(checkOnboarding, 800);
       });
       listen('kbItems', data => { STATE.kbItems = data; _dRenderKb(); _dRenderAnalytics(); });
-      listen('kbQA', data => { STATE.kbQA = data; _dRenderKb(); renderSuggestions(); _dRenderAnalytics(); _dRenderTopics(); });
-      listen('jobs', data => { STATE.kbJobs = data; _dRenderKb(); renderJobsInline(); });
+      listen('kbQA', data => { STATE.kbQA = data; _dRenderKb(); _dRenderSuggestions(); _dRenderAnalytics(); _dRenderTopics(); });
+      listen('jobs', data => { STATE.kbJobs = data; _dRenderKb(); _dRenderJobsInline(); });
       listen('kbSources', data => { STATE.kbSources = data; _dRenderKb(); });
-      listen('unanswered', data => { STATE.unanswered = data; renderUnanswered(); _dRenderAnalytics(); });
+      listen('unanswered', data => { STATE.unanswered = data; _dRenderUnanswered(); _dRenderAnalytics(); });
       listen('topics', data => { STATE.topics = data; _dRenderTopics(); _dRenderAnalytics(); });
       listenChats(data => { STATE.chats = data; renderChats(); });
       listen('aiUsage', data => { STATE.aiUsage = data; renderTariff(); if (STATE.currentAgentScreen === 'ai-usage') renderAiUsage(); });
@@ -13617,10 +13620,18 @@ ${kbSummary}`,
         const labels = Array.from(kbInputs).map(i => i.value.trim()).filter(Boolean);
         kbPreview.innerHTML = kbHtml(labels);
       };
+      const _dRefreshKb = _mkDebounce(refreshKb, 150);
+      let _previewRaf = false;
       textarea.addEventListener('input', () => {
-        previewEl.innerHTML = esc(textarea.value).replace(/\n/g, '<br>');
+        if (!_previewRaf) {
+          _previewRaf = true;
+          requestAnimationFrame(() => {
+            _previewRaf = false;
+            previewEl.innerHTML = esc(textarea.value).replace(/\n/g, '<br>');
+          });
+        }
       });
-      kbInputs.forEach(inp => inp.addEventListener('input', refreshKb));
+      kbInputs.forEach(inp => inp.addEventListener('input', _dRefreshKb));
 
       card.querySelector('#wc-save').addEventListener('click', async () => {
         const msgVal = textarea.value.trim();

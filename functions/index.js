@@ -756,33 +756,33 @@ exports.telegramWebhook = onRequest(
       let _cachedSett = _mcGet(_settCacheKey);
 
       if (kbItems === null || _cachedSett === null) {
-        let kbPromiseQA = db.collection(`users/${uid}/kbQA`).where("status", "==", "active").limit(200).get();
-        let kbPromiseLegacy = db.collection(`users/${uid}/kbItems`).limit(200).get();
-        let kbPromiseBot = botId ? db.collection(`users/${uid}/bots/${botId}/knowledge_base`).limit(200).get() : null;
-        let rulesPromise = botId ? Promise.resolve({ exists: !!botData.rules, data: () => ({ text: botData.rules }) }) : db.doc(`users/${uid}/settings/rules`).get();
+        const rulesPromise = botId
+          ? Promise.resolve({ exists: !!botData.rules, data: () => ({ text: botData.rules }) })
+          : db.doc(`users/${uid}/settings/rules`).get();
 
-        const [kbQASnap, kbItemsSnap, kbBotSnap, rulesDoc, aiDoc, autoReplyDoc, notifDoc] = await Promise.all([
-          kbPromiseQA,
-          kbPromiseLegacy,
-          kbPromiseBot || Promise.resolve({ docs: [] }),
+        // Settings and primary KB source run in parallel
+        const [rulesDoc, aiDoc, autoReplyDoc, notifDoc, primaryKbSnap] = await Promise.all([
           rulesPromise,
           db.doc(`users/${uid}/settings/ai`).get(),
           db.doc(`users/${uid}/settings/autoReplies`).get(),
           db.doc(`users/${uid}/settings/notifications`).get(),
+          botId
+            ? db.collection(`users/${uid}/bots/${botId}/knowledge_base`).limit(200).get()
+            : db.collection(`users/${uid}/kbQA`).where("status", "==", "active").limit(200).get(),
         ]);
 
         if (kbItems === null) {
           if (botId) {
-            kbItems = kbBotSnap.docs.map(d => ({
+            kbItems = primaryKbSnap.docs.map(d => ({
               title: d.data().title || d.data().question || d.data().name || "",
               content: d.data().content || d.data().answer || d.data().text || ""
             })).filter(k => k.content.trim().length > 0);
+          } else if (primaryKbSnap.size > 0) {
+            kbItems = primaryKbSnap.docs.map(d => ({ title: d.data().question || "", content: d.data().answer || "" }));
           } else {
-            if (kbQASnap.size > 0) {
-              kbItems = kbQASnap.docs.map((d) => ({ title: d.data().question || "", content: d.data().answer || "" }));
-            } else {
-              kbItems = kbItemsSnap.docs.map((d) => ({ title: d.data().title || "", content: d.data().content || "" }));
-            }
+            // Fallback to legacy kbItems only if kbQA is empty
+            const legacySnap = await db.collection(`users/${uid}/kbItems`).limit(200).get();
+            kbItems = legacySnap.docs.map(d => ({ title: d.data().title || "", content: d.data().content || "" }));
           }
           _mcSet(_kbCacheKey, kbItems, 60000);
         }
@@ -1664,12 +1664,15 @@ exports.projectsApi = onRequest(
             for (const d of srcSnap.docs.slice(i, i + 400)) b.delete(d.ref);
             await b.commit();
           }
-          for (let i = 0; i < chatSnap.docs.length; i += 120) {
+          // Fetch all message sub-collections in parallel (avoids N+1 sequential reads)
+          const msgSnaps = await Promise.all(
+            chatSnap.docs.map(d => d.ref.collection("messages").limit(500).get())
+          );
+          for (let i = 0; i < chatSnap.docs.length; i += 200) {
             const b = db.batch();
-            for (const d of chatSnap.docs.slice(i, i + 120)) {
-              const msgs = await d.ref.collection("messages").limit(500).get();
-              msgs.docs.forEach((m) => b.delete(m.ref));
-              b.delete(d.ref);
+            for (let j = i; j < Math.min(i + 200, chatSnap.docs.length); j++) {
+              msgSnaps[j].docs.forEach(m => b.delete(m.ref));
+              b.delete(chatSnap.docs[j].ref);
             }
             await b.commit();
           }
