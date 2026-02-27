@@ -11845,6 +11845,19 @@ ${kbSummary}`,
         _pendingNextStep = 'ACTIVE'; // stay in ACTIVE after file sent
         return;
       }
+      // TG wizard chips
+      if (chip.action === 'open_botfather') {
+        window.open('https://t.me/BotFather', '_blank');
+        return;
+      }
+      if (chip.action === 'tg_wizard' || label === '✈️ Подключить Telegram' || label === '✈️ Telegram') {
+        showTgInstructions();
+        return;
+      }
+      if (chip.action === 'tg_exit') {
+        exitTgWizard();
+        return;
+      }
       if (label === '📚 Открыть базу знаний') { openKBDrawer(); }
       if (msg !== null) handleChatObSend(msg); // send contextual sentence, not bare label
     }
@@ -11878,11 +11891,14 @@ ${kbSummary}`,
     async function initFlowEngine(uid) {
       _flowUid = uid;
       let savedLastChips = null;
+      let restoredTgWaiting = false;
       try {
-        const doc = await db.collection('users').doc(uid)
-          .collection('chatosState').doc('flow').get();
-        if (doc.exists) {
-          const d = doc.data();
+        const [flowDoc, tgDoc] = await Promise.all([
+          db.collection('users').doc(uid).collection('chatosState').doc('flow').get(),
+          db.collection('users').doc(uid).collection('chatosState').doc('tgWizard').get()
+        ]);
+        if (flowDoc.exists) {
+          const d = flowDoc.data();
           _flowState = { stepId: d.stepId || 'WELCOME', data: d.data || {}, active: !!d.active };
           if (_flowState.stepId === 'ACTIVE' && Array.isArray(d.lastChips) && d.lastChips.length > 0) {
             savedLastChips = d.lastChips;
@@ -11890,13 +11906,143 @@ ${kbSummary}`,
         } else {
           _flowState = { stepId: 'WELCOME', data: {}, active: false };
         }
+        if (tgDoc.exists && tgDoc.data().status === 'waiting_token') {
+          _tgWizardStatus = 'waiting_token';
+          restoredTgWaiting = true;
+        }
       } catch (_) {
         _flowState = { stepId: 'WELCOME', data: {}, active: false };
       }
-      if (savedLastChips) {
-        applyDynamicChips(savedLastChips, true); // restore without re-saving
+      if (restoredTgWaiting) {
+        applyDynamicChips(TG_WIZARD_CHIPS, true); // restore wizard chips without re-saving
+      } else if (savedLastChips) {
+        applyDynamicChips(savedLastChips, true); // restore dynamic chips without re-saving
       } else {
         renderFlowChips(_flowState.stepId);
+      }
+    }
+
+    // ── TG WIZARD ────────────────────────────────────────────────────────────────
+    // Guided Telegram token connection flow
+    let _tgWizardStatus = 'idle'; // 'idle' | 'waiting_token' | 'verifying' | 'connected' | 'error'
+
+    const TG_WIZARD_CHIPS = [
+      { label: '🚀 Открыть BotFather', action: 'open_botfather' },
+      { label: '📖 Инструкция ещё раз',  action: 'tg_wizard' },
+      { label: '⬅ Назад',               action: 'tg_exit' },
+    ];
+
+    function showTgInstructions() {
+      addChatOsMsg('bot',
+        '📲 **Подключение Telegram**\n\n' +
+        '1. Откройте https://t.me/BotFather\n' +
+        '2. Введите команду: /newbot\n' +
+        '3. Укажите имя бота\n' +
+        '4. Укажите username (должен заканчиваться на bot)\n' +
+        '5. Скопируйте выданный токен\n\n' +
+        '📌 Затем вставьте токен сюда, в этот чат.\n\n' +
+        'Я автоматически подключу вашего бота.'
+      );
+      _enterTgWaiting();
+    }
+
+    async function _enterTgWaiting() {
+      _tgWizardStatus = 'waiting_token';
+      applyDynamicChips(TG_WIZARD_CHIPS, true); // render wizard chips, skip re-save
+      if (_flowUid) {
+        try {
+          await db.collection('users').doc(_flowUid)
+            .collection('chatosState').doc('tgWizard')
+            .set({ status: 'waiting_token', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        } catch (_) {}
+      }
+    }
+
+    async function exitTgWizard() {
+      _tgWizardStatus = 'idle';
+      // Restore flow step chips (or last dynamic chips)
+      if (_lastDynamicChips && _lastDynamicChips.length > 0) {
+        applyDynamicChips(_lastDynamicChips, true);
+      } else {
+        renderFlowChips(_flowState.stepId);
+      }
+      if (_flowUid) {
+        try {
+          await db.collection('users').doc(_flowUid)
+            .collection('chatosState').doc('tgWizard')
+            .set({ status: 'idle' }, { merge: true });
+        } catch (_) {}
+      }
+    }
+
+    async function connectTelegramToken(token) {
+      isWaitingForAI = true;
+      CHAT_OS.inputEl.disabled = true;
+      CHAT_OS.sendBtn.disabled = true;
+      document.getElementById('chat-ob-attach-btn').disabled = true;
+      _tgWizardStatus = 'verifying';
+      addChatOsMsg('bot', '...');
+
+      try {
+        // 1. Validate token via Telegram getMe
+        const meRes = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+        const meData = await meRes.json();
+
+        if (!meData.ok) {
+          removeTypingIndicator();
+          addChatOsMsg('bot', '❌ Токен недействителен. Убедитесь, что скопировали его полностью из BotFather, и попробуйте снова.');
+          _tgWizardStatus = 'waiting_token'; // allow retry
+          return;
+        }
+
+        // 2. Get active bot ID from session
+        const sessionSnap = await db.collection('users').doc(window.resolvedUid)
+          .collection('chat_os_sessions').doc('default').get();
+        const botId = sessionSnap.exists ? sessionSnap.data().activeBotId : null;
+
+        if (!botId) {
+          removeTypingIndicator();
+          addChatOsMsg('bot', '❌ Не удалось определить активного бота. Сначала создайте бота, затем подключите Telegram.');
+          _tgWizardStatus = 'waiting_token';
+          return;
+        }
+
+        // 3. Register webhook via backend
+        const webhookResult = await registerTelegramWebhook(window.resolvedUid, botId, token, false);
+        removeTypingIndicator();
+
+        if (!webhookResult || !webhookResult.ok) {
+          addChatOsMsg('bot', '❌ Не удалось зарегистрировать webhook. Проверьте токен и попробуйте снова.');
+          _tgWizardStatus = 'waiting_token';
+          return;
+        }
+
+        // 4. Success — exit wizard, show confirmation
+        _tgWizardStatus = 'connected';
+        exitTgWizard();
+
+        const botUsername = meData.result.username ? `@${meData.result.username}` : 'боту';
+        addChatOsMsg('bot',
+          `✅ Telegram успешно подключён!\n\nНапишите /start ${botUsername} для проверки.\nЯ покажу подтверждение, когда сообщение придёт.`
+        );
+
+        if (_flowUid) {
+          await db.collection('users').doc(_flowUid)
+            .collection('chatosState').doc('tgWizard')
+            .set({ status: 'connected' }, { merge: true });
+        }
+
+      } catch (e) {
+        removeTypingIndicator();
+        console.error('[TgWizard] connectTelegramToken error:', e);
+        addChatOsMsg('bot', '❌ Ошибка сети. Попробуйте снова.');
+        _tgWizardStatus = 'waiting_token';
+      } finally {
+        isWaitingForAI = false;
+        CHAT_OS.inputEl.disabled = false;
+        CHAT_OS.sendBtn.disabled = false;
+        document.getElementById('chat-ob-attach-btn').disabled = false;
+        CHAT_OS.inputEl.focus();
       }
     }
 
@@ -12278,6 +12424,8 @@ ${kbSummary}`,
       s = s.replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>');
       // Line breaks
       s = s.replace(/\n/g, '<br>');
+      // Auto-link URLs (safe: esc() already escaped user content, only https/http allowed)
+      s = s.replace(/https?:\/\/[^\s<"']{4,200}/g, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
       return s;
     }
 
@@ -12459,6 +12607,20 @@ ${kbSummary}`,
       if (!FILE_UPLOAD_ENABLED && pendingChatAttachment) clearChatAttachment();
 
       if (!text && !pendingChatAttachment) return;
+
+      // TG Wizard: intercept token input while waiting for Telegram token
+      if (_tgWizardStatus === 'waiting_token' && text && !opts.hidden) {
+        CHAT_OS.inputEl.value = '';
+        CHAT_OS.inputEl.style.height = 'auto';
+        addChatOsMsg('user', text);
+        const TOKEN_RE = /^[0-9]{8,}:[A-Za-z0-9_-]{20,}$/;
+        if (TOKEN_RE.test(text.trim())) {
+          connectTelegramToken(text.trim());
+        } else {
+          addChatOsMsg('bot', 'Похоже, это не токен. Токен выглядит как:\n123456789:AAHdqTcvfTBHRcTifIaAUe...\n\nСкопируйте его целиком из BotFather и вставьте сюда.');
+        }
+        return;
+      }
 
       CHAT_OS.inputEl.value = '';
       CHAT_OS.inputEl.style.height = 'auto';
