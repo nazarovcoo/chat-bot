@@ -8,6 +8,7 @@
 
   <script>
     window.BUILD_VERSION = "2026-02-27.2";
+    window.FORCE_PROJECTS_MAIN = true;
     // GLOBAL ERROR HANDLING
     function logClientError(msg, source, lineno, colno, error, type = "Error") {
       try {
@@ -11704,12 +11705,14 @@ ${kbSummary}`,
         document.getElementById('modal-phone-verify').classList.add('open');
       };
 
-      // Launch Chat Onboarding if needed
-      db.collection('users').doc(user.uid).collection('bots').get().then(botsSnap => {
-        initChatOnboarding(user.uid, botsSnap.size);
-      }).catch(() => {
-        initChatOnboarding(user.uid, 0);
-      });
+      // Launch Chat Onboarding if needed (disabled in projects-only mode)
+      if (!window.FORCE_PROJECTS_MAIN) {
+        db.collection('users').doc(user.uid).collection('bots').get().then(botsSnap => {
+          initChatOnboarding(user.uid, botsSnap.size);
+        }).catch(() => {
+          initChatOnboarding(user.uid, 0);
+        });
+      }
 
       db.collection('users').doc(user.uid).collection('settings').doc('agent').get().then(d => {
         if (d.exists) { STATE.agentActive = d.data().active !== false; applyAgentStatus(); }
@@ -14271,6 +14274,7 @@ ${kbSummary}`,
     // Modified to always stay open for all users and fetch history from backend
     // forceReload=true: re-fetches from backend (used after clear_chat) without page reload
     async function initChatOnboarding(uid, botsCount, forceReload) {
+      if (window.FORCE_PROJECTS_MAIN) return;
       if (!uid) return;
       try {
         if (!forceReload) {
@@ -15254,6 +15258,20 @@ ${kbSummary}`,
       const enabled = !forcedOff;
       if (!enabled) return;
 
+      const root = document.getElementById('projects-ui-root');
+      const onboarding = document.getElementById('onboarding-chat-overlay');
+      const main = document.getElementById('main-content');
+      const side = document.querySelector('.sidebar');
+      const mob = document.getElementById('mob-overlay');
+      const cta = document.querySelector('.mob-cta');
+      if (onboarding) onboarding.style.display = 'none';
+      if (main) main.style.display = 'none';
+      if (side) side.style.display = 'none';
+      if (mob) mob.style.display = 'none';
+      if (cta) cta.style.display = 'none';
+      root.style.display = 'block';
+      root.innerHTML = '<div style="height:100vh;display:flex;align-items:center;justify-content:center;color:#6b7280;font:500 14px/1.4 Inter,sans-serif">Загружаю Projects...</div>';
+
       function loadScript(src) {
         return new Promise((resolve, reject) => {
           const s = document.createElement('script');
@@ -15269,34 +15287,12 @@ ${kbSummary}`,
           await loadScript('/js/projects-api.js');
           await loadScript('/js/projects-ui.js');
           if (!window.ProjectsUI) throw new Error('Projects UI module not loaded');
-
-          // Wait for Firebase Auth to resolve before mounting so getAuthToken() returns a valid token
-          const authUser = await new Promise((resolve) => {
-            if (typeof firebase !== 'undefined' && firebase.auth) {
-              if (firebase.auth().currentUser) { resolve(firebase.auth().currentUser); return; }
-              const unsub = firebase.auth().onAuthStateChanged((u) => { unsub(); resolve(u); });
-            } else {
-              resolve(null);
-            }
-          });
-          if (!authUser) return; // not logged in — skip mounting
-
-          const root = document.getElementById('projects-ui-root');
-          const onboarding = document.getElementById('onboarding-chat-overlay');
-          const main = document.getElementById('main-content');
-          const side = document.querySelector('.sidebar');
-          const mob = document.getElementById('mob-overlay');
-          const cta = document.querySelector('.mob-cta');
-          if (onboarding) onboarding.style.display = 'none';
-          if (main) main.style.display = 'none';
-          if (side) side.style.display = 'none';
-          if (mob) mob.style.display = 'none';
-          if (cta) cta.style.display = 'none';
-          root.style.display = 'block';
+          // Wait a moment for auth bootstrap to resolve, but always mount Projects UI.
+          await new Promise((resolve) => setTimeout(resolve, 600));
           window.__projectsUiMounted = window.ProjectsUI.mount(root, {});
         } catch (e) {
           console.error('[ProjectsUI] init failed:', e);
-          localStorage.removeItem('projects_ui_v1');
+          root.innerHTML = '<div style="height:100vh;display:flex;align-items:center;justify-content:center;color:#ef4444;font:600 14px/1.4 Inter,sans-serif">Не удалось загрузить Projects UI. Обновите страницу.</div>';
         }
       })();
     })();
