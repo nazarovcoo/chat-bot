@@ -110,7 +110,7 @@
     };
 
     nodes.btnNew.addEventListener("click", openCreateModal);
-    nodes.btnNew2.addEventListener("click", openCreateModal);
+    if (nodes.btnNew2) nodes.btnNew2.addEventListener("click", openCreateModal);
     nodes.modalClose.addEventListener("click", closeCreateModal);
     nodes.modalCancel.addEventListener("click", closeCreateModal);
     nodes.modal.addEventListener("click", function (e) {
