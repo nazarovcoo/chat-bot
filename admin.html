@@ -1038,6 +1038,52 @@
     /* ── Refresh button ── */
     #refresh-chat-btn { font-size: 15px; }
 
+    /* ── Welcome config card ── */
+    .welcome-config-card {
+      background: #fff; border: 1px solid rgba(51,144,236,.22);
+      border-radius: 14px; padding: 14px; margin: 4px 0; font-size: 13px;
+    }
+    .welcome-config-title { font-weight: 700; font-size: 14px; color: #3390ec; margin-bottom: 8px; }
+    .welcome-preview-label { font-size: 11px; color: #8d9ea9; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px; }
+    .welcome-tg-preview {
+      background: #effdde; border-radius: 0 10px 10px 10px;
+      padding: 10px 13px; font-size: 13px; line-height: 1.55;
+      white-space: pre-wrap; word-break: break-word;
+      max-height: 130px; overflow-y: auto; margin-bottom: 6px;
+    }
+    .welcome-kb-preview { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; min-height: 22px; }
+    .welcome-kb-btn {
+      background: #fff; border: 1px solid rgba(51,144,236,.35); border-radius: 16px;
+      padding: 3px 10px; font-size: 12px; font-weight: 600; color: #3390ec;
+    }
+    .welcome-field-label { font-size: 11px; color: #8d9ea9; margin-bottom: 4px; }
+    .welcome-edit-area {
+      width: 100%; box-sizing: border-box; border: 1px solid #e2e8f0;
+      border-radius: 8px; padding: 8px; font-size: 13px; font-family: inherit;
+      resize: vertical; min-height: 72px;
+    }
+    .welcome-edit-area:focus { outline: none; border-color: #3390ec; }
+    .welcome-kb-inputs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+    .welcome-kb-input {
+      width: calc(50% - 3px); box-sizing: border-box; border: 1px solid #e2e8f0;
+      border-radius: 6px; padding: 5px 8px; font-size: 12.5px; font-family: inherit;
+    }
+    .welcome-kb-input:focus { outline: none; border-color: #3390ec; }
+    .welcome-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .welcome-save-btn {
+      background: #3390ec; color: #fff; border: none; border-radius: 8px;
+      padding: 8px 18px; font-weight: 700; cursor: pointer; font-size: 13px;
+    }
+    .welcome-save-btn:hover { background: #2778d0; }
+    .welcome-save-btn:disabled { opacity: .6; cursor: default; }
+    .welcome-ai-btn {
+      background: none; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 8px 14px; cursor: pointer; font-size: 13px;
+    }
+    .welcome-ai-btn:hover { background: #f8f9fa; }
+    .welcome-status { font-size: 11.5px; color: #4caf50; margin-top: 6px; display: none; }
+    .welcome-status.visible { display: block; }
+
 
     .guide-tip-close:hover {
       color: var(--text);
@@ -11777,7 +11823,8 @@ ${kbSummary}`,
       if (window._tgListenerUnsub) { window._tgListenerUnsub(); window._tgListenerUnsub = null; }
       // Advance wizard to ACTIVE now that TG is connected
       if (_flowState && _flowState.stepId !== 'ACTIVE') advanceFlowStep('ACTIVE');
-      setTimeout(() => { handleChatObSend("Я только что отправил(а) /start боту и он заработал. Что дальше?"); }, 1500);
+      // Auto-show welcome message editor so user can personalise /start reply
+      setTimeout(() => showWelcomeConfigCard(), 1800);
     }
 
     // Collection-level TG listener — watches ALL bots so it works for new users too
@@ -11827,7 +11874,7 @@ ${kbSummary}`,
           { label: '📎 Загрузить файл',   msg: null,                                        action: 'file' },
           { label: '🔗 Добавить ссылку',  msg: 'Хочу добавить ссылку в базу знаний бота' },
           { label: '✈️ Telegram',          msg: 'Хочу подключить Telegram к боту' },
-          { label: '❓ Что дальше?',       msg: 'Что ещё можно настроить или улучшить в боте?' }
+          { label: '🎨 Приветствие',       action: 'welcome_config' },
         ]
       }
     };
@@ -11898,6 +11945,11 @@ ${kbSummary}`,
       }
       if (chip.action === 'tg_exit') {
         exitTgWizard();
+        return;
+      }
+      // Welcome message config
+      if (chip.action === 'welcome_config' || label === '🎨 Приветствие') {
+        showWelcomeConfigCard();
         return;
       }
       // Post-reset choice chips
@@ -12104,6 +12156,131 @@ ${kbSummary}`,
         CHAT_OS.sendBtn.disabled = false;
         document.getElementById('chat-ob-attach-btn').disabled = false;
         CHAT_OS.inputEl.focus();
+      }
+    }
+
+    // ── WELCOME MESSAGE CONFIG ───────────────────────────────────────────────────
+    // Generates a default welcome text from bot name + system prompt (no AI call needed)
+    function _buildDefaultWelcome(botName, systemPrompt) {
+      const name = botName || 'Бот';
+      if (systemPrompt && systemPrompt.length > 20) {
+        const excerpt = systemPrompt.split('\n')[0].replace(/^(ты|вы|this bot|you are)\s*/i, '').slice(0, 130).trim();
+        if (excerpt.length > 10) {
+          return `👋 Привет! Я ${name}.\n\n${excerpt}\n\nЧем могу помочь?`;
+        }
+      }
+      return `👋 Привет! Я ${name}.\n\nЗадайте любой вопрос — постараюсь помочь!\n\nЧем могу помочь?`;
+    }
+
+    async function showWelcomeConfigCard() {
+      if (!window.resolvedUid) return;
+      try {
+        const sessionSnap = await db.collection('users').doc(window.resolvedUid)
+          .collection('chat_os_sessions').doc('default').get();
+        const botId = sessionSnap.exists ? sessionSnap.data().activeBotId : null;
+        if (!botId) {
+          addChatOsMsg('bot', 'Сначала создайте бота, чтобы настроить приветствие.');
+          return;
+        }
+        const botDoc = await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId).get();
+        const bot = botDoc.data() || {};
+        const savedMsg = bot.welcomeMessage || '';
+        const savedKb  = Array.isArray(bot.welcomeKeyboard) ? bot.welcomeKeyboard : [];
+        const msgText  = savedMsg || _buildDefaultWelcome(bot.name || 'Бот', bot.systemPrompt || bot.description || '');
+        _insertWelcomeCard(botId, bot.name || 'Бот', msgText, savedKb);
+      } catch (e) {
+        console.error('[Welcome] showWelcomeConfigCard error:', e);
+        addChatOsMsg('bot', 'Не удалось загрузить настройки бота.');
+      }
+    }
+
+    function _insertWelcomeCard(botId, botName, msgText, keyboard) {
+      document.getElementById('welcome-config-card')?.remove();
+      const card = document.createElement('div');
+      card.id = 'welcome-config-card';
+      card.className = 'welcome-config-card';
+
+      const kbHtml = (chips) => chips.length > 0
+        ? chips.map(k => `<span class="welcome-kb-btn">${esc(k)}</span>`).join('')
+        : '<span style="opacity:.4;font-size:12px;">Кнопки не добавлены</span>';
+
+      card.innerHTML = `
+        <div class="welcome-config-title">🎨 Приветствие <span style="font-weight:400;opacity:.5">/start</span></div>
+        <div class="welcome-preview-label">Предпросмотр в Telegram</div>
+        <div class="welcome-tg-preview" id="wc-preview">${esc(msgText).replace(/\n/g, '<br>')}</div>
+        <div class="welcome-kb-preview" id="wc-kb-preview">${kbHtml(keyboard)}</div>
+        <div class="welcome-edit-section">
+          <div class="welcome-field-label">Текст сообщения:</div>
+          <textarea class="welcome-edit-area" id="wc-textarea" rows="5">${esc(msgText)}</textarea>
+          <div class="welcome-field-label" style="margin-top:8px;">Быстрые кнопки (до 4):</div>
+          <div class="welcome-kb-inputs">
+            ${[0,1,2,3].map(i => `<input class="welcome-kb-input" placeholder="Кнопка ${i+1}" value="${esc(keyboard[i] || '')}">`).join('')}
+          </div>
+        </div>
+        <div class="welcome-actions">
+          <button class="welcome-save-btn" id="wc-save">💾 Сохранить</button>
+          <button class="welcome-ai-btn" id="wc-ai">✨ Спросить AI</button>
+        </div>
+        <div class="welcome-status" id="wc-status">✅ Сохранено в настройках бота</div>
+      `;
+
+      const scrollBtn = document.getElementById('cos-scroll-btn');
+      if (scrollBtn) CHAT_OS.messagesEl.insertBefore(card, scrollBtn);
+      else CHAT_OS.messagesEl.appendChild(card);
+
+      const textarea  = card.querySelector('#wc-textarea');
+      const previewEl = card.querySelector('#wc-preview');
+      const kbPreview = card.querySelector('#wc-kb-preview');
+      const kbInputs  = card.querySelectorAll('.welcome-kb-input');
+
+      const refreshKb = () => {
+        const labels = Array.from(kbInputs).map(i => i.value.trim()).filter(Boolean);
+        kbPreview.innerHTML = kbHtml(labels);
+      };
+      textarea.addEventListener('input', () => {
+        previewEl.innerHTML = esc(textarea.value).replace(/\n/g, '<br>');
+      });
+      kbInputs.forEach(inp => inp.addEventListener('input', refreshKb));
+
+      card.querySelector('#wc-save').addEventListener('click', async () => {
+        const msgVal = textarea.value.trim();
+        const kbVal  = Array.from(kbInputs).map(i => i.value.trim()).filter(Boolean).slice(0, 4);
+        if (!msgVal) { textarea.focus(); return; }
+        const btn = card.querySelector('#wc-save');
+        btn.disabled = true; btn.textContent = '…';
+        await saveWelcomeConfig(botId, msgVal, kbVal);
+        btn.disabled = false; btn.textContent = '💾 Сохранить';
+        const s = card.querySelector('#wc-status');
+        s.classList.add('visible');
+        setTimeout(() => s.classList.remove('visible'), 3000);
+      });
+
+      // Pre-fills input so user explicitly sends the generation request to AI
+      card.querySelector('#wc-ai').addEventListener('click', () => {
+        const prompt = `Сгенерируй приветственное сообщение для Telegram бота «${botName}». ` +
+          `Формат: 👋 Привет! Я [имя]. Затем 2–3 строки с эмодзи — что умеет бот. ` +
+          `Последняя строка — короткий призыв к действию. Только текст, без объяснений.`;
+        CHAT_OS.inputEl.value = prompt;
+        CHAT_OS.inputEl.dispatchEvent(new Event('input'));
+        CHAT_OS.inputEl.focus();
+      });
+
+      scrollToBottomChatOs();
+    }
+
+    async function saveWelcomeConfig(botId, msgText, keyboard) {
+      if (!window.resolvedUid || !botId) return;
+      try {
+        await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId)
+          .update({
+            welcomeMessage: msgText,
+            welcomeKeyboard: keyboard,
+            welcomeUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+      } catch (e) {
+        console.error('[Welcome] saveWelcomeConfig error:', e);
       }
     }
 
