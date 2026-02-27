@@ -19,22 +19,20 @@
     var s = document.createElement("style");
     s.id = "projects-ui-styles";
     s.textContent = [
-      ".projects-app{height:var(--app-height,100dvh);display:grid;grid-template-columns:300px 1fr;background:#fff;color:#111827;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}",
-      ".projects-side{border-right:1px solid #e5e7eb;padding:14px;display:flex;flex-direction:column;gap:12px}",
-      ".projects-brand{display:flex;align-items:center;gap:9px;padding:8px 10px}",
+      ".projects-app{height:var(--app-height,100dvh);display:grid;grid-template-columns:260px 1fr;background:#fff;color:#111827;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}",
+      ".projects-side{border-right:1px solid #e5e7eb;padding:10px 8px;display:flex;flex-direction:column;gap:0}",
+      ".projects-brand{display:flex;align-items:center;gap:9px;padding:8px 10px;margin-bottom:6px}",
       ".projects-logo{width:28px;height:28px;border-radius:10px;background:#0b0f19;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}",
-      ".projects-head{display:flex;align-items:center;justify-content:space-between;padding:0 10px}",
-      ".projects-title{font-size:14px;font-weight:700;color:#6b7280}",
+      ".projects-sec-hdr{display:flex;align-items:center;gap:5px;padding:4px 10px 6px;font-size:13px;color:#6b7280;font-weight:500}",
       ".projects-btn{border:1px solid #e5e7eb;background:#fff;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700;cursor:pointer}",
       ".projects-btn.primary{background:#0b0f19;color:#fff;border-color:#0b0f19}",
-      ".projects-list{display:flex;flex-direction:column;gap:8px;padding:0 6px;overflow:auto}",
-      ".project-row{border:1px solid #e5e7eb;border-radius:14px;background:#fff;padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}",
-      ".project-row.active{background:#0b0f19;color:#fff;border-color:#0b0f19}",
-      ".project-name{font-weight:800;font-size:13px}",
-      ".project-sub{font-size:12px;color:#6b7280;margin-top:3px}",
-      ".project-row.active .project-sub{color:#cbd5e1}",
-      ".project-pill{font-size:11px;border:1px solid #e5e7eb;border-radius:999px;padding:5px 8px;background:#f3f4f6;height:fit-content}",
-      ".project-row.active .project-pill{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.2);color:#fff}",
+      ".projects-new-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:14px;color:#111827;background:none;border:none;width:100%;text-align:left;font-family:inherit;margin-bottom:2px}",
+      ".projects-new-row:hover{background:#f3f4f6}",
+      ".projects-list{display:flex;flex-direction:column;overflow:auto}",
+      ".project-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:14px;color:#111827;background:none;border:none;width:100%;text-align:left;font-family:inherit}",
+      ".project-row:hover{background:#f3f4f6}",
+      ".project-row.active{background:#efefef}",
+      ".project-name{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}",
       ".projects-main{display:flex;flex-direction:column;min-width:0}",
       ".projects-top{border-bottom:1px solid #e5e7eb;padding:16px 18px;display:flex;justify-content:space-between;gap:12px}",
       ".projects-top h1{margin:0;font-size:18px;line-height:1.2}",
@@ -124,6 +122,31 @@
       clearTimeout(t);
       t = setTimeout(function () { fn.apply(null, args); }, wait || 250);
     };
+  }
+
+  function isTelegramToken(value) {
+    var v = String(value || "").trim();
+    return /^\d{6,}:[A-Za-z0-9_-]{20,}$/.test(v);
+  }
+
+  function notify(msg, isError) {
+    if (typeof showToast === "function") {
+      showToast((isError ? "❌ " : "✅ ") + msg);
+      return;
+    }
+    if (isError) alert(msg);
+    else console.log(msg);
+  }
+
+  async function postJSON(url, payload) {
+    var resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {}),
+    });
+    var data = {};
+    try { data = await resp.json(); } catch (_) {}
+    return { ok: resp.ok, status: resp.status, data: data || {} };
   }
 
   function mount(root, opts) {
@@ -358,17 +381,68 @@
       await renderTab();
     }
 
+    async function connectTelegramToken(token, projectId, projectName) {
+      if (!token || !isTelegramToken(token)) return null;
+      if (!(typeof firebase !== "undefined" && firebase.auth && firebase.firestore)) {
+        throw new Error("Firebase client unavailable");
+      }
+      var user = firebase.auth().currentUser;
+      if (!user || !user.uid) throw new Error("Сначала авторизуйтесь");
+      var uid = user.uid;
+
+      var verify = await postJSON("/api/verify-telegram-token", { token: token });
+      if (!verify.ok || !verify.data || !verify.data.ok) {
+        throw new Error((verify.data && verify.data.error) || "Невалидный Telegram токен");
+      }
+      var tg = verify.data.result || {};
+      var usernameClean = String(tg.username || "").replace(/^@/, "");
+      var username = usernameClean ? ("@" + usernameClean) : "";
+
+      var botsCol = firebase.firestore().collection("users").doc(uid).collection("bots");
+      var byToken = await botsCol.where("token", "==", token).limit(1).get();
+      var botRef = byToken.empty ? botsCol.doc() : byToken.docs[0].ref;
+      await botRef.set({
+        name: projectName || tg.first_name || username || "Bot",
+        token: token,
+        username: username || (projectName || "bot"),
+        telegram: {
+          status: "waiting_first_update",
+          botId: tg.id || null,
+          botUsername: username || null,
+          connectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        },
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+      var webhook = await postJSON("/api/register-webhook", { uid: uid, botId: botRef.id, token: token, remove: false });
+      if (!webhook.ok || !webhook.data || !webhook.data.ok) {
+        throw new Error((webhook.data && (webhook.data.description || webhook.data.error)) || "Webhook registration failed");
+      }
+
+      var projectPatch = {
+        telegramBotId: botRef.id,
+        telegramConnected: true,
+        telegramUsername: username || null,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      if (username) projectPatch.botHost = username;
+      await firebase.firestore().doc("users/" + uid + "/projects/" + projectId).set(projectPatch, { merge: true });
+
+      return { botId: botRef.id, username: username };
+    }
+
     function getActiveProject() {
       return state.projects.find(function (p) { return p.id === state.activeProjectId; }) || null;
     }
 
+    var _icFolder = "<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' style='flex-shrink:0;opacity:.55'><path d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'/></svg>";
+
     function renderSidebar() {
       nodes.list.innerHTML = "";
       state.projects.forEach(function (p) {
-        var el = document.createElement("div");
+        var el = document.createElement("button");
         el.className = "project-row" + (p.id === state.activeProjectId ? " active" : "");
-        el.innerHTML = "<div><div class='project-name'>" + esc(p.name) + "</div><div class='project-sub'>" + esc(p.botHost || "—") + "</div></div>" +
-          "<div class='project-pill'>" + (p.legacyDefault ? "default" : "project") + "</div>";
+        el.innerHTML = _icFolder + "<span class='project-name'>" + esc(p.name) + "</span>";
         el.addEventListener("click", function () {
           state.activeProjectId = p.id;
           state.chats = [];
@@ -609,17 +683,29 @@
       var p = getActiveProject();
       nodes.content.innerHTML = "<div class='projects-card'><div class='projects-form'>" +
         "<div><label>Название проекта</label><input id='projects-set-name' value='" + esc(p.name) + "'></div>" +
-        "<div><label>IP / Домен</label><input id='projects-set-host' value='" + esc(p.botHost || "") + "'></div>" +
+        "<div><label>IP / Домен / Telegram API token</label><input id='projects-set-host' value='" + esc(p.botHost || "") + "'></div>" +
         "<div><label>Инструкции (system behavior)</label><textarea id='projects-set-inst'>" + esc(p.instructions || "") + "</textarea></div>" +
         "<div style='display:flex;gap:10px;flex-wrap:wrap'><button class='projects-btn primary' id='projects-save'>Сохранить</button>" +
         "<button class='projects-btn projects-danger' id='projects-del'>Удалить проект</button></div></div></div>";
       root.querySelector("#projects-save").addEventListener("click", async function () {
+        var hostInput = root.querySelector("#projects-set-host").value.trim();
+        var isToken = isTelegramToken(hostInput);
+        var safeHost = isToken ? (p.botHost || "@pending_connect") : hostInput;
         await ProjectsApi.updateProject(state.activeProjectId, {
           name: root.querySelector("#projects-set-name").value.trim(),
-          botHost: root.querySelector("#projects-set-host").value.trim(),
+          botHost: safeHost,
           instructions: root.querySelector("#projects-set-inst").value,
         });
-        if (typeof showToast === "function") showToast("✅ Сохранено");
+        if (isToken) {
+          try {
+            var linked = await connectTelegramToken(hostInput, state.activeProjectId, root.querySelector("#projects-set-name").value.trim());
+            notify("Telegram подключён" + (linked && linked.username ? (": " + linked.username) : ""));
+          } catch (e) {
+            notify(e.message || "Не удалось подключить Telegram", true);
+          }
+        } else {
+          notify("Сохранено");
+        }
         await refreshProjects();
       });
       root.querySelector("#projects-del").addEventListener("click", async function () {
@@ -647,8 +733,20 @@
       var botHost = nodes.createHost.value.trim();
       if (name.length < 2) { alert("Введите название проекта"); return; }
       if (botHost.length < 3) { alert("Введите IP/домен"); return; }
-      var created = await ProjectsApi.createProject({ name: name, botHost: botHost });
+      var hostLooksLikeToken = isTelegramToken(botHost);
+      var created = await ProjectsApi.createProject({ name: name, botHost: hostLooksLikeToken ? "@pending_connect" : botHost });
       state.activeProjectId = created.project.id;
+      if (hostLooksLikeToken) {
+        try {
+          var linked = await connectTelegramToken(botHost, created.project.id, name);
+          if (linked && linked.username) {
+            await ProjectsApi.updateProject(created.project.id, { botHost: linked.username });
+          }
+          notify("Telegram подключён" + (linked && linked.username ? (": " + linked.username) : ""));
+        } catch (e) {
+          notify("Проект создан, но Telegram не подключён: " + (e.message || "ошибка"), true);
+        }
+      }
       closeCreateModal();
       await refreshProjects();
       if (nodes.createKB.value === "add") {
