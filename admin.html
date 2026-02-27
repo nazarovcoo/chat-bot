@@ -2933,6 +2933,22 @@
       width: 85%;
     }
 
+    .v3-frame-wrap {
+      height: calc(100vh - 180px);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+
+    .v3-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: #fff;
+    }
+
     /* ══════════════════════════════
        MAIN
     ════════════════════════    /* Main content hidden for Chat OS natively */
@@ -6583,6 +6599,9 @@
           data-i18n="nav.partner">Кабинет партнёра</span></div>
       <div class="nav-item" onclick="openSettings('general')"><span class="nav-ico">🌐</span> <span
           data-i18n="nav.language">Язык</span></div>
+      <div class="nav-item" id="nav-designv3" onclick="goAgentScreen('design-v3')"><span class="nav-ico">🧩</span>
+        <span>Новый дизайн (v3)</span>
+      </div>
       <div class="nav-item" onclick="showToast(T[LANG]['help.soon'])"><span class="nav-ico">❓</span> <span
           data-i18n="nav.help">Помощь</span></div>
       <div class="nav-item" onclick="signOut()" style="color:var(--red);"><span class="nav-ico">🚪</span> <span
@@ -6687,6 +6706,13 @@
               <div class="home-step-sub">Бот начнёт отвечать клиентам в Telegram</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ══ DESIGN V3 ══ -->
+      <div class="screen" id="screen-design-v3" style="padding:12px;">
+        <div class="v3-frame-wrap">
+          <iframe class="v3-frame" src="/kb-design-v3.html" title="ChatOS Design v3"></iframe>
         </div>
       </div>
 
@@ -8865,6 +8891,11 @@
         document.getElementById('topbar-title').textContent = 'BotPanel';
         document.getElementById('topbar-count').textContent = '';
         document.getElementById('bot-switcher').style.display = 'none';
+      } else if (id === 'design-v3') {
+        document.getElementById('topbar-title').style.display = '';
+        document.getElementById('topbar-title').textContent = 'Новый дизайн (v3)';
+        document.getElementById('topbar-count').textContent = '';
+        document.getElementById('bot-switcher').style.display = 'none';
       } else if (id === 'bot-overview') {
         document.getElementById('topbar-title').style.display = 'none';
         document.getElementById('topbar-count').textContent = '';
@@ -8893,9 +8924,10 @@
       document.getElementById('kb-nav-hd')?.classList.toggle('active', id === 'topics');
       document.getElementById('nav-analytics')?.classList.toggle('active', id === 'analytics');
       document.getElementById('nav-automations')?.classList.toggle('active', id === 'automations');
+      document.getElementById('nav-designv3')?.classList.toggle('active', id === 'design-v3');
 
       // Open advanced nav when navigating to advanced screens
-      const advancedScreens = ['analytics', 'chats', 'topics', 'automations', 'ai-settings', 'launch', 'rules', 'autoreplies'];
+      const advancedScreens = ['analytics', 'chats', 'topics', 'automations', 'ai-settings', 'launch', 'rules', 'autoreplies', 'design-v3'];
       if (advancedScreens.includes(id)) {
         toggleAdvancedNav(true);
       }
