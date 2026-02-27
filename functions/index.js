@@ -726,9 +726,9 @@ exports.telegramWebhook = onRequest(
         await chatDocRef.set({ mode: 'ai', handoffAt: admin.firestore.FieldValue.delete() }, { merge: true });
       }
 
-      let kbPromiseQA = db.collection(`users/${uid}/kbQA`).where("status", "==", "active").get();
-      let kbPromiseLegacy = db.collection(`users/${uid}/kbItems`).get();
-      let kbPromiseBot = botId ? db.collection(`users/${uid}/bots/${botId}/knowledge_base`).get() : null;
+      let kbPromiseQA = db.collection(`users/${uid}/kbQA`).where("status", "==", "active").limit(200).get();
+      let kbPromiseLegacy = db.collection(`users/${uid}/kbItems`).limit(200).get();
+      let kbPromiseBot = botId ? db.collection(`users/${uid}/bots/${botId}/knowledge_base`).limit(200).get() : null;
       let rulesPromise = botId ? Promise.resolve({ exists: !!botData.rules, data: () => ({ text: botData.rules }) }) : db.doc(`users/${uid}/settings/rules`).get();
 
       // Load context + settings + auto-replies
@@ -1410,9 +1410,14 @@ async function ensureDefaultProject(uid) {
     }
   }
 
-  // Migrate old chats into project_chats and messages subcollection copy
-  const chatsSnap = await db.collection(`users/${uid}/chats`).limit(500).get().catch(() => ({ docs: [] }));
-  for (const c of chatsSnap.docs || []) {
+  // Migrate old chats into project_chats — fetch all chat histories in parallel (not N+1)
+  const chatsSnap = await db.collection(`users/${uid}/chats`).limit(200).get().catch(() => ({ docs: [] }));
+  const chatDocs = chatsSnap.docs || [];
+  const histDocs = await Promise.all(
+    chatDocs.map(c => db.doc(`users/${uid}/chatHistory/${c.id}`).get().catch(() => null))
+  );
+  for (let ci = 0; ci < chatDocs.length; ci++) {
+    const c = chatDocs[ci];
     const cd = c.data() || {};
     const pChatRef = db.collection(`users/${uid}/project_chats`).doc(c.id);
     batchWrites.push({
@@ -1434,7 +1439,7 @@ async function ensureDefaultProject(uid) {
       },
     });
 
-    const histDoc = await db.doc(`users/${uid}/chatHistory/${c.id}`).get().catch(() => null);
+    const histDoc = histDocs[ci];
     const msgs = histDoc && histDoc.exists ? (histDoc.data().messages || []) : [];
     for (let i = 0; i < Math.min(msgs.length, 80); i++) {
       const m = msgs[i] || {};

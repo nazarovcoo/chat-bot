@@ -11611,6 +11611,7 @@ ${kbSummary}`,
     }
 
     function onUserLogin(user) {
+      stopListeners(); // guard: clear any stale listeners if onUserLogin fires more than once
       currentUser = user;
       document.getElementById('auth-overlay').classList.add('hidden');
       document.getElementById('auth-overlay').classList.remove('has-landing');
@@ -11788,6 +11789,7 @@ ${kbSummary}`,
     }
 
     function onUserLogout() {
+      stopListeners(); // unsubscribe all Firestore listeners on logout
       currentUser = null;
       STATE.bots = []; STATE.kbItems = []; STATE.unanswered = []; STATE.topics = [];
       document.getElementById('auth-overlay').classList.remove('hidden');
@@ -11875,6 +11877,9 @@ ${kbSummary}`,
         onUserLogout(); // onUserLogout handles Telegram context internally
       }
     });
+
+    // Clean up all Firestore listeners when the page is closed/navigated away
+    window.addEventListener('beforeunload', stopListeners);
 
     /* ══ AVATAR DROPDOWN ══ */
     function toggleAvDropdown(e) {
