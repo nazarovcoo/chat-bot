@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "chatbot-acd16",
     "public": ".",
     "ignore": [
       "firebase.json",
