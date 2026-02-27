@@ -6439,6 +6439,10 @@
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
             </svg>
           </button>
+          <button class="chat-header-btn" title="Новый дизайн (v3)" aria-label="Новый дизайн (v3)"
+            onclick="openDesignV3Preview()">
+            🧩
+          </button>
           <button id="refresh-chat-btn" class="chat-header-btn" title="Обновить чат"
             aria-label="Обновить чат">↻</button>
           <button id="clear-chat-btn" class="chat-header-btn" title="Очистить чат" aria-label="Очистить чат">
@@ -15035,6 +15039,15 @@ ${kbSummary}`,
 
     function _closeInfoPopoverOnBg(e) {
       if (e.target.id === 'info-popover-overlay') closeInfoPopover();
+    }
+
+    function openDesignV3Preview() {
+      const target = `${window.location.origin}/kb-design-v3.html`;
+      if (window.Telegram?.WebApp?.openLink) {
+        window.Telegram.WebApp.openLink(target);
+      } else {
+        window.open(target, '_blank');
+      }
     }
 
     document.getElementById('info-popover-overlay')
