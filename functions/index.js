@@ -2482,7 +2482,7 @@ exports.uploadKnowledgeFile = onRequest(
       // Fallback to activeBotId if botId passed is "default"
       const finalBotId = botId === 'default' ? 'tmp' : botId;
       const safeName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-      const storagePath = `users / ${uid} /bots/${finalBotId} /uploads/${rid}/${safeName}`;
+      const storagePath = `users/${uid}/bots/${finalBotId}/uploads/${rid}/${safeName}`;
 
       const file = bucket.file(storagePath);
       const buffer = Buffer.from(base64, 'base64');
