@@ -11900,6 +11900,25 @@ ${kbSummary}`,
         exitTgWizard();
         return;
       }
+      // Post-reset choice chips
+      if (chip.action === 'reset_continue') {
+        const stepId = chip._savedStepId || 'ACTIVE';
+        advanceFlowStep(stepId);
+        const continueMsg = STEP_CONTINUE_MSGS[stepId] || 'Продолжим настройку бота.';
+        handleChatObSend(continueMsg); // not hidden — AI responds with step-specific guidance
+        return;
+      }
+      if (chip.action === 'reset_restart') {
+        _lastDynamicChips = null;
+        _tgWizardStatus = 'idle';
+        advanceFlowStep('WELCOME');
+        if (_flowUid) {
+          db.collection('users').doc(_flowUid).collection('chatosState').doc('tgWizard')
+            .set({ status: 'idle' }, { merge: true }).catch(() => {});
+        }
+        addChatOsMsg('bot', 'Хорошо! Начинаем с нуля. Выберите, что нужно сделать:');
+        return; // let user pick from freshly-rendered WELCOME chips
+      }
       if (label === '📚 Открыть базу знаний') { openKBDrawer(); }
       if (msg !== null) handleChatObSend(msg); // send contextual sentence, not bare label
     }
@@ -12371,10 +12390,18 @@ ${kbSummary}`,
           CHAT_OS.inputEl.placeholder = "Напишите ответ...";
           document.getElementById('chat-ob-attach-btn').disabled = false;
           // Init flow engine: reads saved step from Firestore, renders chips
-          initFlowEngine(uid);
-          // Auto-start: bot initiates conversation when history is empty
+          await initFlowEngine(uid);
+          // Auto-start or post-reset UI when history is empty
           if (chatOsHistory.length === 0) {
-            handleChatObSend('Привет', { hidden: true });
+            if (_pendingResetState !== null) {
+              // After clearChatSmart: show "Continue / Restart" choice instead of generic greeting
+              const savedStep = _pendingResetState;
+              _pendingResetState = null;
+              _showPostResetUI(savedStep);
+            } else {
+              // First-time open: let AI drive the conversation
+              handleChatObSend('Привет', { hidden: true });
+            }
           }
         } catch (e) {
           _clearCosSkeleton();
@@ -12433,8 +12460,27 @@ ${kbSummary}`,
           return;
         }
 
+        // Save current wizard step before reload so _showPostResetUI can offer "Continue/Restart"
+        _pendingResetState = _flowState.stepId;
+
+        // Reset all client-side transient state
+        _lastDynamicChips = null;
+        _tgWizardStatus = 'idle';
+        _lastUserMsgEl = null;
+
+        // Clear saved chips + tgWizard in Firestore BEFORE reload so initFlowEngine
+        // doesn't restore stale dynamic chips or the old wizard state on reload
+        try {
+          await Promise.all([
+            db.collection('users').doc(window.resolvedUid).collection('chatosState').doc('flow')
+              .set({ lastChips: null }, { merge: true }),
+            db.collection('users').doc(window.resolvedUid).collection('chatosState').doc('tgWizard')
+              .set({ status: 'idle' }, { merge: true }),
+          ]);
+        } catch (_) {}
+
         // Reload session from backend — no page refresh needed
-        chatOsInitDone = false; // allow re-init
+        chatOsInitDone = false;
         _lastChatRole = null;
         await initChatOnboarding(window.resolvedUid, null, /*forceReload=*/true);
 
@@ -12470,6 +12516,43 @@ ${kbSummary}`,
 
     function _clearCosSkeleton() {
       CHAT_OS.messagesEl.querySelectorAll('.cos-skeleton-wrap').forEach(el => el.remove());
+    }
+
+    // ── POST-RESET FLOW ──────────────────────────────────────────────────────────
+    // Human-readable labels for each wizard step
+    const STEP_LABELS = {
+      WELCOME:  'Начало',
+      BOT_NAME: 'Создание бота',
+      ACTIVE:   'Настройка бота',
+    };
+    // Message sent to AI when user picks "Continue" from a given step
+    const STEP_CONTINUE_MSGS = {
+      BOT_NAME: 'Продолжим — я хочу создать нового бота.',
+      ACTIVE:   'Продолжим настройку существующего бота.',
+    };
+    // Set by clearChatSmart() before reload so initChatOnboarding shows the right post-reset UI
+    let _pendingResetState = null;
+
+    function _getStepLabel(stepId) {
+      return STEP_LABELS[stepId] || stepId || 'Настройка';
+    }
+
+    // Shows context-aware "History cleared" message + Continue/Restart chips
+    function _showPostResetUI(savedStepId) {
+      const hasProgress = savedStepId && savedStepId !== 'WELCOME';
+      if (hasProgress) {
+        const label = _getStepLabel(savedStepId);
+        addChatOsMsg('bot',
+          `✅ История очищена.\n\nМы остановились на шаге: **${label}**.\nПродолжим с этого места или начнём заново?`
+        );
+        applyDynamicChips([
+          { label: '▶ Продолжить', action: 'reset_continue', _savedStepId: savedStepId },
+          { label: '🔄 Начать заново', action: 'reset_restart' },
+        ], /*skipSave=*/true);
+      } else {
+        addChatOsMsg('bot', '✅ История очищена.\n\nВыберите, что делаем:');
+        renderFlowChips('WELCOME');
+      }
     }
 
     // 5. Markdown renderer
