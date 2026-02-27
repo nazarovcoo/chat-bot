@@ -834,97 +834,226 @@
     /* ══ CHAT OS UX v2 ══ */
 
     /* 1. Animated typing indicator */
-    #chat-os-typing { padding: 10px 14px !important; display: flex !important; align-items: center; gap: 4px; }
+    #chat-os-typing {
+      padding: 10px 14px !important;
+      display: flex !important;
+      align-items: center;
+      gap: 4px;
+    }
+
     .cos-dot {
-      display: inline-block; width: 8px; height: 8px;
-      border-radius: 50%; background: #94a3b8;
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94a3b8;
       animation: cosDotBounce 1.2s infinite ease-in-out;
       flex-shrink: 0;
     }
-    .cos-dot:nth-child(2) { animation-delay: 0.2s; }
-    .cos-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    .cos-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .cos-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
     @keyframes cosDotBounce {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.55; }
-      30% { transform: translateY(-7px); opacity: 1; }
+
+      0%,
+      60%,
+      100% {
+        transform: translateY(0);
+        opacity: 0.55;
+      }
+
+      30% {
+        transform: translateY(-7px);
+        opacity: 1;
+      }
     }
 
     /* 2. Timestamps */
     .cos-time {
-      font-size: 11px; color: #8d9ea9; text-align: right;
-      margin-top: 4px; line-height: 1; user-select: none;
+      font-size: 11px;
+      color: #8d9ea9;
+      text-align: right;
+      margin-top: 4px;
+      line-height: 1;
+      user-select: none;
     }
-    .msg-user .cos-time { color: #5fa377; }
+
+    .msg-user .cos-time {
+      color: #5fa377;
+    }
 
     /* 3. Message grouping */
-    .msg-grp.msg-bot  { border-top-left-radius: 2px;  margin-top: 1px; }
-    .msg-grp.msg-user { border-top-right-radius: 2px; margin-top: 1px; }
+    .msg-grp.msg-bot {
+      border-top-left-radius: 2px;
+      margin-top: 1px;
+    }
+
+    .msg-grp.msg-user {
+      border-top-right-radius: 2px;
+      margin-top: 1px;
+    }
 
     /* 5. Markdown */
     .cos-code {
       font-family: 'SF Mono', 'Fira Code', monospace;
-      background: rgba(15,23,42,.08); padding: 1px 5px;
-      border-radius: 4px; font-size: 0.87em;
+      background: rgba(15, 23, 42, .08);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.87em;
     }
+
     .cos-pre {
-      background: rgba(15,23,42,.07); border-radius: 8px;
-      padding: 10px 12px; margin: 4px 0;
-      overflow-x: auto; font-family: 'SF Mono', monospace; font-size: 0.84em;
+      background: rgba(15, 23, 42, .07);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 4px 0;
+      overflow-x: auto;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.84em;
     }
-    .msg-bot ul, .msg-user ul { margin: 5px 0 2px 14px; padding: 0; }
-    .msg-bot li, .msg-user li { margin-bottom: 3px; }
+
+    .msg-bot ul,
+    .msg-user ul {
+      margin: 5px 0 2px 14px;
+      padding: 0;
+    }
+
+    .msg-bot li,
+    .msg-user li {
+      margin-bottom: 3px;
+    }
 
     /* 6. Scroll-to-bottom button */
     .cos-scroll-btn {
-      position: sticky; bottom: 10px; right: 0; align-self: flex-end;
-      width: 34px; height: 34px; border-radius: 50%;
-      background: #fff; border: none;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.22);
-      cursor: pointer; font-size: 16px;
-      display: flex; align-items: center; justify-content: center;
-      z-index: 5; transition: opacity .2s, transform .2s;
+      position: sticky;
+      bottom: 10px;
+      right: 0;
+      align-self: flex-end;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      transition: opacity .2s, transform .2s;
       margin-right: 4px;
     }
-    .cos-scroll-btn.hidden { opacity: 0; pointer-events: none; transform: scale(0.7); }
+
+    .cos-scroll-btn.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.7);
+    }
 
     /* 7. Empty state */
     .cos-empty {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 10px; text-align: center; padding: 40px 20px;
-      pointer-events: none; user-select: none;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-align: center;
+      padding: 40px 20px;
+      pointer-events: none;
+      user-select: none;
     }
-    .cos-empty.hidden { display: none; }
-    .cos-empty-icon { font-size: 44px; opacity: 0.35; }
-    .cos-empty-title { font-weight: 700; font-size: 15px; color: #0f172a; opacity: 0.5; }
-    .cos-empty-sub { font-size: 12.5px; color: #64748b; opacity: 0.65; line-height: 1.45; max-width: 200px; }
+
+    .cos-empty.hidden {
+      display: none;
+    }
+
+    .cos-empty-icon {
+      font-size: 44px;
+      opacity: 0.35;
+    }
+
+    .cos-empty-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: #0f172a;
+      opacity: 0.5;
+    }
+
+    .cos-empty-sub {
+      font-size: 12.5px;
+      color: #64748b;
+      opacity: 0.65;
+      line-height: 1.45;
+      max-width: 200px;
+    }
 
     /* 8. Copy button */
     .cos-copy-btn {
-      position: absolute; top: 5px; right: 5px;
-      opacity: 0; transition: opacity .15s;
-      background: rgba(15,23,42,.07); border: none; border-radius: 6px;
-      padding: 2px 6px; cursor: pointer; font-size: 12px; color: #475569;
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      opacity: 0;
+      transition: opacity .15s;
+      background: rgba(15, 23, 42, .07);
+      border: none;
+      border-radius: 6px;
+      padding: 2px 6px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #475569;
       line-height: 1.4;
     }
-    .msg-bot:hover .cos-copy-btn { opacity: 1; }
+
+    .msg-bot:hover .cos-copy-btn {
+      opacity: 1;
+    }
 
     /* 9. Reactions */
     .cos-reactions {
-      display: flex; gap: 4px; margin-top: 3px;
-      align-self: flex-start; margin-bottom: 6px;
+      display: flex;
+      gap: 4px;
+      margin-top: 3px;
+      align-self: flex-start;
+      margin-bottom: 6px;
     }
+
     .cos-react {
-      background: #fff; border: 1px solid rgba(0,0,0,.1);
-      border-radius: 14px; padding: 2px 9px; cursor: pointer;
-      font-size: 14px; transition: all .15s; line-height: 1.6;
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, .1);
+      border-radius: 14px;
+      padding: 2px 9px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all .15s;
+      line-height: 1.6;
     }
-    .cos-react:hover { border-color: rgba(0,0,0,.22); transform: scale(1.08); }
-    .cos-react.active { background: #effdde; border-color: #4caf50; }
+
+    .cos-react:hover {
+      border-color: rgba(0, 0, 0, .22);
+      transform: scale(1.08);
+    }
+
+    .cos-react.active {
+      background: #effdde;
+      border-color: #4caf50;
+    }
 
     /* 4. Textarea auto-grow */
     textarea.chat-ob-input {
-      resize: none; overflow: hidden; max-height: 120px;
-      line-height: 1.4; padding-top: 8px; padding-bottom: 8px;
+      resize: none;
+      overflow: hidden;
+      max-height: 120px;
+      line-height: 1.4;
+      padding-top: 8px;
+      padding-bottom: 8px;
       display: block;
     }
 
@@ -1002,198 +1131,575 @@
 
     /* ── Skeleton loader ── */
     .cos-skeleton-wrap {
-      display: flex; flex-direction: column; gap: 7px;
-      max-width: 68%; align-self: flex-start; padding: 10px 14px;
-      background: #fff; border-radius: 0 10px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      max-width: 68%;
+      align-self: flex-start;
+      padding: 10px 14px;
+      background: #fff;
+      border-radius: 0 10px 10px 10px;
     }
-    .cos-skeleton-wrap + .cos-skeleton-wrap { margin-top: 4px; border-top-left-radius: 3px; }
+
+    .cos-skeleton-wrap+.cos-skeleton-wrap {
+      margin-top: 4px;
+      border-top-left-radius: 3px;
+    }
+
     .cos-skeleton-line {
-      height: 13px; border-radius: 6px;
+      height: 13px;
+      border-radius: 6px;
       background: linear-gradient(90deg, #f0f2f5 25%, #e4e8ec 50%, #f0f2f5 75%);
       background-size: 200% 100%;
       animation: cosSkeletonShimmer 1.6s infinite;
     }
+
     @keyframes cosSkeletonShimmer {
-      0%   { background-position: 200% 0; }
-      100% { background-position: -200% 0; }
+      0% {
+        background-position: 200% 0;
+      }
+
+      100% {
+        background-position: -200% 0;
+      }
     }
 
     /* ── Connection status ── */
     #cos-conn-status {
-      display: none; text-align: center; font-size: 11.5px; color: #707579;
-      padding: 5px 12px; background: rgba(255,193,7,.1);
-      border-bottom: 1px solid rgba(255,193,7,.25);
+      display: none;
+      text-align: center;
+      font-size: 11.5px;
+      color: #707579;
+      padding: 5px 12px;
+      background: rgba(255, 193, 7, .1);
+      border-bottom: 1px solid rgba(255, 193, 7, .25);
     }
-    #cos-conn-status.visible { display: block; }
+
+    #cos-conn-status.visible {
+      display: block;
+    }
 
     /* ── Message send-status ── */
     .cos-send-status {
-      display: inline-block; font-size: 10px; color: #a8b8c0;
-      margin-left: 3px; vertical-align: middle; user-select: none;
+      display: inline-block;
+      font-size: 10px;
+      color: #a8b8c0;
+      margin-left: 3px;
+      vertical-align: middle;
+      user-select: none;
     }
+
     .cos-send-status.failed {
-      color: #ef4444; cursor: pointer; text-decoration: underline dotted;
+      color: #ef4444;
+      cursor: pointer;
+      text-decoration: underline dotted;
     }
 
     /* ── Refresh button ── */
-    #refresh-chat-btn { font-size: 15px; }
+    #refresh-chat-btn {
+      font-size: 15px;
+    }
 
     /* ── Welcome config card ── */
     .welcome-config-card {
-      background: #fff; border: 1px solid rgba(51,144,236,.22);
-      border-radius: 14px; padding: 14px; margin: 4px 0; font-size: 13px;
+      background: #fff;
+      border: 1px solid rgba(51, 144, 236, .22);
+      border-radius: 14px;
+      padding: 14px;
+      margin: 4px 0;
+      font-size: 13px;
     }
-    .welcome-config-title { font-weight: 700; font-size: 14px; color: #3390ec; margin-bottom: 8px; }
-    .welcome-preview-label { font-size: 11px; color: #8d9ea9; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 5px; }
+
+    .welcome-config-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #3390ec;
+      margin-bottom: 8px;
+    }
+
+    .welcome-preview-label {
+      font-size: 11px;
+      color: #8d9ea9;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 5px;
+    }
+
     .welcome-tg-preview {
-      background: #effdde; border-radius: 0 10px 10px 10px;
-      padding: 10px 13px; font-size: 13px; line-height: 1.55;
-      white-space: pre-wrap; word-break: break-word;
-      max-height: 130px; overflow-y: auto; margin-bottom: 6px;
+      background: #effdde;
+      border-radius: 0 10px 10px 10px;
+      padding: 10px 13px;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 130px;
+      overflow-y: auto;
+      margin-bottom: 6px;
     }
-    .welcome-kb-preview { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; min-height: 22px; }
+
+    .welcome-kb-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 10px;
+      min-height: 22px;
+    }
+
     .welcome-kb-btn {
-      background: #fff; border: 1px solid rgba(51,144,236,.35); border-radius: 16px;
-      padding: 3px 10px; font-size: 12px; font-weight: 600; color: #3390ec;
+      background: #fff;
+      border: 1px solid rgba(51, 144, 236, .35);
+      border-radius: 16px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #3390ec;
     }
-    .welcome-field-label { font-size: 11px; color: #8d9ea9; margin-bottom: 4px; }
+
+    .welcome-field-label {
+      font-size: 11px;
+      color: #8d9ea9;
+      margin-bottom: 4px;
+    }
+
     .welcome-edit-area {
-      width: 100%; box-sizing: border-box; border: 1px solid #e2e8f0;
-      border-radius: 8px; padding: 8px; font-size: 13px; font-family: inherit;
-      resize: vertical; min-height: 72px;
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 72px;
     }
-    .welcome-edit-area:focus { outline: none; border-color: #3390ec; }
-    .welcome-kb-inputs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+
+    .welcome-edit-area:focus {
+      outline: none;
+      border-color: #3390ec;
+    }
+
+    .welcome-kb-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 6px 0;
+    }
+
     .welcome-kb-input {
-      width: calc(50% - 3px); box-sizing: border-box; border: 1px solid #e2e8f0;
-      border-radius: 6px; padding: 5px 8px; font-size: 12.5px; font-family: inherit;
+      width: calc(50% - 3px);
+      box-sizing: border-box;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 12.5px;
+      font-family: inherit;
     }
-    .welcome-kb-input:focus { outline: none; border-color: #3390ec; }
-    .welcome-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    .welcome-kb-input:focus {
+      outline: none;
+      border-color: #3390ec;
+    }
+
+    .welcome-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
     .welcome-save-btn {
-      background: #3390ec; color: #fff; border: none; border-radius: 8px;
-      padding: 8px 18px; font-weight: 700; cursor: pointer; font-size: 13px;
+      background: #3390ec;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
     }
-    .welcome-save-btn:hover { background: #2778d0; }
-    .welcome-save-btn:disabled { opacity: .6; cursor: default; }
+
+    .welcome-save-btn:hover {
+      background: #2778d0;
+    }
+
+    .welcome-save-btn:disabled {
+      opacity: .6;
+      cursor: default;
+    }
+
     .welcome-ai-btn {
-      background: none; border: 1px solid #e2e8f0; border-radius: 8px;
-      padding: 8px 14px; cursor: pointer; font-size: 13px;
+      background: none;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 13px;
     }
-    .welcome-ai-btn:hover { background: #f8f9fa; }
-    .welcome-status { font-size: 11.5px; color: #4caf50; margin-top: 6px; display: none; }
-    .welcome-status.visible { display: block; }
+
+    .welcome-ai-btn:hover {
+      background: #f8f9fa;
+    }
+
+    .welcome-status {
+      font-size: 11.5px;
+      color: #4caf50;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .welcome-status.visible {
+      display: block;
+    }
 
     /* ── Test Mode / Test Report card ── */
     .test-report-card {
-      background: #fff; border: 1px solid rgba(76,175,80,.25);
-      border-radius: 14px; padding: 14px; margin: 6px 0;
+      background: #fff;
+      border: 1px solid rgba(76, 175, 80, .25);
+      border-radius: 14px;
+      padding: 14px;
+      margin: 6px 0;
     }
-    .tr-title { font-weight: 700; font-size: 14px; color: #2e7d32; margin-bottom: 10px; }
-    .tr-stats { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+
+    .tr-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #2e7d32;
+      margin-bottom: 10px;
+    }
+
+    .tr-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
     .tr-stat {
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 12.5px; padding: 4px 0; border-bottom: 1px solid #f0f2f5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12.5px;
+      padding: 4px 0;
+      border-bottom: 1px solid #f0f2f5;
     }
-    .tr-stat:last-child { border-bottom: none; }
-    .tr-stat-label { color: #64748b; }
-    .tr-stat-val { font-weight: 600; }
-    .tr-ok { color: #4caf50; }
-    .tr-warn { color: #f59e0b; }
-    .tr-section { margin-bottom: 10px; }
-    .tr-label { font-size: 11.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
-    .tr-rec { font-size: 12.5px; color: #374151; line-height: 1.5; padding: 2px 0; }
-    .tr-rec.ok-text { color: #4caf50; }
-    .tr-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+    .tr-stat:last-child {
+      border-bottom: none;
+    }
+
+    .tr-stat-label {
+      color: #64748b;
+    }
+
+    .tr-stat-val {
+      font-weight: 600;
+    }
+
+    .tr-ok {
+      color: #4caf50;
+    }
+
+    .tr-warn {
+      color: #f59e0b;
+    }
+
+    .tr-section {
+      margin-bottom: 10px;
+    }
+
+    .tr-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 4px;
+    }
+
+    .tr-rec {
+      font-size: 12.5px;
+      color: #374151;
+      line-height: 1.5;
+      padding: 2px 0;
+    }
+
+    .tr-rec.ok-text {
+      color: #4caf50;
+    }
+
+    .tr-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
     .tr-btn {
-      border: 1px solid #e2e8f0; background: none; border-radius: 8px;
-      padding: 7px 14px; cursor: pointer; font-size: 12.5px; transition: background .15s;
+      border: 1px solid #e2e8f0;
+      background: none;
+      border-radius: 8px;
+      padding: 7px 14px;
+      cursor: pointer;
+      font-size: 12.5px;
+      transition: background .15s;
     }
-    .tr-btn:hover { background: #f8f9fa; }
+
+    .tr-btn:hover {
+      background: #f8f9fa;
+    }
+
     .tr-btn-primary {
-      background: #3390ec; color: #fff; border-color: #3390ec; font-weight: 700;
+      background: #3390ec;
+      color: #fff;
+      border-color: #3390ec;
+      font-weight: 700;
     }
-    .tr-btn-primary:hover { background: #2778d0; border-color: #2778d0; }
+
+    .tr-btn-primary:hover {
+      background: #2778d0;
+      border-color: #2778d0;
+    }
 
     /* ── Info ⓘ button ── */
     .info-btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 20px; height: 20px; border-radius: 50%;
-      background: rgba(51,144,236,.12); color: #3390ec;
-      font-size: 11px; font-weight: 800; cursor: pointer;
-      border: 1.5px solid rgba(51,144,236,.25); flex-shrink: 0;
-      transition: background .15s; vertical-align: middle;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(51, 144, 236, .12);
+      color: #3390ec;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      border: 1.5px solid rgba(51, 144, 236, .25);
+      flex-shrink: 0;
+      transition: background .15s;
+      vertical-align: middle;
     }
-    .info-btn:hover { background: rgba(51,144,236,.22); }
+
+    .info-btn:hover {
+      background: rgba(51, 144, 236, .22);
+    }
 
     /* ── Info popover overlay (bottom sheet) ── */
     .info-popover-overlay {
-      position: fixed; inset: 0; z-index: 8500;
-      background: rgba(0,0,0,.38);
-      display: flex; align-items: flex-end; justify-content: center;
-      opacity: 0; pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 8500;
+      background: rgba(0, 0, 0, .38);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
       transition: opacity .18s ease;
     }
-    .info-popover-overlay.visible { opacity: 1; pointer-events: auto; }
+
+    .info-popover-overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
     .info-popover {
-      background: #fff; border-radius: 18px 18px 0 0;
-      padding: 16px 20px 36px; width: 100%; max-width: 520px;
-      max-height: 78vh; overflow-y: auto;
-      transform: translateY(48px); transition: transform .18s ease;
-      box-shadow: 0 -8px 40px rgba(0,0,0,.14);
+      background: #fff;
+      border-radius: 18px 18px 0 0;
+      padding: 16px 20px 36px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 78vh;
+      overflow-y: auto;
+      transform: translateY(48px);
+      transition: transform .18s ease;
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, .14);
     }
-    .info-popover-overlay.visible .info-popover { transform: translateY(0); }
+
+    .info-popover-overlay.visible .info-popover {
+      transform: translateY(0);
+    }
+
     .ip-handle {
-      width: 40px; height: 4px; border-radius: 2px;
-      background: #e2e8f0; margin: 0 auto 16px;
+      width: 40px;
+      height: 4px;
+      border-radius: 2px;
+      background: #e2e8f0;
+      margin: 0 auto 16px;
     }
-    .ip-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-    .ip-title { font-size: 15px; font-weight: 700; color: #0f172a; flex: 1; line-height: 1.4; }
+
+    .ip-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .ip-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      flex: 1;
+      line-height: 1.4;
+    }
+
     .ip-close {
-      background: none; border: none; cursor: pointer;
-      font-size: 22px; color: #94a3b8; line-height: 1; padding: 0 4px; flex-shrink: 0;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 22px;
+      color: #94a3b8;
+      line-height: 1;
+      padding: 0 4px;
+      flex-shrink: 0;
     }
-    .ip-close:hover { color: #475569; }
-    .ip-section { margin-bottom: 12px; }
+
+    .ip-close:hover {
+      color: #475569;
+    }
+
+    .ip-section {
+      margin-bottom: 12px;
+    }
+
     .ip-section-label {
-      font-size: 10.5px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .07em; color: #64748b; margin-bottom: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: #64748b;
+      margin-bottom: 6px;
     }
-    .ip-section-body { font-size: 13.5px; color: #374151; line-height: 1.65; }
-    .ip-section-body ol { margin: 2px 0 0 18px; padding: 0; }
-    .ip-section-body li { margin-bottom: 4px; }
-    .ip-divider { border: none; border-top: 1px solid #f1f5f9; margin: 12px 0; }
+
+    .ip-section-body {
+      font-size: 13.5px;
+      color: #374151;
+      line-height: 1.65;
+    }
+
+    .ip-section-body ol {
+      margin: 2px 0 0 18px;
+      padding: 0;
+    }
+
+    .ip-section-body li {
+      margin-bottom: 4px;
+    }
+
+    .ip-divider {
+      border: none;
+      border-top: 1px solid #f1f5f9;
+      margin: 12px 0;
+    }
 
     /* ── Page label row (for ⓘ placement) ── */
-    .page-label-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
-    .page-label-row .page-label { margin: 0; }
+    .page-label-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .page-label-row .page-label {
+      margin: 0;
+    }
 
     /* ── Field caption ── */
-    .field-caption { font-size: 11.5px; color: #94a3b8; margin-top: 5px; line-height: 1.5; }
+    .field-caption {
+      font-size: 11.5px;
+      color: #94a3b8;
+      margin-top: 5px;
+      line-height: 1.5;
+    }
 
     /* ── KB Status Card (in chat) ── */
     .kb-status-card {
-      background: #fff; border: 1px solid rgba(51,144,236,.2);
-      border-radius: 12px; padding: 12px 14px; margin: 4px 0; font-size: 13px;
+      background: #fff;
+      border: 1px solid rgba(51, 144, 236, .2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin: 4px 0;
+      font-size: 13px;
     }
-    .ksc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-    .ksc-icon { font-size: 16px; flex-shrink: 0; }
-    .ksc-title { font-weight: 700; color: #374151; flex: 1; font-size: 13.5px; }
+
+    .ksc-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .ksc-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .ksc-title {
+      font-weight: 700;
+      color: #374151;
+      flex: 1;
+      font-size: 13.5px;
+    }
+
     .ksc-badge {
-      font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 20px; flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 20px;
+      flex-shrink: 0;
     }
-    .ksc-badge.pending { background: rgba(59,130,246,.1); color: #3b82f6; }
-    .ksc-badge.ready   { background: rgba(34,197,94,.12);  color: #16a34a; }
-    .ksc-badge.warn    { background: rgba(245,158,11,.1);  color: #d97706; }
-    .ksc-badge.error   { background: rgba(239,68,68,.1);   color: #dc2626; }
-    .ksc-body { font-size: 12.5px; color: #64748b; margin-bottom: 8px; line-height: 1.5; }
-    .ksc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .ksc-badge.pending {
+      background: rgba(59, 130, 246, .1);
+      color: #3b82f6;
+    }
+
+    .ksc-badge.ready {
+      background: rgba(34, 197, 94, .12);
+      color: #16a34a;
+    }
+
+    .ksc-badge.warn {
+      background: rgba(245, 158, 11, .1);
+      color: #d97706;
+    }
+
+    .ksc-badge.error {
+      background: rgba(239, 68, 68, .1);
+      color: #dc2626;
+    }
+
+    .ksc-body {
+      font-size: 12.5px;
+      color: #64748b;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+
+    .ksc-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .ksc-btn {
-      border: 1px solid rgba(51,144,236,.3); background: none; border-radius: 8px;
-      padding: 5px 12px; font-size: 12px; cursor: pointer; color: #3390ec; transition: background .15s;
+      border: 1px solid rgba(51, 144, 236, .3);
+      background: none;
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #3390ec;
+      transition: background .15s;
     }
-    .ksc-btn:hover { background: rgba(51,144,236,.06); }
-    .ksc-btn-ghost { border-color: rgba(0,0,0,.1); color: #374151; }
+
+    .ksc-btn:hover {
+      background: rgba(51, 144, 236, .06);
+    }
+
+    .ksc-btn-ghost {
+      border-color: rgba(0, 0, 0, .1);
+      color: #374151;
+    }
 
     .guide-tip-close:hover {
       color: var(--text);
@@ -1613,47 +2119,147 @@
       background: #f0f7ff;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
     }
-    .ob-chip.active { background: #3390ec; color: #fff; box-shadow: 0 1px 4px rgba(51,144,236,.3); }
+
+    .ob-chip.active {
+      background: #3390ec;
+      color: #fff;
+      box-shadow: 0 1px 4px rgba(51, 144, 236, .3);
+    }
 
     /* ── 👎 Feedback form ── */
     .cos-feedback-form {
-      margin: 4px 0 8px; background: #fff; border-radius: 10px;
-      padding: 10px 12px; box-shadow: 0 1px 5px rgba(0,0,0,.10); max-width: 320px;
+      margin: 4px 0 8px;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, .10);
+      max-width: 320px;
     }
-    .cos-feedback-label { font-size: 12px; color: #707579; margin-bottom: 6px; }
+
+    .cos-feedback-label {
+      font-size: 12px;
+      color: #707579;
+      margin-bottom: 6px;
+    }
+
     .cos-feedback-input {
-      width: 100%; box-sizing: border-box; border: 1px solid #dde1e7;
-      border-radius: 8px; padding: 8px 10px; font-size: 0.83rem;
-      resize: none; font-family: inherit; line-height: 1.4;
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #dde1e7;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.83rem;
+      resize: none;
+      font-family: inherit;
+      line-height: 1.4;
     }
-    .cos-feedback-input:focus { outline: none; border-color: #3390ec; }
-    .cos-feedback-btns { display: flex; gap: 6px; margin-top: 7px; }
-    .cos-fb-send, .cos-fb-cancel { font-size: 0.8rem; padding: 5px 12px; border-radius: 8px; border: none; cursor: pointer; }
-    .cos-fb-send { background: #3390ec; color: #fff; font-weight: 600; }
-    .cos-fb-send:hover { background: #2778d0; }
-    .cos-fb-cancel { background: #f0f2f5; color: #707579; }
+
+    .cos-feedback-input:focus {
+      outline: none;
+      border-color: #3390ec;
+    }
+
+    .cos-feedback-btns {
+      display: flex;
+      gap: 6px;
+      margin-top: 7px;
+    }
+
+    .cos-fb-send,
+    .cos-fb-cancel {
+      font-size: 0.8rem;
+      padding: 5px 12px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .cos-fb-send {
+      background: #3390ec;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .cos-fb-send:hover {
+      background: #2778d0;
+    }
+
+    .cos-fb-cancel {
+      background: #f0f2f5;
+      color: #707579;
+    }
 
     /* ── KB Suggestions section ── */
-    #onboarding-chat-overlay .kb-sug-divider { border: none; border-top: 1px solid rgba(15,23,42,.07); margin: 10px 0; }
-    #onboarding-chat-overlay .kb-suggestions { padding: 0 14px 10px; }
+    #onboarding-chat-overlay .kb-sug-divider {
+      border: none;
+      border-top: 1px solid rgba(15, 23, 42, .07);
+      margin: 10px 0;
+    }
+
+    #onboarding-chat-overlay .kb-suggestions {
+      padding: 0 14px 10px;
+    }
+
     #onboarding-chat-overlay .kb-suggestions-hdr {
-      font-size: 11.5px; font-weight: 700; color: #8d9ea9;
-      text-transform: uppercase; letter-spacing: .04em; margin-bottom: 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #8d9ea9;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 10px;
     }
+
     #onboarding-chat-overlay .kb-sug-card {
-      background: #fff; border: 1px solid rgba(15,23,42,.08);
-      border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;
+      background: #fff;
+      border: 1px solid rgba(15, 23, 42, .08);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
     }
-    #onboarding-chat-overlay .kb-sug-meta { font-size: 11px; color: #8d9ea9; margin-bottom: 4px; }
-    #onboarding-chat-overlay .kb-sug-text { font-size: 13px; color: #0f172a; line-height: 1.4; margin-bottom: 8px; }
-    #onboarding-chat-overlay .kb-sug-actions { display: flex; gap: 6px; }
+
+    #onboarding-chat-overlay .kb-sug-meta {
+      font-size: 11px;
+      color: #8d9ea9;
+      margin-bottom: 4px;
+    }
+
+    #onboarding-chat-overlay .kb-sug-text {
+      font-size: 13px;
+      color: #0f172a;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+
+    #onboarding-chat-overlay .kb-sug-actions {
+      display: flex;
+      gap: 6px;
+    }
+
     #onboarding-chat-overlay .kb-sug-btn {
-      font-size: 12px; padding: 4px 10px; border-radius: 8px;
-      border: 1px solid rgba(15,23,42,.12); background: #fff; cursor: pointer; font-weight: 600;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 23, 42, .12);
+      background: #fff;
+      cursor: pointer;
+      font-weight: 600;
     }
-    #onboarding-chat-overlay .kb-sug-btn.approve { background: #dcf8c6; border-color: #4caf50; color: #2e7d32; }
-    #onboarding-chat-overlay .kb-sug-btn.reject  { background: #fef0f0; border-color: #ef4444; color: #b91c1c; }
-    #onboarding-chat-overlay .kb-sug-btn:hover { opacity: .85; }
+
+    #onboarding-chat-overlay .kb-sug-btn.approve {
+      background: #dcf8c6;
+      border-color: #4caf50;
+      color: #2e7d32;
+    }
+
+    #onboarding-chat-overlay .kb-sug-btn.reject {
+      background: #fef0f0;
+      border-color: #ef4444;
+      color: #b91c1c;
+    }
+
+    #onboarding-chat-overlay .kb-sug-btn:hover {
+      opacity: .85;
+    }
 
     .chat-ob-input-area {
       width: 100%;
@@ -5601,7 +6207,8 @@
               <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
             </svg>
           </button>
-          <button id="refresh-chat-btn" class="chat-header-btn" title="Обновить чат" aria-label="Обновить чат">↻</button>
+          <button id="refresh-chat-btn" class="chat-header-btn" title="Обновить чат"
+            aria-label="Обновить чат">↻</button>
           <button id="clear-chat-btn" class="chat-header-btn" title="Очистить чат" aria-label="Очистить чат">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path d="M9 3h6m-8 4h10m-9 0 1 16h6l1-16" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -5696,8 +6303,8 @@
             </svg>
           </button>
           <input type="file" id="chat-ob-file-input" style="display:none" accept=".txt,.pdf,.csv,.docx,.md,.jpg,.png">
-          <textarea id="chat-ob-input" class="chat-ob-input" placeholder="Подключаем аккаунт..."
-            autocomplete="off" disabled rows="1"></textarea>
+          <textarea id="chat-ob-input" class="chat-ob-input" placeholder="Подключаем аккаунт..." autocomplete="off"
+            disabled rows="1"></textarea>
           <button id="chat-ob-send" class="chat-ob-send" disabled>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
@@ -6841,6 +7448,14 @@
             </div>
           </div>
         </div>
+        <!-- Phone card — shown only for Telegram users -->
+        <div class="s-card" id="s-phone-card" style="display:none;">
+          <div class="s-card-title">Номер телефона</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div style="font-size:0.9rem;font-weight:600;color:var(--text);" id="s-phone-value">—</div>
+            <button class="s-btn" onclick="openPhoneModal()" style="font-size:0.8rem;padding:6px 14px;">Изменить номер</button>
+          </div>
+        </div>
         <div class="s-card">
           <div class="s-card-title">Статус подписки</div>
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
@@ -7496,7 +8111,8 @@
     <div class="modal">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         <div class="modal-title" id="kb-modal-title" style="margin:0;">Добавить информацию</div>
-        <button class="info-btn" id="kb-modal-info-btn" onclick="showInfoPopover('topics')" title="Как это работает?">ⓘ</button>
+        <button class="info-btn" id="kb-modal-info-btn" onclick="showInfoPopover('topics')"
+          title="Как это работает?">ⓘ</button>
       </div>
       <div class="modal-sub">Напишите текст, который будет использоваться ИИ-агентом при ответах</div>
       <label class="form-label">Заголовок</label>
@@ -7714,7 +8330,7 @@
       </div>
       <input type="tel" id="tg-phone-input" class="form-input" placeholder="+_ (___) ___-__-__"
         style="font-size:1.1rem;text-align:center;letter-spacing:1px;margin-bottom:20px;">
-      <button class="btn-primary" style="width:100%;" onclick="saveTgPhone()">Сохранить номер</button>
+      <button class="btn-primary" id="tg-phone-save-btn" style="width:100%;" onclick="saveTgPhone()">Подтвердить</button>
     </div>
   </div>
 
@@ -9420,13 +10036,16 @@
         actEl.className = 'kb-item-actions';
 
         const btnOpen = document.createElement('button');
-        btnOpen.className = 'kb-btn'; btnOpen.type = 'button'; btnOpen.textContent = 'Открыть';
+        btnOpen.className = 'kb-btn'; btnOpen.type = 'button';
+        btnOpen.textContent = it.type === 'text' ? 'Редактировать' : 'Открыть';
         btnOpen.onclick = () => {
-          const link = it.fileUrl || it.downloadURL || it.url;
-          if (link) window.open(link, '_blank', 'noopener,noreferrer');
-        };
-
-        const btnDel = document.createElement('button');
+          if (it.type === 'text') {
+            editKBItemText(botId || it._botId, it._id, it.title || it.name || '', it.content || it.text || '');
+          } else {
+            const link = it.fileUrl || it.downloadURL || it.url;
+            if (link) window.open(link, '_blank', 'noopener,noreferrer');
+          }
+        }; const btnDel = document.createElement('button');
         btnDel.className = 'kb-btn kb-btn-delete'; btnDel.type = 'button'; btnDel.textContent = 'Удалить';
         btnDel.onclick = () => deleteKBItem(botId || it._botId, it._id);
 
@@ -9502,6 +10121,72 @@
         console.error('[ChatOS][KB] deleteKBItem error', e);
         showToast('Ошибка удаления');
       }
+    }
+
+    // ── Edit text KB item ──
+    function editKBItemText(botId, itemId, currentTitle, currentContent) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay open';
+      overlay.style.zIndex = '99999';
+
+      // Basic escape utility for inserting values into HTML
+      const escapeHtml = (str) => {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      };
+
+      overlay.innerHTML = `
+        <div class="modal" style="display:flex; flex-direction:column; gap:16px;">
+          <div class="modal-header">
+            <h3>Редактировать текст</h3>
+            <button class="modal-close" id="edit-kb-close">✕</button>
+          </div>
+          <input type="text" id="edit-kb-title" class="input" value="${escapeHtml(currentTitle)}" placeholder="Заголовок" />
+          <textarea id="edit-kb-content" class="input" rows="8" placeholder="Текст">${escapeHtml(currentContent)}</textarea>
+          <button id="edit-kb-save" class="btn btn-primary" style="width:100%">Сохранить</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      document.getElementById('edit-kb-close').onclick = () => overlay.remove();
+      document.getElementById('edit-kb-save').onclick = async () => {
+        const newTitle = document.getElementById('edit-kb-title').value.trim();
+        const newContent = document.getElementById('edit-kb-content').value.trim();
+        if (!newTitle || !newContent) return showToast('Заполните поля');
+
+        const btn = document.getElementById('edit-kb-save');
+        btn.disabled = true;
+        btn.textContent = 'Сохраняю...';
+
+        try {
+          await db.collection("users").doc(window.resolvedUid)
+            .collection("bots").doc(botId)
+            .collection("knowledge_base").doc(itemId).update({
+              title: newTitle,
+              content: newContent,
+              type: "text"
+            });
+
+          try {
+            await db.collection("users").doc(window.resolvedUid)
+              .collection("bots").doc(botId)
+              .collection("knowledge_items").doc(itemId).update({
+                title: newTitle,
+                contentPreview: newContent.substring(0, 120),
+                type: "text"
+              });
+          } catch (e) { }
+
+          showToast('✅ Обновлено');
+          overlay.remove();
+          loadKBList(botId);
+        } catch (e) {
+          showToast('❌ Ошибка: ' + e.message);
+          btn.disabled = false;
+          btn.textContent = 'Сохранить';
+        }
+      };
     }
 
     // ── In-chat confirm (replaces window.confirm) ──
@@ -10732,28 +11417,61 @@ ${kbSummary}`,
 
       // Check if TG user needs phone verification
       if (isTg) {
-        db.collection('users').doc(user.uid).get().then(doc => {
-          if (!doc.exists || !doc.data().phone) {
-            document.getElementById('modal-phone-verify').classList.add('open');
-          }
-        });
+        // Fast path: UID-keyed localStorage cache (handles account switching automatically)
+        const _phoneKey = 'phone_verified_' + user.uid;
+        if (localStorage.getItem(_phoneKey) !== 'true') {
+          // Slow path: single Firestore call — cache result to skip on next session
+          db.collection('users').doc(user.uid).get().then(doc => {
+            const d = doc.exists ? doc.data() : {};
+            if (!d.phone || d.phone_verified === false) {
+              document.getElementById('modal-phone-verify').classList.add('open');
+            } else {
+              // Backfill cache for users who already have phone saved
+              localStorage.setItem(_phoneKey, 'true');
+            }
+          }).catch(() => { /* silently skip on network error — don't block UX */ });
+        }
       }
 
       window.saveTgPhone = async function () {
         const input = document.getElementById('tg-phone-input');
+        const btn = document.getElementById('tg-phone-save-btn');
         const phone = input.value.trim();
         if (phone.length < 9) {
           showToast('❌ Пожалуйста, введите корректный номер');
           input.focus();
           return;
         }
+        if (btn) { btn.disabled = true; btn.textContent = 'Сохранение…'; }
         try {
-          await db.collection('users').doc(currentUser.uid).set({ phone }, { merge: true });
+          await db.collection('users').doc(currentUser.uid).set({
+            phone,
+            phone_verified: true,
+            phone_updated_at: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+          // Cache so we skip the check on next login
+          localStorage.setItem('phone_verified_' + currentUser.uid, 'true');
+          // Update settings card if visible
+          const sv = document.getElementById('s-phone-value');
+          if (sv) sv.textContent = phone;
           document.getElementById('modal-phone-verify').classList.remove('open');
           showToast('✅ Номер подтверждён. Спасибо!');
         } catch (e) {
           showToast('❌ Ошибка сохранения: ' + e.message);
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = 'Подтвердить'; }
         }
+      };
+
+      window.openPhoneModal = function () {
+        if (!currentUser) return;
+        // Pre-fill with saved phone if any
+        db.collection('users').doc(currentUser.uid).get().then(doc => {
+          const ph = doc.exists ? (doc.data().phone || '') : '';
+          const inp = document.getElementById('tg-phone-input');
+          if (inp) inp.value = ph;
+        }).catch(() => {});
+        document.getElementById('modal-phone-verify').classList.add('open');
       };
 
       // Launch Chat Onboarding if needed
@@ -11020,6 +11738,17 @@ ${kbSummary}`,
       if (el('s-used')) el('s-used').textContent = used.toLocaleString('ru');
       if (el('s-limit')) el('s-limit').textContent = limit.toLocaleString('ru');
       if (el('s-prog')) el('s-prog').style.width = pct + '%';
+
+      // Phone card — TG users only
+      const isTgUser = !!window.Telegram?.WebApp?.initData;
+      const phoneCard = el('s-phone-card');
+      if (phoneCard && isTgUser) {
+        phoneCard.style.display = '';
+        db.collection('users').doc(currentUser.uid).get().then(doc => {
+          const ph = doc.exists ? (doc.data().phone || '—') : '—';
+          if (el('s-phone-value')) el('s-phone-value').textContent = ph;
+        }).catch(() => {});
+      }
 
       // Billing section
       if (el('sb-plan-name')) el('sb-plan-name').textContent = typeName;
@@ -11983,9 +12712,9 @@ ${kbSummary}`,
     const FLOW_STEPS = {
       WELCOME: {
         chips: [
-          { label: '🤖 Создать бота',       msg: 'Хочу создать нового бота' },
-          { label: '🔧 Улучшить бота',      msg: 'Хочу улучшить существующего бота' },
-          { label: '📚 База знаний',         msg: 'Хочу добавить знания боту' },
+          { label: '🤖 Создать бота', msg: 'Хочу создать нового бота' },
+          { label: '🔧 Улучшить бота', msg: 'Хочу улучшить существующего бота' },
+          { label: '📚 База знаний', msg: 'Хочу добавить знания боту' },
           { label: '✈️ Подключить Telegram', msg: 'Хочу подключить Telegram к боту' }
         ],
         next: { '🤖 Создать бота': 'BOT_NAME', '🔧 Улучшить бота': 'ACTIVE', '📚 База знаний': 'ACTIVE', '✈️ Подключить Telegram': 'ACTIVE' }
@@ -11996,11 +12725,11 @@ ${kbSummary}`,
       },
       ACTIVE: {
         chips: [
-          { label: '📎 Загрузить файл',   msg: null,                                        action: 'file' },
-          { label: '🔗 Добавить ссылку',  msg: 'Хочу добавить ссылку в базу знаний бота' },
-          { label: '✈️ Telegram',          msg: 'Хочу подключить Telegram к боту' },
-          { label: '🎨 Приветствие',       action: 'welcome_config' },
-          { label: '🧪 Тестировать',       action: 'test_mode' },
+          { label: '📎 Загрузить файл', msg: null, action: 'file' },
+          { label: '🔗 Добавить ссылку', msg: 'Хочу добавить ссылку в базу знаний бота' },
+          { label: '✈️ Telegram', msg: 'Хочу подключить Telegram к боту' },
+          { label: '🎨 Приветствие', action: 'welcome_config' },
+          { label: '🧪 Тестировать', action: 'test_mode' },
         ]
       }
     };
@@ -12020,7 +12749,7 @@ ${kbSummary}`,
 
     // Extract label/msg from chip (supports string or {label, msg} format)
     function _chipLabel(chip) { return (typeof chip === 'string') ? chip : chip.label; }
-    function _chipMsg(chip)   { return (typeof chip === 'string') ? chip : (chip.msg !== undefined ? chip.msg : chip.label); }
+    function _chipMsg(chip) { return (typeof chip === 'string') ? chip : (chip.msg !== undefined ? chip.msg : chip.label); }
 
     function renderFlowChips(stepId) {
       const step = FLOW_STEPS[stepId] || FLOW_STEPS.ACTIVE;
@@ -12045,8 +12774,8 @@ ${kbSummary}`,
 
     function onFlowChipClick(chip, stepId) {
       const label = _chipLabel(chip);
-      const msg   = _chipMsg(chip);   // full sentence → AI responds naturally
-      const step  = FLOW_STEPS[stepId];
+      const msg = _chipMsg(chip);   // full sentence → AI responds naturally
+      const step = FLOW_STEPS[stepId];
       let nextStep;
       if (step && step.next && label in step.next) {
         nextStep = step.next[label]; // null = stay, string = advance
@@ -12096,9 +12825,9 @@ ${kbSummary}`,
         return;
       }
       if (chip.action === 'run_auto_test') { runAutoTest(); return; }
-      if (chip.action === 'custom_test')   { startCustomTestMode(); return; }
-      if (chip.action === 'test_exit')     { exitTestMode(); return; }
-      if (chip.action === 'noop')          { return; } // disabled chip
+      if (chip.action === 'custom_test') { startCustomTestMode(); return; }
+      if (chip.action === 'test_exit') { exitTestMode(); return; }
+      if (chip.action === 'noop') { return; } // disabled chip
       // Post-reset choice chips
       if (chip.action === 'reset_continue') {
         const stepId = chip._savedStepId || 'ACTIVE';
@@ -12113,7 +12842,7 @@ ${kbSummary}`,
         advanceFlowStep('WELCOME');
         if (_flowUid) {
           db.collection('users').doc(_flowUid).collection('chatosState').doc('tgWizard')
-            .set({ status: 'idle' }, { merge: true }).catch(() => {});
+            .set({ status: 'idle' }, { merge: true }).catch(() => { });
         }
         addChatOsMsg('bot', 'Хорошо! Начинаем с нуля. Выберите, что нужно сделать:');
         return; // let user pick from freshly-rendered WELCOME chips
@@ -12133,10 +12862,12 @@ ${kbSummary}`,
         try {
           await db.collection('users').doc(_flowUid)
             .collection('chatosState').doc('flow')
-            .set({ stepId: nextStepId, data: _flowState.data, active: _flowState.active,
+            .set({
+              stepId: nextStepId, data: _flowState.data, active: _flowState.active,
               lastChips: null, // clear saved dynamic chips on step advance
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        } catch (_) {}
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        } catch (_) { }
       }
     }
 
@@ -12188,8 +12919,8 @@ ${kbSummary}`,
 
     const TG_WIZARD_CHIPS = [
       { label: '🚀 Открыть BotFather', action: 'open_botfather' },
-      { label: '📖 Инструкция ещё раз',  action: 'tg_wizard' },
-      { label: '⬅ Назад',               action: 'tg_exit' },
+      { label: '📖 Инструкция ещё раз', action: 'tg_wizard' },
+      { label: '⬅ Назад', action: 'tg_exit' },
     ];
 
     function showTgInstructions() {
@@ -12214,7 +12945,7 @@ ${kbSummary}`,
           await db.collection('users').doc(_flowUid)
             .collection('chatosState').doc('tgWizard')
             .set({ status: 'waiting_token', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        } catch (_) {}
+        } catch (_) { }
       }
     }
 
@@ -12231,7 +12962,7 @@ ${kbSummary}`,
           await db.collection('users').doc(_flowUid)
             .collection('chatosState').doc('tgWizard')
             .set({ status: 'idle' }, { merge: true });
-        } catch (_) {}
+        } catch (_) { }
       }
     }
 
@@ -12325,8 +13056,8 @@ ${kbSummary}`,
 
     const TEST_ENTRY_CHIPS = [
       { label: '🚀 Запустить авто-тест', action: 'run_auto_test' },
-      { label: '✏ Свой сценарий',        action: 'custom_test' },
-      { label: '⬅ Назад',               action: 'test_exit' },
+      { label: '✏ Свой сценарий', action: 'custom_test' },
+      { label: '⬅ Назад', action: 'test_exit' },
     ];
 
     function _buildTestQuestions(kbCount) {
@@ -12353,7 +13084,7 @@ ${kbSummary}`,
         const bot = botDoc.data() || {};
         const kbSnap = await db.collection('users').doc(window.resolvedUid)
           .collection('bots').doc(botId).collection('knowledge_base').get();
-        const kbCount  = kbSnap.size;
+        const kbCount = kbSnap.size;
         const tgStatus = bot.telegram?.status || 'none';
         const hasPrompt = !!(bot.systemPrompt || bot.description);
 
@@ -12363,8 +13094,8 @@ ${kbSummary}`,
           questions: [], answers: []
         };
 
-        const kbLine     = kbCount === 0 ? 'нет ⚠️' : `${kbCount} ${kbCount === 1 ? 'документ' : kbCount < 5 ? 'документа' : 'документов'} ✅`;
-        const tgLine     = tgStatus === 'active' ? 'подключён ✅' : 'не подключён ⚠️';
+        const kbLine = kbCount === 0 ? 'нет ⚠️' : `${kbCount} ${kbCount === 1 ? 'документ' : kbCount < 5 ? 'документа' : 'документов'} ✅`;
+        const tgLine = tgStatus === 'active' ? 'подключён ✅' : 'не подключён ⚠️';
         const promptLine = hasPrompt ? 'заданы ✅' : 'не заданы ⚠️';
 
         addChatOsMsg('bot',
@@ -12392,7 +13123,7 @@ ${kbSummary}`,
       const { kbCount, tgStatus } = _testState;
       _testMode = true;
       _testState.questions = _buildTestQuestions(kbCount);
-      _testState.answers   = [];
+      _testState.answers = [];
 
       // Lock input during test
       isWaitingForAI = true;
@@ -12440,14 +13171,14 @@ ${kbSummary}`,
       if (!_testState) return;
       const { answers, kbCount, tgStatus } = _testState;
       const okCount = answers.filter(a => a.ok).length;
-      const total   = answers.length || 1;
-      const allOk   = okCount === total;
+      const total = answers.length || 1;
+      const allOk = okCount === total;
 
       const recs = [];
-      if (kbCount === 0)        recs.push('📚 Добавьте базу знаний — бот станет точнее');
+      if (kbCount === 0) recs.push('📚 Добавьте базу знаний — бот станет точнее');
       if (tgStatus !== 'active') recs.push('✈️ Подключите Telegram для публикации бота');
       const avgLen = answers.reduce((s, a) => s + (a.a?.length || 0), 0) / total;
-      if (avgLen < 80)           recs.push('📝 Уточните системный промт для более развёрнутых ответов');
+      if (avgLen < 80) recs.push('📝 Уточните системный промт для более развёрнутых ответов');
 
       const recsHtml = recs.length > 0
         ? `<div class="tr-section"><div class="tr-label">Рекомендации</div>${recs.map(r => `<div class="tr-rec">${esc(r)}</div>`).join('')}</div>`
@@ -12497,13 +13228,13 @@ ${kbSummary}`,
 
       applyDynamicChips([
         { label: '🔄 Повторить тест', action: 'run_auto_test' },
-        { label: '⬅ Выйти',          action: 'test_exit' },
+        { label: '⬅ Выйти', action: 'test_exit' },
       ], true);
       scrollToBottomChatOs();
     }
 
     function exitTestMode() {
-      _testMode  = false;
+      _testMode = false;
       _testState = null;
       document.getElementById('test-report-card')?.remove();
       renderFlowChips(_flowState.stepId);
@@ -12537,8 +13268,8 @@ ${kbSummary}`,
           .collection('bots').doc(botId).get();
         const bot = botDoc.data() || {};
         const savedMsg = bot.welcomeMessage || '';
-        const savedKb  = Array.isArray(bot.welcomeKeyboard) ? bot.welcomeKeyboard : [];
-        const msgText  = savedMsg || _buildDefaultWelcome(bot.name || 'Бот', bot.systemPrompt || bot.description || '');
+        const savedKb = Array.isArray(bot.welcomeKeyboard) ? bot.welcomeKeyboard : [];
+        const msgText = savedMsg || _buildDefaultWelcome(bot.name || 'Бот', bot.systemPrompt || bot.description || '');
         _insertWelcomeCard(botId, bot.name || 'Бот', msgText, savedKb);
       } catch (e) {
         console.error('[Welcome] showWelcomeConfigCard error:', e);
@@ -12569,7 +13300,7 @@ ${kbSummary}`,
           <textarea class="welcome-edit-area" id="wc-textarea" rows="5">${esc(msgText)}</textarea>
           <div class="welcome-field-label" style="margin-top:8px;">Быстрые кнопки (до 4):</div>
           <div class="welcome-kb-inputs">
-            ${[0,1,2,3].map(i => `<input class="welcome-kb-input" placeholder="Кнопка ${i+1}" value="${esc(keyboard[i] || '')}">`).join('')}
+            ${[0, 1, 2, 3].map(i => `<input class="welcome-kb-input" placeholder="Кнопка ${i + 1}" value="${esc(keyboard[i] || '')}">`).join('')}
           </div>
         </div>
         <div class="welcome-actions">
@@ -12583,10 +13314,10 @@ ${kbSummary}`,
       if (scrollBtn) CHAT_OS.messagesEl.insertBefore(card, scrollBtn);
       else CHAT_OS.messagesEl.appendChild(card);
 
-      const textarea  = card.querySelector('#wc-textarea');
+      const textarea = card.querySelector('#wc-textarea');
       const previewEl = card.querySelector('#wc-preview');
       const kbPreview = card.querySelector('#wc-kb-preview');
-      const kbInputs  = card.querySelectorAll('.welcome-kb-input');
+      const kbInputs = card.querySelectorAll('.welcome-kb-input');
 
       const refreshKb = () => {
         const labels = Array.from(kbInputs).map(i => i.value.trim()).filter(Boolean);
@@ -12599,7 +13330,7 @@ ${kbSummary}`,
 
       card.querySelector('#wc-save').addEventListener('click', async () => {
         const msgVal = textarea.value.trim();
-        const kbVal  = Array.from(kbInputs).map(i => i.value.trim()).filter(Boolean).slice(0, 4);
+        const kbVal = Array.from(kbInputs).map(i => i.value.trim()).filter(Boolean).slice(0, 4);
         if (!msgVal) { textarea.focus(); return; }
         const btn = card.querySelector('#wc-save');
         btn.disabled = true; btn.textContent = '…';
@@ -12676,8 +13407,8 @@ ${kbSummary}`,
 
     async function _checkKbStatus(botId, card) {
       if (!card || !card.isConnected) return;
-      const badge    = card.querySelector('#ksc-badge');
-      const body     = card.querySelector('#ksc-body');
+      const badge = card.querySelector('#ksc-badge');
+      const body = card.querySelector('#ksc-body');
       const checkBtn = card.querySelector('#ksc-check-btn');
       const verifyBtn = card.querySelector('#ksc-verify-btn');
       if (badge) { badge.className = 'ksc-badge pending'; badge.textContent = '⏳ Проверяю...'; }
@@ -12742,7 +13473,7 @@ ${kbSummary}`,
           const title = d.title || d.name || d.source || '';
           if (title && title.length > 2) testQ = `Расскажи подробнее о "${title.slice(0, 60)}"`;
         }
-      } catch (_) {}
+      } catch (_) { }
 
       addChatOsMsg('bot', `**Тест-вопрос:** _${testQ}_`);
       addChatOsMsg('bot', '...');
@@ -12920,15 +13651,15 @@ ${kbSummary}`,
     // ── DYNAMIC CHIPS ENGINE ─────────────────────────────────────────────────────
     // Maps keywords in AI reply list items to contextual chip definitions
     const LIST_CHIP_MAP = [
-      { test: /база знан|базу знан|knowledge|знани/i,          chip: { label: '📚 База знаний',    msg: 'Хочу добавить базу знаний боту' } },
-      { test: /поведен|тон|стиль|правил|persona|инструкц/i,    chip: { label: '🎛 Поведение',      msg: 'Хочу изменить поведение и тон бота' } },
-      { test: /telegram|токен|подключ|activat/i,               chip: { label: '✈️ Telegram',       msg: 'Хочу подключить Telegram к боту' } },
-      { test: /тест|сценар|проверить|test/i,                   chip: { label: '🧪 Тестировать',    action: 'test_mode' } },
-      { test: /загрузить файл|upload|\bфайл\b/i,               chip: { label: '📎 Загрузить файл', msg: null, action: 'file' } },
-      { test: /ссылк|url|сайт|link/i,                          chip: { label: '🔗 Ссылка',         msg: 'Хочу добавить ссылку в базу знаний' } },
-      { test: /текст.*знан|добавить текст|вставить|\bтекст\b/i, chip: { label: '✏️ Текст',         msg: 'Хочу добавить текст в базу знаний' } },
-      { test: /имя|назван|назови|name.*bot|bot.*name/i,        chip: { label: '✏️ Назвать бота',   msg: 'Хочу задать имя и описание бота' } },
-      { test: /аудитори|целев|для кого/i,                      chip: { label: '🎯 Аудитория',      msg: 'Хочу описать целевую аудиторию бота' } },
+      { test: /база знан|базу знан|knowledge|знани/i, chip: { label: '📚 База знаний', msg: 'Хочу добавить базу знаний боту' } },
+      { test: /поведен|тон|стиль|правил|persona|инструкц/i, chip: { label: '🎛 Поведение', msg: 'Хочу изменить поведение и тон бота' } },
+      { test: /telegram|токен|подключ|activat/i, chip: { label: '✈️ Telegram', msg: 'Хочу подключить Telegram к боту' } },
+      { test: /тест|сценар|проверить|test/i, chip: { label: '🧪 Тестировать', action: 'test_mode' } },
+      { test: /загрузить файл|upload|\bфайл\b/i, chip: { label: '📎 Загрузить файл', msg: null, action: 'file' } },
+      { test: /ссылк|url|сайт|link/i, chip: { label: '🔗 Ссылка', msg: 'Хочу добавить ссылку в базу знаний' } },
+      { test: /текст.*знан|добавить текст|вставить|\bтекст\b/i, chip: { label: '✏️ Текст', msg: 'Хочу добавить текст в базу знаний' } },
+      { test: /имя|назван|назови|name.*bot|bot.*name/i, chip: { label: '✏️ Назвать бота', msg: 'Хочу задать имя и описание бота' } },
+      { test: /аудитори|целев|для кого/i, chip: { label: '🎯 Аудитория', msg: 'Хочу описать целевую аудиторию бота' } },
     ];
 
     // Extract numbered/bulleted list items from text
@@ -12985,10 +13716,10 @@ ${kbSummary}`,
         if (hasText && hasFile && hasLink) {
           console.log('[DynChips] KB method choice detected — returning 4-chip set');
           return [
-            { label: '📝 Текст',  msg: 'Хочу добавить текст в базу знаний' },
-            { label: '📎 Файл',   msg: null, action: 'file' },
+            { label: '📝 Текст', msg: 'Хочу добавить текст в базу знаний' },
+            { label: '📎 Файл', msg: null, action: 'file' },
             { label: '🔗 Ссылка', msg: 'Хочу добавить ссылку в базу знаний' },
-            { label: '⬅ Назад',  action: 'reset_to_active' },
+            { label: '⬅ Назад', action: 'reset_to_active' },
           ];
         }
       }
@@ -13028,7 +13759,7 @@ ${kbSummary}`,
         await db.collection('users').doc(_flowUid)
           .collection('chatosState').doc('flow')
           .set({ lastChips: chips || null, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Modified to always stay open for all users and fetch history from backend
@@ -13185,7 +13916,7 @@ ${kbSummary}`,
             db.collection('users').doc(window.resolvedUid).collection('chatosState').doc('tgWizard')
               .set({ status: 'idle' }, { merge: true }),
           ]);
-        } catch (_) {}
+        } catch (_) { }
 
         // Reload session from backend — no page refresh needed
         chatOsInitDone = false;
@@ -13229,14 +13960,14 @@ ${kbSummary}`,
     // ── POST-RESET FLOW ──────────────────────────────────────────────────────────
     // Human-readable labels for each wizard step
     const STEP_LABELS = {
-      WELCOME:  'Начало',
+      WELCOME: 'Начало',
       BOT_NAME: 'Создание бота',
-      ACTIVE:   'Настройка бота',
+      ACTIVE: 'Настройка бота',
     };
     // Message sent to AI when user picks "Continue" from a given step
     const STEP_CONTINUE_MSGS = {
       BOT_NAME: 'Продолжим — я хочу создать нового бота.',
-      ACTIVE:   'Продолжим настройку существующего бота.',
+      ACTIVE: 'Продолжим настройку существующего бота.',
     };
     // Set by clearChatSmart() before reload so initChatOnboarding shows the right post-reset UI
     let _pendingResetState = null;
@@ -13315,7 +14046,7 @@ ${kbSummary}`,
           navigator.clipboard.writeText(content).then(() => {
             copyBtn.textContent = '✓';
             setTimeout(() => { copyBtn.textContent = '⎘'; }, 1500);
-          }).catch(() => {});
+          }).catch(() => { });
         });
         div.appendChild(copyBtn);
       }
@@ -13328,7 +14059,7 @@ ${kbSummary}`,
         if (ch.id !== 'cos-empty' && ch.id !== 'cos-scroll-btn') ch.remove();
       });
       _lastChatRole = null;
-      const emptyEl  = document.getElementById('cos-empty');
+      const emptyEl = document.getElementById('cos-empty');
       const scrollBtn = document.getElementById('cos-scroll-btn');
       if (emptyEl) emptyEl.classList.toggle('hidden', chatOsHistory.length > 0);
 
@@ -13352,7 +14083,7 @@ ${kbSummary}`,
           copyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(txt).then(() => {
               copyBtn.textContent = '✓'; setTimeout(() => { copyBtn.textContent = '⎘'; }, 1500);
-            }).catch(() => {});
+            }).catch(() => { });
           });
           div.appendChild(copyBtn);
           frag.appendChild(div);
@@ -13376,7 +14107,7 @@ ${kbSummary}`,
       if (!isTyping) chatOsHistory.push({ role, content });
 
       const scrollBtn = document.getElementById('cos-scroll-btn');
-      const emptyEl  = document.getElementById('cos-empty');
+      const emptyEl = document.getElementById('cos-empty');
       if (emptyEl && !emptyEl.classList.contains('hidden')) emptyEl.classList.add('hidden');
 
       const isGroup = !isTyping && role === _lastChatRole;
@@ -13405,7 +14136,7 @@ ${kbSummary}`,
           copyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(content).then(() => {
               copyBtn.textContent = '✓'; setTimeout(() => { copyBtn.textContent = '⎘'; }, 1500);
-            }).catch(() => {});
+            }).catch(() => { });
           });
           div.appendChild(copyBtn);
         }
@@ -13497,7 +14228,7 @@ ${kbSummary}`,
       // Flow engine: auto-advance for text-input steps (no chips shown)
       // WELCOME is chip-only; ACTIVE stays in ACTIVE
       if (!opts.hidden && text && _pendingNextStep === null &&
-          _flowState.stepId !== 'ACTIVE' && _flowState.stepId !== 'WELCOME') {
+        _flowState.stepId !== 'ACTIVE' && _flowState.stepId !== 'WELCOME') {
         const _curStep = FLOW_STEPS[_flowState.stepId];
         if (_curStep && _curStep.chips && _curStep.chips.length === 0) {
           _pendingNextStep = getDefaultNextStep(_flowState.stepId);
@@ -13677,7 +14408,7 @@ ${kbSummary}`,
     CHAT_OS.inputEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatObSend(); }
     });
-    CHAT_OS.inputEl.addEventListener('input', function() {
+    CHAT_OS.inputEl.addEventListener('input', function () {
       CHAT_OS.sendBtn.disabled = !this.value.trim() && !pendingChatAttachment;
       // 4. Auto-grow textarea
       this.style.height = 'auto';
@@ -13850,7 +14581,9 @@ ${kbSummary}`,
       <hr class="ip-divider">
       <div class="ip-section">
         <div class="ip-section-label">▸ Как настроить</div>
-        <div class="ip-section-body"><ol id="ip-how"></ol></div>
+        <div class="ip-section-body">
+          <ol id="ip-how"></ol>
+        </div>
       </div>
       <hr class="ip-divider">
       <div class="ip-section">
