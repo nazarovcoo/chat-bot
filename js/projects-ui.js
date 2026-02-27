@@ -203,7 +203,6 @@
       btnNew2: root.querySelector("#projects-new-empty"),
       btnTopSrc: root.querySelector("#projects-top-add-source"),
       btnTopChats: root.querySelector("#projects-top-open-chats"),
-      btnTopSettings: root.querySelector("#projects-top-settings"),
       modal: root.querySelector("#projects-create-modal"),
       modalClose: root.querySelector("#projects-create-close"),
       modalCancel: root.querySelector("#projects-create-cancel"),
@@ -259,7 +258,6 @@
         setTab("chats");
       }
     });
-    if (nodes.btnTopSettings) nodes.btnTopSettings.addEventListener("click", function () { setTab("settings"); });
     nodes.tabs.addEventListener("click", function (e) {
       var btn = e.target.closest("[data-tab]");
       if (!btn) return;
@@ -611,7 +609,6 @@
         nodes.tabs.style.display = "none";
         nodes.btnTopSrc.style.display = "none";
         nodes.btnTopChats.style.display = "none";
-        if (nodes.btnTopSettings) nodes.btnTopSettings.style.display = "none";
         return;
       }
       nodes.title.textContent = p.name;
@@ -621,7 +618,6 @@
       nodes.tabs.style.display = "flex";
       nodes.btnTopSrc.style.display = "inline-flex";
       nodes.btnTopChats.style.display = "inline-flex";
-      if (nodes.btnTopSettings) nodes.btnTopSettings.style.display = "inline-flex";
       nodes.tabs.querySelectorAll(".projects-tab").forEach(function (t) {
         t.classList.toggle("active", t.getAttribute("data-tab") === state.tab);
       });
@@ -970,8 +966,7 @@
         "<main class='projects-main'>" +
         "<div class='projects-top'><div><h1 id='projects-active-title'>Выберите проект</h1><div class='projects-meta' id='projects-active-meta'>—</div></div>" +
         "<div class='projects-top-actions'><button class='projects-btn primary' id='projects-top-add-source' style='display:none'>Add Knowledge</button>" +
-        "<button class='projects-btn' id='projects-top-open-chats' style='display:none'>Open Bot</button>" +
-        "<button class='projects-btn' id='projects-top-settings' style='display:none'>Settings</button></div></div>" +
+        "<button class='projects-btn' id='projects-top-open-chats' style='display:none'>Open Bot</button></div></div>" +
         "<div class='projects-tabs' id='projects-tabs' style='display:none'>" +
         "<button class='projects-tab active' data-tab='chats'>Chats</button>" +
         "<button class='projects-tab' data-tab='sources'>Sources</button>" +
