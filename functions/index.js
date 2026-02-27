@@ -2205,6 +2205,10 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
                       }, { merge: true });
 
                       toolResult = "Success. Token is valid, waiting for /start in Telegram.";
+                      currentSession.state = "telegram_connected";
+                      currentSession.assistant_expectation = { type: "post_connect_menu", persistent: false };
+                      finalReply = "Бот успешно подключён к Telegram! ✅\n\nЧто делаем дальше?\n\n1) Наполнить базу знаний\n2) Задать тон общения\n3) Протестировать бота";
+                      break;
                     }
                   }
                 } catch (e) {
@@ -2345,6 +2349,8 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
           activeBotId: currentSession.activeBotId || null,
           business_profile: currentSession.business_profile || null,
           onboarding_state: currentSession.onboarding_state || null,
+          state: currentSession.state || s.state || "idle",
+          assistant_expectation: currentSession.assistant_expectation !== undefined ? currentSession.assistant_expectation : (s.assistant_expectation || null),
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
       });
