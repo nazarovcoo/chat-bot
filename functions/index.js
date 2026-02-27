@@ -1390,7 +1390,7 @@ function _tokenizeSearchText(input) {
 async function ensureDefaultProject(uid) {
   const db = admin.firestore();
   const projectsCol = db.collection(`users/${uid}/projects`);
-  const metaRef = db.doc(`users/${uid}/meta`);
+  const metaRef = db.doc(`users/${uid}/settings/meta`);
 
   const existing = await projectsCol.limit(1).get();
   if (!existing.empty) return existing.docs[0].id;
