@@ -633,29 +633,42 @@ exports.telegramWebhook = onRequest(
         await chatDocRef.set({ mode: 'ai', handoffAt: admin.firestore.FieldValue.delete() }, { merge: true });
       }
 
-      // Load kbQA (new) + fallback to kbItems (legacy) + rules + AI settings + auto-replies
-      const [kbQASnap, kbItemsSnap, rulesDoc, aiDoc, autoReplyDoc, notifDoc] = await Promise.all([
-        db.collection(`users/${uid}/kbQA`).where("status", "==", "active").get(),
-        db.collection(`users/${uid}/kbItems`).get(),
-        db.doc(`users/${uid}/settings/rules`).get(),
+      let kbPromiseQA = db.collection(`users/${uid}/kbQA`).where("status", "==", "active").get();
+      let kbPromiseLegacy = db.collection(`users/${uid}/kbItems`).get();
+      let kbPromiseBot = botId ? db.collection(`users/${uid}/bots/${botId}/knowledge_base`).get() : null;
+      let rulesPromise = botId ? Promise.resolve({ exists: !!botData.rules, data: () => ({ text: botData.rules }) }) : db.doc(`users/${uid}/settings/rules`).get();
+
+      // Load context + settings + auto-replies
+      const [kbQASnap, kbItemsSnap, kbBotSnap, rulesDoc, aiDoc, autoReplyDoc, notifDoc] = await Promise.all([
+        kbPromiseQA,
+        kbPromiseLegacy,
+        kbPromiseBot || Promise.resolve({ docs: [] }),
+        rulesPromise,
         db.doc(`users/${uid}/settings/ai`).get(),
         db.doc(`users/${uid}/settings/autoReplies`).get(),
         db.doc(`users/${uid}/settings/notifications`).get(),
       ]);
 
-      // Use kbQA if available (Q&A pairs), else kbItems (legacy raw text)
-      let kbItems;
-      if (kbQASnap.size > 0) {
-        kbItems = kbQASnap.docs.map((d) => ({
-          _id: d.id,
-          title: d.data().question || "",
-          content: d.data().answer || "",
-        }));
+      let kbItems = [];
+      if (botId) {
+        // Use bot-specific knowledge base 
+        kbItems = kbBotSnap.docs.map(d => ({
+          title: d.data().title || d.data().question || d.data().name || "",
+          content: d.data().content || d.data().answer || d.data().text || ""
+        })).filter(k => k.content.trim().length > 0);
       } else {
-        kbItems = kbItemsSnap.docs.map((d) => ({
-          title: d.data().title || "",
-          content: d.data().content || "",
-        }));
+        // Legacy fallback
+        if (kbQASnap.size > 0) {
+          kbItems = kbQASnap.docs.map((d) => ({
+            title: d.data().question || "",
+            content: d.data().answer || "",
+          }));
+        } else {
+          kbItems = kbItemsSnap.docs.map((d) => ({
+            title: d.data().title || "",
+            content: d.data().content || "",
+          }));
+        }
       }
 
       const rules = rulesDoc.exists ? rulesDoc.data().text || "" : "";
@@ -1637,6 +1650,18 @@ exports.chatOsHandler = onRequest(
           s.activeBotId = userBots[0].id;
         }
 
+        if (!s.state) s.state = "idle";
+
+        // --- Telegram Connect State Machine Intercept ---
+        const tgTokenRegex = /^[0-9]+:[A-Za-z0-9_-]+$/;
+        if (s.state === "connecting_telegram" && tgTokenRegex.test(message.trim())) {
+          // LLM is already verifying it, ignore duplicate token submission
+          return;
+        } else if (s.state === "waiting_token" && tgTokenRegex.test(message.trim())) {
+          s.state = "connecting_telegram";
+          s.assistant_expectation = { type: "telegram_connect", persistent: false };
+        }
+
         s.history.push({
           role: "user",
           content: message,
@@ -1653,11 +1678,18 @@ exports.chatOsHandler = onRequest(
           mode: s.mode || "admin",
           business_profile: s.business_profile,
           onboarding_state: s.onboarding_state,
+          state: s.state,
+          assistant_expectation: s.assistant_expectation || null,
           lastSeq: nextSeq,
           rev: (s.rev || 0) + 1,
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
       });
+
+      // Special early abort if we just ignored a duplicate token
+      if (currentSession && currentSession.state === "connecting_telegram" && currentSession.history && currentSession.history[currentSession.history.length - 1].content !== message) {
+        return res.status(200).json({ reply: "⏳ Проверяю токен, пожалуйста, подождите..." });
+      }
 
       // If an attachment was sent with this message, save it directly to the active bot's Knowledge Base
       if (attachment && attachment.type === 'file' && currentSession.activeBotId) {
@@ -1683,6 +1715,28 @@ exports.chatOsHandler = onRequest(
           status: "active",
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
+
+        // Extract text content for TXT/CSV/MD files so RAG can use them
+        const _fname = (attachment.fileName || attachment.name || '').toLowerCase();
+        const _textMimes = ['text/plain', 'text/csv', 'text/markdown', 'text/x-markdown'];
+        const _isTextFile = _textMimes.includes(attachment.mimeType) ||
+          _fname.endsWith('.txt') || _fname.endsWith('.csv') || _fname.endsWith('.md');
+        if (_isTextFile) {
+          try {
+            const _fileUrl = attachment.fileUrl || attachment.downloadURL;
+            const _fileRes = await fetch(_fileUrl);
+            const _rawText = await _fileRes.text();
+            if (_rawText && _rawText.length > 20) {
+              await fileKbRef.update({
+                content: _rawText.slice(0, 50000),
+                textExtracted: true,
+                textLength: _rawText.length
+              });
+            }
+          } catch (_e) {
+            console.error('[KB] Text extraction failed:', attachment.name, _e.message);
+          }
+        }
       }
 
       let activeBotText = "None";
@@ -1729,6 +1783,16 @@ WELCOME MESSAGE FLOW
 After Telegram is connected and active:
 Ask the user: "Напишите короткое приветствие (1-2 строки), которое бот будет отправлять при команде /start."
 When they reply, execute "set_welcome_message" tool.
+
+────────────────────────────────────────
+KNOWLEDGE BASE FLOW
+
+When the user wants to add materials to the knowledge base:
+- TEXT: Ask them to paste it, then call add_knowledge with title + content.
+- LINK/URL: ALWAYS call fetch_webpage tool first. Never use add_knowledge with just a URL as content — the bot won't be able to use it. If fetch fails, tell user to copy-paste the text manually.
+- FILE (PDF/DOCX): Say "Файл сохранён. Для точных ответов по его содержимому скопируйте ключевые части текста и добавьте через 'Вставить текст'."
+- FILE (TXT/CSV/MD): Say "Файл прочитан и добавлен в базу знаний ✅".
+- After any successful KB add: confirm with "✅ Добавлено в базу знаний. Бот начнёт использовать это в ответах."
 
 ────────────────────────────────────────
 GLOBAL RULES
@@ -1782,6 +1846,21 @@ GLOBAL RULES
                 content: { type: "string", description: "The actual knowledge text content" }
               },
               required: ["title", "content"]
+            }
+          }
+        },
+        {
+          type: "function",
+          function: {
+            name: "fetch_webpage",
+            description: "Fetches the text content of a public webpage and saves it to the bot's knowledge base. ALWAYS use this when the user provides a URL to add to KB — never use add_knowledge with a raw URL as content.",
+            parameters: {
+              type: "object",
+              properties: {
+                url: { type: "string", description: "The full public URL to fetch (must start with https://)" },
+                title: { type: "string", description: "Short descriptive title for this knowledge entry" }
+              },
+              required: ["url", "title"]
             }
           }
         },
@@ -2043,6 +2122,43 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
                   createdAt: admin.firestore.FieldValue.serverTimestamp()
                 });
                 toolResult = "Knowledge added successfully to the active bot.";
+              }
+            }
+            else if (functionName === 'fetch_webpage') {
+              if (!currentSession.activeBotId) {
+                toolResult = "Error: No active bot selected.";
+              } else {
+                try {
+                  const _webRes = await fetch(args.url, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BotPanel/1.0)' },
+                    signal: AbortSignal.timeout(8000)
+                  });
+                  const _html = await _webRes.text();
+                  const _text = _html
+                    .replace(/<script[\s\S]*?<\/script>/gi, '')
+                    .replace(/<style[\s\S]*?<\/style>/gi, '')
+                    .replace(/<[^>]+>/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .slice(0, 15000);
+                  if (_text.length < 50) {
+                    toolResult = `Error: Could not extract meaningful text from ${args.url}. The page may require JavaScript or login.`;
+                  } else {
+                    const _webKbRef = db.collection("users").doc(uid)
+                      .collection("bots").doc(currentSession.activeBotId)
+                      .collection("knowledge_base").doc();
+                    await _webKbRef.set({
+                      title: args.title,
+                      content: _text,
+                      type: "link",
+                      sourceUrl: args.url,
+                      createdAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                    toolResult = `Success. Extracted ${_text.length} characters from ${args.url} and saved to knowledge base.`;
+                  }
+                } catch (_e) {
+                  toolResult = `Error fetching ${args.url}: ${_e.message}`;
+                }
               }
             }
             else if (functionName === 'connect_telegram') {

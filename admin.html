@@ -12765,6 +12765,7 @@ ${kbSummary}`,
           { label: '✈️ Telegram', msg: 'Хочу подключить Telegram к боту' },
           { label: '🎨 Приветствие', action: 'welcome_config' },
           { label: '🧪 Тестировать', action: 'test_mode' },
+          { label: '🔍 Статус KB', action: 'debug_kb' },
         ]
       }
     };
@@ -12863,6 +12864,7 @@ ${kbSummary}`,
       if (chip.action === 'custom_test') { startCustomTestMode(); return; }
       if (chip.action === 'test_exit') { exitTestMode(); return; }
       if (chip.action === 'noop') { return; } // disabled chip
+      if (chip.action === 'debug_kb') { showKbDebugInfo(); return; }
       // Post-reset choice chips
       if (chip.action === 'reset_continue') {
         const stepId = chip._savedStepId || 'ACTIVE';
@@ -13557,6 +13559,7 @@ ${kbSummary}`,
 
     // ── KB ADD PANEL ─────────────────────────────────────────────────────────────
     let _kbPanelActive = false;
+    let _kbPanelCooldownTs = 0;
 
     function showKbAddPanel(step) {
       const panel = document.getElementById('kb-add-panel');
@@ -13623,9 +13626,39 @@ ${kbSummary}`,
 
     function hideKbAddPanel() {
       _kbPanelActive = false;
+      _kbPanelCooldownTs = Date.now();
       const panel = document.getElementById('kb-add-panel');
       if (panel) { panel.innerHTML = ''; panel.classList.add('hidden'); }
       renderFlowChips(_flowState.stepId);
+    }
+
+    async function showKbDebugInfo() {
+      if (!window.resolvedUid || !_chatActiveBotId) {
+        addChatOsMsg('bot', '❌ Нет активного бота');
+        return;
+      }
+      addChatOsMsg('bot', '...');
+      try {
+        const [kbSnap, jobsSnap] = await Promise.all([
+          db.collection(`users/${window.resolvedUid}/bots/${_chatActiveBotId}/knowledge_base`).get(),
+          db.collection(`users/${window.resolvedUid}/bots/${_chatActiveBotId}/jobs`).orderBy('updatedAt', 'desc').limit(3).get().catch(() => ({ empty: true, docs: [] }))
+        ]);
+        const total = kbSnap.size;
+        const withContent = kbSnap.docs.filter(d => d.data().content).length;
+        const filesOnly = total - withContent;
+        let jobInfo = 'нет';
+        if (!jobsSnap.empty && jobsSnap.docs.length > 0) {
+          const j = jobsSnap.docs[0].data();
+          jobInfo = `${j.status || '?'} (шаг: ${j.step || '—'}, прогресс: ${j.progress || 0}%)`;
+        }
+        removeTypingIndicator();
+        addChatOsMsg('bot',
+          `📊 **Статус базы знаний**\n\nВсего записей: ${total}\nС текстом (поддерживается поиском): ${withContent}\nТолько файл (не индексировано): ${filesOnly}\nПоследний job: ${jobInfo}`
+        );
+      } catch (e) {
+        removeTypingIndicator();
+        addChatOsMsg('bot', '❌ Ошибка получения статуса: ' + e.message);
+      }
     }
 
     function _kbLinkChange() {
@@ -13798,6 +13831,7 @@ ${kbSummary}`,
       { test: /текст.*знан|добавить текст|вставить|\bтекст\b/i, chip: { label: '✏️ Текст', msg: 'Хочу добавить текст в базу знаний' } },
       { test: /имя|назван|назови|name.*bot|bot.*name/i, chip: { label: '✏️ Назвать бота', msg: 'Хочу задать имя и описание бота' } },
       { test: /аудитори|целев|для кого/i, chip: { label: '🎯 Аудитория', msg: 'Хочу описать целевую аудиторию бота' } },
+      { test: /debug.kb|статус.kb|состояние.kb/i, chip: { label: '🔍 Статус KB', action: 'debug_kb' } },
     ];
 
     // Extract numbered/bulleted list items from text
@@ -13851,7 +13885,7 @@ ${kbSummary}`,
         const hasText = /\bтекст\b/i.test(replyText);
         const hasFile = /\bфайл\b/i.test(replyText);
         const hasLink = /\bссылк/i.test(replyText);
-        if (hasText && hasFile && hasLink && !_kbPanelActive) {
+        if (hasText && hasFile && hasLink && !_kbPanelActive && (Date.now() - _kbPanelCooldownTs > 10000)) {
           setTimeout(() => showKbAddPanel('kb-choose'), 0);
           return null; // KB panel handles interaction
         }
@@ -14397,7 +14431,7 @@ ${kbSummary}`,
             <button class="ub-x" title="Отменить" aria-label="cancel">✕</button>
           </div>
           <div class="ub-processing"><span class="ub-spinner"></span><span>Анализирую файл…</span></div>
-          <div class="ub-done"><span class="ub-check">✓</span><span>Файл загружен и добавлен в базу знаний</span></div>
+          <div class="ub-done"><span class="ub-check">✓</span><span>Файл сохранён в базе знаний</span></div>
           <div class="ub-error"><span class="ub-warn">!</span><span class="ub-error-text">Ошибка загрузки.</span></div>
         `;
         CHAT_OS.messagesEl.appendChild(uploadBubble);
