@@ -29,10 +29,19 @@
       ".projects-new-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:14px;color:#111827;background:none;border:none;width:100%;text-align:left;font-family:inherit;margin-bottom:2px}",
       ".projects-new-row:hover{background:#f3f4f6}",
       ".projects-list{display:flex;flex-direction:column;overflow:auto}",
-      ".project-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:14px;color:#111827;background:none;border:none;width:100%;text-align:left;font-family:inherit}",
+      ".project-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;font-size:14px;color:#111827;background:none;border:none;width:100%;text-align:left;font-family:inherit;position:relative}",
       ".project-row:hover{background:#f3f4f6}",
       ".project-row.active{background:#efefef}",
       ".project-name{font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}",
+      ".proj-menu-btn{background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:6px;color:#6b7280;font-size:13px;letter-spacing:1px;line-height:1;opacity:0;flex-shrink:0;font-family:inherit}",
+      ".project-row:hover .proj-menu-btn,.project-row.active .proj-menu-btn{opacity:1}",
+      ".proj-menu-btn:hover{background:rgba(0,0,0,.08)}",
+      ".proj-dropdown{position:fixed;min-width:210px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.13);padding:6px;z-index:99999}",
+      ".proj-dd-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:14px;cursor:pointer;color:#111827;white-space:nowrap}",
+      ".proj-dd-item:hover{background:#f3f4f6}",
+      ".proj-dd-sep{height:1px;background:#e5e7eb;margin:4px 0}",
+      ".proj-dd-danger{color:#dc2626}",
+      ".proj-dd-danger:hover{background:#fef2f2}",
       ".projects-main{display:flex;flex-direction:column;min-width:0}",
       ".projects-top{border-bottom:1px solid #e5e7eb;padding:16px 18px;display:flex;justify-content:space-between;gap:12px}",
       ".projects-top h1{margin:0;font-size:18px;line-height:1.2}",
@@ -437,12 +446,87 @@
 
     var _icFolder = "<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' style='flex-shrink:0;opacity:.55'><path d='M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'/></svg>";
 
+    var _ddEl = null;
+
+    function closeProjectMenu() {
+      if (_ddEl) { _ddEl.remove(); _ddEl = null; }
+    }
+
+    function openProjectMenu(projectId, btnEl) {
+      closeProjectMenu();
+      var p = state.projects.find(function (pr) { return pr.id === projectId; });
+      if (!p) return;
+      var dd = document.createElement("div");
+      dd.className = "proj-dropdown";
+      dd.innerHTML =
+        "<div class='proj-dd-item' data-act='share'><svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8'/><polyline points='16 6 12 2 8 6'/><line x1='12' y1='2' x2='12' y2='15'/></svg>Поделиться</div>" +
+        "<div class='proj-dd-item' data-act='rename'><svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M12 20h9'/><path d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z'/></svg>Переименовать проект</div>" +
+        "<div class='proj-dd-sep'></div>" +
+        "<div class='proj-dd-item proj-dd-danger' data-act='delete'><svg width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><polyline points='3 6 5 6 21 6'/><path d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2'/></svg>Удалить проект</div>";
+
+      var rect = btnEl.getBoundingClientRect();
+      dd.style.top = (rect.bottom + 4) + "px";
+      dd.style.left = Math.max(8, rect.right - 220) + "px";
+      document.body.appendChild(dd);
+      _ddEl = dd;
+
+      dd.addEventListener("click", async function (e) {
+        var item = e.target.closest("[data-act]");
+        if (!item) return;
+        var act = item.getAttribute("data-act");
+        closeProjectMenu();
+        if (act === "share") await doShareProject(p);
+        if (act === "rename") await doRenameProject(p);
+        if (act === "delete") await doDeleteProject(p);
+      });
+
+      setTimeout(function () {
+        document.addEventListener("click", function _h(e) {
+          document.removeEventListener("click", _h);
+          if (_ddEl && !_ddEl.contains(e.target)) closeProjectMenu();
+        });
+      }, 0);
+    }
+
+    async function doShareProject(p) {
+      var host = p.botHost || "";
+      var link = host.startsWith("@") ? ("https://t.me/" + host.slice(1)) : host || p.name;
+      try {
+        await navigator.clipboard.writeText(link);
+        notify("Скопировано: " + link);
+      } catch (_) {
+        notify("Ссылка: " + link);
+      }
+    }
+
+    async function doRenameProject(p) {
+      var newName = prompt("Новое название:", p.name);
+      if (!newName || !newName.trim() || newName.trim() === p.name) return;
+      await ProjectsApi.updateProject(p.id, { name: newName.trim() });
+      notify("Переименовано");
+      await refreshProjects();
+    }
+
+    async function doDeleteProject(p) {
+      if (!confirm('Удалить проект "' + p.name + '"? Это действие нельзя отменить.')) return;
+      await ProjectsApi.deleteProject(p.id);
+      if (p.id === state.activeProjectId) state.activeProjectId = null;
+      await refreshProjects();
+    }
+
     function renderSidebar() {
       nodes.list.innerHTML = "";
       state.projects.forEach(function (p) {
         var el = document.createElement("button");
         el.className = "project-row" + (p.id === state.activeProjectId ? " active" : "");
-        el.innerHTML = _icFolder + "<span class='project-name'>" + esc(p.name) + "</span>";
+        el.innerHTML = _icFolder +
+          "<span class='project-name'>" + esc(p.name) + "</span>" +
+          "<span class='proj-menu-btn' title='Настройки проекта'>•••</span>";
+        var menuBtn = el.querySelector(".proj-menu-btn");
+        menuBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openProjectMenu(p.id, menuBtn);
+        });
         el.addEventListener("click", function () {
           state.activeProjectId = p.id;
           state.chats = [];
