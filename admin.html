@@ -15290,14 +15290,24 @@ ${kbSummary}`,
       const enabled = !forcedOff;
       if (!enabled) return;
 
+      if (!document.getElementById('projects-mode-force-hide-style')) {
+        const st = document.createElement('style');
+        st.id = 'projects-mode-force-hide-style';
+        st.textContent = 'body.projects-mode .sidebar,body.projects-mode .main,body.projects-mode #main-content,body.projects-mode #onboarding-chat-overlay,body.projects-mode #mob-overlay,body.projects-mode .mob-cta{display:none !important;} body.projects-mode #projects-ui-root{display:block !important;position:fixed;inset:0;z-index:99999;background:#f6f7fb;}';
+        document.head.appendChild(st);
+      }
+      document.body.classList.add('projects-mode');
+
       const root = document.getElementById('projects-ui-root');
       const onboarding = document.getElementById('onboarding-chat-overlay');
       const main = document.getElementById('main-content');
+      const mainShell = document.querySelector('.main');
       const side = document.querySelector('.sidebar');
       const mob = document.getElementById('mob-overlay');
       const cta = document.querySelector('.mob-cta');
       if (onboarding) onboarding.style.display = 'none';
       if (main) main.style.display = 'none';
+      if (mainShell) mainShell.style.display = 'none';
       if (side) side.style.display = 'none';
       if (mob) mob.style.display = 'none';
       if (cta) cta.style.display = 'none';
