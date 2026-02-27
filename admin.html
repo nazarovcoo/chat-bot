@@ -15269,6 +15269,17 @@ ${kbSummary}`,
           await loadScript('/js/projects-ui.js');
           if (!window.ProjectsUI) throw new Error('Projects UI module not loaded');
 
+          // Wait for Firebase Auth to resolve before mounting so getAuthToken() returns a valid token
+          const authUser = await new Promise((resolve) => {
+            if (typeof firebase !== 'undefined' && firebase.auth) {
+              if (firebase.auth().currentUser) { resolve(firebase.auth().currentUser); return; }
+              const unsub = firebase.auth().onAuthStateChanged((u) => { unsub(); resolve(u); });
+            } else {
+              resolve(null);
+            }
+          });
+          if (!authUser) return; // not logged in — skip mounting
+
           const root = document.getElementById('projects-ui-root');
           const onboarding = document.getElementById('onboarding-chat-overlay');
           const main = document.getElementById('main-content');
