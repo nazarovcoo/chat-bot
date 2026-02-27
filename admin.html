@@ -9130,7 +9130,7 @@
         const isCurrent = b.id === STATE.currentBotId;
         return `<div class="bot-sw-item ${isCurrent ? 'current' : ''}" onclick="setActiveBot('${b.id}');closeBotDropdown();">
         <div class="bot-sw-av" style="background:${c};width:28px;height:28px;font-size:12px;">${ini}</div>
-        <span>${escH(bname)}</span>
+        <span>${esc(bname)}</span>
       </div>`;
       }).join('');
     }
