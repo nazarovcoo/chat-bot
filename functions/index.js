@@ -2173,6 +2173,8 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
 
                   if (!getMeRes.ok || !getMeData.ok) {
                     toolResult = "Error: Token invalid. Please check the token and try again.";
+                    currentSession.state = "waiting_token";
+                    currentSession.assistant_expectation = { type: "telegram_connect", persistent: false };
                   } else {
                     const botInfo = getMeData.result;
 
