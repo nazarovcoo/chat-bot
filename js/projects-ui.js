@@ -84,11 +84,13 @@
       chatsHasMore: false,
       chatsQuery: "",
       chatsRequestSeq: 0,
+      chatsLoadedProjectId: null,
       sources: [],
       sourcesCursor: null,
       sourcesHasMore: false,
       sourcesQuery: "",
       sourcesRequestSeq: 0,
+      sourcesLoadedProjectId: null,
       sort: "newest",
       sourcesType: "",
     };
@@ -178,6 +180,8 @@
           state.sourcesQuery = "";
           state.sort = "newest";
           state.sourcesType = "";
+          state.chatsLoadedProjectId = null;
+          state.sourcesLoadedProjectId = null;
           renderSidebar();
           renderHeader();
           renderTab();
@@ -222,28 +226,29 @@
         return;
       }
       if (state.tab === "chats") {
-        await loadChats();
+        if (state.chatsLoadedProjectId === state.activeProjectId) {
+          renderChatsView();
+          loadChats(false, { silent: true });
+          return;
+        }
+        nodes.content.innerHTML = "<div class='projects-card'>Загрузка чатов…</div>";
+        await loadChats(false);
         return;
       }
       if (state.tab === "sources") {
-        await loadSources();
+        if (state.sourcesLoadedProjectId === state.activeProjectId) {
+          renderSourcesView();
+          loadSources(false, { silent: true });
+          return;
+        }
+        nodes.content.innerHTML = "<div class='projects-card'>Загрузка источников…</div>";
+        await loadSources(false);
         return;
       }
       await loadSettings();
     }
 
-    async function loadChats(append) {
-      var reqId = ++state.chatsRequestSeq;
-      var data = await ProjectsApi.listChats(state.activeProjectId, {
-        q: state.chatsQuery,
-        sort: state.sort,
-        limit: 30,
-        cursor: append ? state.chatsCursor : "",
-      });
-      if (reqId !== state.chatsRequestSeq) return;
-      state.chats = append ? state.chats.concat(data.chats || []) : (data.chats || []);
-      state.chatsCursor = data.nextCursor || null;
-      state.chatsHasMore = !!data.hasMore;
+    function renderChatsView() {
       if (!state.chats.length) {
         nodes.content.innerHTML = "<div class='projects-empty'><div><h3>Чатов пока нет</h3><p>Здесь будут реальные диалоги клиентов проекта.</p></div></div>";
         return;
@@ -262,13 +267,19 @@
       sSel.value = state.sort;
       var debouncedChatsSearch = debounce(function () {
         state.chatsCursor = null;
+        state.chatsLoadedProjectId = null;
         loadChats(false);
       }, 260);
       qInp.addEventListener("input", function () {
         state.chatsQuery = qInp.value.trim();
         debouncedChatsSearch();
       });
-      sSel.addEventListener("change", function () { state.sort = sSel.value; state.chatsCursor = null; loadChats(false); });
+      sSel.addEventListener("change", function () {
+        state.sort = sSel.value;
+        state.chatsCursor = null;
+        state.chatsLoadedProjectId = null;
+        loadChats(false);
+      });
       if (more) more.addEventListener("click", function () { loadChats(true); });
       renderVirtualRows(vbox, list, state.chats, function (c) {
         var when = c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleString("ru-RU") : "—";
@@ -278,18 +289,27 @@
       }, 88);
     }
 
-    async function loadSources(append) {
-      var reqId = ++state.sourcesRequestSeq;
-      var data = await ProjectsApi.listSources(state.activeProjectId, {
-        q: state.sourcesQuery,
-        type: state.sourcesType,
+    async function loadChats(append, options) {
+      var opts = options || {};
+      var requestedProjectId = state.activeProjectId;
+      var reqId = ++state.chatsRequestSeq;
+      var data = await ProjectsApi.listChats(state.activeProjectId, {
+        q: state.chatsQuery,
+        sort: state.sort,
         limit: 30,
-        cursor: append ? state.sourcesCursor : "",
+        cursor: append ? state.chatsCursor : "",
       });
-      if (reqId !== state.sourcesRequestSeq) return;
-      state.sources = append ? state.sources.concat(data.sources || []) : (data.sources || []);
-      state.sourcesCursor = data.nextCursor || null;
-      state.sourcesHasMore = !!data.hasMore;
+      if (reqId !== state.chatsRequestSeq) return;
+      if (state.activeProjectId !== requestedProjectId) return;
+      state.chats = append ? state.chats.concat(data.chats || []) : (data.chats || []);
+      state.chatsCursor = data.nextCursor || null;
+      state.chatsHasMore = !!data.hasMore;
+      state.chatsLoadedProjectId = requestedProjectId;
+      if (state.tab === "chats" && !opts.silent) renderChatsView();
+      if (state.tab === "chats" && opts.silent) renderChatsView();
+    }
+
+    function renderSourcesView() {
       if (!state.sources.length) {
         nodes.content.innerHTML = "<div class='projects-empty'><div><h3>Дайте больше контекста</h3><p>Источники = база знаний проекта.</p>" +
           "<div style='margin-top:12px'><button class='projects-btn primary' id='projects-add-source-empty'>Добавить источник</button></div></div></div>";
@@ -313,13 +333,19 @@
       tSel.value = state.sourcesType || "";
       var debouncedSourcesSearch = debounce(function () {
         state.sourcesCursor = null;
+        state.sourcesLoadedProjectId = null;
         loadSources(false);
       }, 260);
       qInp.addEventListener("input", function () {
         state.sourcesQuery = qInp.value.trim();
         debouncedSourcesSearch();
       });
-      tSel.addEventListener("change", function () { state.sourcesType = tSel.value; state.sourcesCursor = null; loadSources(false); });
+      tSel.addEventListener("change", function () {
+        state.sourcesType = tSel.value;
+        state.sourcesCursor = null;
+        state.sourcesLoadedProjectId = null;
+        loadSources(false);
+      });
       if (more) more.addEventListener("click", function () { loadSources(true); });
       renderVirtualRows(vbox, list, state.sources, function (s) {
         var d = s.createdAt ? new Date(s.createdAt).toLocaleDateString("ru-RU") : "—";
@@ -333,9 +359,30 @@
         if (!confirm("Удалить источник?")) return;
         await ProjectsApi.deleteSource(btn.getAttribute("data-del-source"));
         state.sourcesCursor = null;
+        state.sourcesLoadedProjectId = null;
         await loadSources(false);
         await refreshProjects();
       };
+    }
+
+    async function loadSources(append, options) {
+      var opts = options || {};
+      var requestedProjectId = state.activeProjectId;
+      var reqId = ++state.sourcesRequestSeq;
+      var data = await ProjectsApi.listSources(state.activeProjectId, {
+        q: state.sourcesQuery,
+        type: state.sourcesType,
+        limit: 30,
+        cursor: append ? state.sourcesCursor : "",
+      });
+      if (reqId !== state.sourcesRequestSeq) return;
+      if (state.activeProjectId !== requestedProjectId) return;
+      state.sources = append ? state.sources.concat(data.sources || []) : (data.sources || []);
+      state.sourcesCursor = data.nextCursor || null;
+      state.sourcesHasMore = !!data.hasMore;
+      state.sourcesLoadedProjectId = requestedProjectId;
+      if (state.tab === "sources" && !opts.silent) renderSourcesView();
+      if (state.tab === "sources" && opts.silent) renderSourcesView();
     }
 
     function renderVirtualRows(viewport, spacer, rows, rowRenderer, rowHeight) {
