@@ -1634,7 +1634,6 @@ exports.projectsApi = onRequest(
         const sort = String(req.query.sort || "newest");
         const snap = await db.collection(`users/${uid}/project_chats`)
           .where("projectId", "==", projectId)
-          .orderBy("lastMessageAt", sort === "oldest" ? "asc" : "desc")
           .limit(200)
           .get();
         let chats = snap.docs.map((d) => {
@@ -1650,6 +1649,12 @@ exports.projectsApi = onRequest(
             lastMessageAt: _asIso(c.lastMessageAt),
             createdAt: _asIso(c.createdAt),
           };
+        });
+        // Sort in memory to avoid requiring a composite Firestore index
+        chats.sort((a, b) => {
+          const aT = a.lastMessageAt || "";
+          const bT = b.lastMessageAt || "";
+          return sort === "oldest" ? aT.localeCompare(bT) : bT.localeCompare(aT);
         });
         if (chats.length === 0) {
           const p = (await pRef.get()).data() || {};
