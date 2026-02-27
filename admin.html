@@ -9973,6 +9973,7 @@
     </td></tr>`;
 
     function renderAiUsage() {
+      if (!document.getElementById('aiu-total-tokens')) return; // elements not in DOM
       const events = getAiUsageFiltered();
       const allEvents = STATE.aiUsage;
       const totalTokens = events.reduce((s, e) => s + (e.totalTokens || 0), 0);
