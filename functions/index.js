@@ -8,6 +8,23 @@ setGlobalOptions({ region: "us-central1" });
 
 if (!admin.apps.length) admin.initializeApp();
 
+// ─── Module-level cache (survives warm Cloud Function instances) ──────────────
+const _memCache = new Map();
+function _mcGet(key) {
+  const r = _memCache.get(key);
+  if (!r) return null;
+  if (Date.now() > r.exp) { _memCache.delete(key); return null; }
+  return r.val;
+}
+function _mcSet(key, val, ttlMs) {
+  // Limit cache size to prevent unbounded memory growth
+  if (_memCache.size > 500) {
+    const firstKey = _memCache.keys().next().value;
+    _memCache.delete(firstKey);
+  }
+  _memCache.set(key, { val, exp: Date.now() + (ttlMs || 60000) });
+}
+
 // ─── Shared: score KB item relevance ─────────────────────────────────────────
 function scoreRelevance(question, item) {
   const q = question.toLowerCase();
@@ -726,52 +743,61 @@ exports.telegramWebhook = onRequest(
         await chatDocRef.set({ mode: 'ai', handoffAt: admin.firestore.FieldValue.delete() }, { merge: true });
       }
 
-      let kbPromiseQA = db.collection(`users/${uid}/kbQA`).where("status", "==", "active").limit(200).get();
-      let kbPromiseLegacy = db.collection(`users/${uid}/kbItems`).limit(200).get();
-      let kbPromiseBot = botId ? db.collection(`users/${uid}/bots/${botId}/knowledge_base`).limit(200).get() : null;
-      let rulesPromise = botId ? Promise.resolve({ exists: !!botData.rules, data: () => ({ text: botData.rules }) }) : db.doc(`users/${uid}/settings/rules`).get();
+      // ── KB + settings with 60-second in-memory cache (warm instances) ──────────
+      const _kbCacheKey = `kb:${uid}:${botId || "_"}`;
+      const _settCacheKey = `sett:${uid}`;
+      let kbItems = _mcGet(_kbCacheKey);
+      let _cachedSett = _mcGet(_settCacheKey);
 
-      // Load context + settings + auto-replies
-      const [kbQASnap, kbItemsSnap, kbBotSnap, rulesDoc, aiDoc, autoReplyDoc, notifDoc] = await Promise.all([
-        kbPromiseQA,
-        kbPromiseLegacy,
-        kbPromiseBot || Promise.resolve({ docs: [] }),
-        rulesPromise,
-        db.doc(`users/${uid}/settings/ai`).get(),
-        db.doc(`users/${uid}/settings/autoReplies`).get(),
-        db.doc(`users/${uid}/settings/notifications`).get(),
-      ]);
+      if (kbItems === null || _cachedSett === null) {
+        let kbPromiseQA = db.collection(`users/${uid}/kbQA`).where("status", "==", "active").limit(200).get();
+        let kbPromiseLegacy = db.collection(`users/${uid}/kbItems`).limit(200).get();
+        let kbPromiseBot = botId ? db.collection(`users/${uid}/bots/${botId}/knowledge_base`).limit(200).get() : null;
+        let rulesPromise = botId ? Promise.resolve({ exists: !!botData.rules, data: () => ({ text: botData.rules }) }) : db.doc(`users/${uid}/settings/rules`).get();
 
-      let kbItems = [];
-      if (botId) {
-        // Use bot-specific knowledge base 
-        kbItems = kbBotSnap.docs.map(d => ({
-          title: d.data().title || d.data().question || d.data().name || "",
-          content: d.data().content || d.data().answer || d.data().text || ""
-        })).filter(k => k.content.trim().length > 0);
-      } else {
-        // Legacy fallback
-        if (kbQASnap.size > 0) {
-          kbItems = kbQASnap.docs.map((d) => ({
-            title: d.data().question || "",
-            content: d.data().answer || "",
-          }));
-        } else {
-          kbItems = kbItemsSnap.docs.map((d) => ({
-            title: d.data().title || "",
-            content: d.data().content || "",
-          }));
+        const [kbQASnap, kbItemsSnap, kbBotSnap, rulesDoc, aiDoc, autoReplyDoc, notifDoc] = await Promise.all([
+          kbPromiseQA,
+          kbPromiseLegacy,
+          kbPromiseBot || Promise.resolve({ docs: [] }),
+          rulesPromise,
+          db.doc(`users/${uid}/settings/ai`).get(),
+          db.doc(`users/${uid}/settings/autoReplies`).get(),
+          db.doc(`users/${uid}/settings/notifications`).get(),
+        ]);
+
+        if (kbItems === null) {
+          if (botId) {
+            kbItems = kbBotSnap.docs.map(d => ({
+              title: d.data().title || d.data().question || d.data().name || "",
+              content: d.data().content || d.data().answer || d.data().text || ""
+            })).filter(k => k.content.trim().length > 0);
+          } else {
+            if (kbQASnap.size > 0) {
+              kbItems = kbQASnap.docs.map((d) => ({ title: d.data().question || "", content: d.data().answer || "" }));
+            } else {
+              kbItems = kbItemsSnap.docs.map((d) => ({ title: d.data().title || "", content: d.data().content || "" }));
+            }
+          }
+          _mcSet(_kbCacheKey, kbItems, 60000);
+        }
+
+        if (_cachedSett === null) {
+          _cachedSett = {
+            rules: rulesDoc.exists ? rulesDoc.data().text || "" : "",
+            aiProviders: aiDoc.exists ? aiDoc.data().providers || {} : {},
+            autoRules: autoReplyDoc.exists ? autoReplyDoc.data().rules || [] : [],
+            notifData: notifDoc.exists ? notifDoc.data() : {},
+          };
+          _mcSet(_settCacheKey, _cachedSett, 60000);
         }
       }
 
-      const rules = rulesDoc.exists ? rulesDoc.data().text || "" : "";
-      const aiProviders = aiDoc.exists ? aiDoc.data().providers || {} : {};
+      var { rules, aiProviders, autoRules: _autoRules, notifData: _notifData } = _cachedSett;
 
       // ── Auto-reply rules (no AI, saves requests) ──────────────────────────────
-      if (autoReplyDoc.exists) {
-        const autoRules = autoReplyDoc.data().rules || [];
+      if (_autoRules && _autoRules.length > 0) {
         const qLow = question.toLowerCase().trim();
-        for (const rule of autoRules) {
+        for (const rule of _autoRules) {
           if (!rule.keyword || !rule.response || !rule.enabled) continue;
           const kw = rule.keyword.toLowerCase().trim();
           const matched = rule.matchType === 'exact' ? qLow === kw : qLow.includes(kw);
@@ -792,7 +818,7 @@ exports.telegramWebhook = onRequest(
       }
 
       // ── Notify owner about new user ───────────────────────────────────────────
-      const notifData = notifDoc.exists ? notifDoc.data() : {};
+      const notifData = _notifData || {};
       const ownerChatId = notifData.ownerChatId || '';
       if (isNewChat && ownerChatId && notifData.notifyNewUser !== false) {
         fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {

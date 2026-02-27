@@ -1,0 +1,61 @@
+:root {
+  --app-height: 100dvh;
+  --tg-safe-top: env(safe-area-inset-top, 0px);
+  --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tg-safe-left: env(safe-area-inset-left, 0px);
+  --tg-safe-right: env(safe-area-inset-right, 0px);
+}
+
+html.miniapp-ios-fix,
+html.miniapp-ios-fix body {
+  height: var(--app-height);
+  min-height: var(--app-height);
+  max-height: var(--app-height);
+  overflow: hidden;
+  overscroll-behavior: none;
+  position: relative;
+  touch-action: manipulation;
+}
+
+html.miniapp-ios-fix body {
+  padding-top: var(--tg-safe-top);
+  padding-bottom: var(--tg-safe-bottom);
+  padding-left: var(--tg-safe-left);
+  padding-right: var(--tg-safe-right);
+}
+
+html.miniapp-ios-fix #projects-ui-root,
+html.miniapp-ios-fix #onboarding-chat-overlay,
+html.miniapp-ios-fix .projects-app {
+  height: calc(var(--app-height) - var(--tg-safe-top) - var(--tg-safe-bottom));
+  max-height: calc(var(--app-height) - var(--tg-safe-top) - var(--tg-safe-bottom));
+}
+
+html.miniapp-ios-fix .projects-main {
+  min-height: 0;
+}
+
+html.miniapp-ios-fix .projects-content,
+html.miniapp-ios-fix .projects-list,
+html.miniapp-ios-fix .projects-virtual,
+html.miniapp-ios-fix .chat-area,
+html.miniapp-ios-fix .sidebar-scroll,
+html.miniapp-ios-fix .main-content {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 980px) {
+  html.miniapp-ios-fix input,
+  html.miniapp-ios-fix textarea,
+  html.miniapp-ios-fix select,
+  html.miniapp-ios-fix button {
+    font-size: 16px !important;
+  }
+
+  html.miniapp-ios-fix input,
+  html.miniapp-ios-fix textarea,
+  html.miniapp-ios-fix select {
+    transform-origin: left top;
+  }
+}

@@ -3,12 +3,28 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <title>BotPanel — Создайте AI-бота для Telegram за 5 минут</title>
 
   <script>
-    window.BUILD_VERSION = "2026-02-27.4";
+    window.BUILD_VERSION = "2026-02-28.1";
     window.FORCE_PROJECTS_MAIN = true;
+    (function initMiniAppIosFixFlag() {
+      try {
+        const qp = new URLSearchParams(window.location.search);
+        const qpFlag = qp.get('miniapp_ios_fix');
+        const lsFlag = localStorage.getItem('MINIAPP_IOS_FIX');
+        let enabled = true;
+        if (lsFlag === '0' || lsFlag === 'false') enabled = false;
+        if (lsFlag === '1' || lsFlag === 'true') enabled = true;
+        if (qpFlag === '0') enabled = false;
+        if (qpFlag === '1') enabled = true;
+        window.MINIAPP_IOS_FIX = enabled;
+      } catch (_) {
+        window.MINIAPP_IOS_FIX = true;
+      }
+    })();
     // GLOBAL ERROR HANDLING
     function logClientError(msg, source, lineno, colno, error, type = "Error") {
       try {
@@ -61,6 +77,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="./css/miniapp.css?v=2026-02-28.1">
+  <script src="./js/miniapp.js?v=2026-02-28.1"></script>
   <script src="./js/state.js"></script>
   <script src="./js/api.js"></script>
   <script src="./js/ui.js"></script>
@@ -11745,6 +11763,12 @@ ${kbSummary}`,
       });
       loadNotifSettings();
 
+      // Debounced render helpers — collapse 4 simultaneous listener triggers into 1 render
+      function _mkDebounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+      const _dRenderKb = _mkDebounce(renderKb, 40);
+      const _dRenderAnalytics = _mkDebounce(renderAnalytics, 40);
+      const _dRenderTopics = _mkDebounce(renderTopics, 40);
+
       // Start Firestore real-time listeners
       listen('bots', data => {
         STATE.bots = data;
@@ -11770,12 +11794,12 @@ ${kbSummary}`,
         // Show wizard for new users after bots loaded
         setTimeout(checkOnboarding, 800);
       });
-      listen('kbItems', data => { STATE.kbItems = data; renderKb(); renderAnalytics(); });
-      listen('kbQA', data => { STATE.kbQA = data; renderKb(); renderSuggestions(); renderAnalytics(); renderTopics(); });
-      listen('jobs', data => { STATE.kbJobs = data; renderKb(); renderJobsInline(); });
-      listen('kbSources', data => { STATE.kbSources = data; renderKb(); });
-      listen('unanswered', data => { STATE.unanswered = data; renderUnanswered(); renderAnalytics(); });
-      listen('topics', data => { STATE.topics = data; renderTopics(); renderAnalytics(); });
+      listen('kbItems', data => { STATE.kbItems = data; _dRenderKb(); _dRenderAnalytics(); });
+      listen('kbQA', data => { STATE.kbQA = data; _dRenderKb(); renderSuggestions(); _dRenderAnalytics(); _dRenderTopics(); });
+      listen('jobs', data => { STATE.kbJobs = data; _dRenderKb(); renderJobsInline(); });
+      listen('kbSources', data => { STATE.kbSources = data; _dRenderKb(); });
+      listen('unanswered', data => { STATE.unanswered = data; renderUnanswered(); _dRenderAnalytics(); });
+      listen('topics', data => { STATE.topics = data; _dRenderTopics(); _dRenderAnalytics(); });
       listenChats(data => { STATE.chats = data; renderChats(); });
       listen('aiUsage', data => { STATE.aiUsage = data; renderTariff(); if (STATE.currentAgentScreen === 'ai-usage') renderAiUsage(); });
 

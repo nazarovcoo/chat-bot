@@ -19,7 +19,7 @@
     var s = document.createElement("style");
     s.id = "projects-ui-styles";
     s.textContent = [
-      ".projects-app{height:100vh;display:grid;grid-template-columns:300px 1fr;background:#fff;color:#111827;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}",
+      ".projects-app{height:var(--app-height,100dvh);display:grid;grid-template-columns:300px 1fr;background:#fff;color:#111827;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}",
       ".projects-side{border-right:1px solid #e5e7eb;padding:14px;display:flex;flex-direction:column;gap:12px}",
       ".projects-brand{display:flex;align-items:center;gap:9px;padding:8px 10px}",
       ".projects-logo{width:28px;height:28px;border-radius:10px;background:#0b0f19;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}",
@@ -69,6 +69,27 @@
       ".projects-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}",
       ".projects-top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}",
       ".projects-danger{border:1px solid #fecaca;background:#fff;color:#b91c1c}",
+      // Source modal styles
+      ".src-modal-bg{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;z-index:9999;padding:18px}",
+      ".src-modal-bg.open{display:flex}",
+      ".src-modal{width:min(540px,100%);border:1px solid #e5e7eb;border-radius:18px;background:#fff;overflow:hidden}",
+      ".src-modal-h{padding:14px 18px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:8px}",
+      ".src-back-btn{background:none;border:none;cursor:pointer;font-size:18px;color:#6b7280;padding:4px 8px;border-radius:8px;line-height:1}",
+      ".src-back-btn:hover{background:#f3f4f6}",
+      ".src-modal-title{font-size:16px;font-weight:900;flex:1}",
+      ".src-close-btn{background:none;border:none;cursor:pointer;font-size:18px;color:#6b7280;padding:4px 8px;border-radius:8px;line-height:1}",
+      ".src-close-btn:hover{background:#f3f4f6}",
+      ".src-modal-b{padding:18px;display:flex;flex-direction:column;gap:14px}",
+      ".src-modal-f{padding:14px 18px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px}",
+      ".src-drop-zone{border:1.5px dashed #d1d5db;border-radius:14px;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}",
+      ".src-drop-zone:hover,.src-drop-zone.drag-over{border-color:#0b0f19;background:#f8fafc}",
+      ".src-drop-icon{font-size:32px;opacity:.4}",
+      ".src-drop-text{font-size:14px;color:#9ca3af;text-align:center;padding:0 16px}",
+      ".src-type-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}",
+      ".src-type-btn{border:1px solid #e5e7eb;border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;background:#f9fafb;transition:border-color .15s,background .15s}",
+      ".src-type-btn:hover{border-color:#0b0f19;background:#fff}",
+      ".src-type-icon{font-size:24px;margin-bottom:6px}",
+      ".src-type-label{font-size:13px;font-weight:700;color:#111827}",
       "@media(max-width:980px){.projects-app{grid-template-columns:1fr}.projects-side{display:none}}",
     ].join("");
     document.head.appendChild(s);
@@ -129,7 +150,35 @@
       createName: root.querySelector("#projects-create-name"),
       createHost: root.querySelector("#projects-create-host"),
       createKB: root.querySelector("#projects-create-kb"),
+      // Source modal
+      srcModal: root.querySelector("#projects-source-modal"),
+      srcClose: root.querySelector("#src-close"),
+      srcBack: root.querySelector("#src-back"),
+      srcTitle: root.querySelector("#src-title"),
+      srcViewMain: root.querySelector("#src-view-main"),
+      srcViewText: root.querySelector("#src-view-text"),
+      srcViewUrl: root.querySelector("#src-view-url"),
+      srcViewFile: root.querySelector("#src-view-file"),
+      srcDropZone: root.querySelector("#src-drop-zone"),
+      srcPickFile: root.querySelector("#src-pick-file"),
+      srcPickText: root.querySelector("#src-pick-text"),
+      srcPickUrl: root.querySelector("#src-pick-url"),
+      srcTextTitle: root.querySelector("#src-text-title"),
+      srcTextBody: root.querySelector("#src-text-body"),
+      srcTextOk: root.querySelector("#src-text-ok"),
+      srcTextCancel: root.querySelector("#src-text-cancel"),
+      srcUrlTitle: root.querySelector("#src-url-title"),
+      srcUrlHref: root.querySelector("#src-url-href"),
+      srcUrlOk: root.querySelector("#src-url-ok"),
+      srcUrlCancel: root.querySelector("#src-url-cancel"),
+      srcFileZone: root.querySelector("#src-file-zone"),
+      srcFileInp: root.querySelector("#src-file-inp"),
+      srcFileLbl: root.querySelector("#src-file-lbl"),
+      srcFileOk: root.querySelector("#src-file-ok"),
+      srcFileCancel: root.querySelector("#src-file-cancel"),
     };
+
+    var _srcFile = null;
 
     nodes.btnNew.addEventListener("click", openCreateModal);
     if (nodes.btnNew2) nodes.btnNew2.addEventListener("click", openCreateModal);
@@ -146,6 +195,156 @@
       if (!btn) return;
       setTab(btn.getAttribute("data-tab"));
     });
+
+    // Source modal events
+    nodes.srcClose.addEventListener("click", closeSourceModal);
+    nodes.srcModal.addEventListener("click", function (e) {
+      if (e.target === nodes.srcModal) closeSourceModal();
+    });
+    nodes.srcBack.addEventListener("click", function () { showSrcView("main"); });
+
+    nodes.srcPickText.addEventListener("click", function () { showSrcView("text"); nodes.srcTextTitle.focus(); });
+    nodes.srcPickUrl.addEventListener("click", function () { showSrcView("url"); nodes.srcUrlHref.focus(); });
+    nodes.srcPickFile.addEventListener("click", function () { showSrcView("file"); });
+
+    nodes.srcTextCancel.addEventListener("click", closeSourceModal);
+    nodes.srcUrlCancel.addEventListener("click", closeSourceModal);
+    nodes.srcFileCancel.addEventListener("click", closeSourceModal);
+
+    // Main drop zone → go to file view
+    nodes.srcDropZone.addEventListener("click", function () { showSrcView("file"); });
+    nodes.srcDropZone.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      nodes.srcDropZone.classList.add("drag-over");
+    });
+    nodes.srcDropZone.addEventListener("dragleave", function () {
+      nodes.srcDropZone.classList.remove("drag-over");
+    });
+    nodes.srcDropZone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      nodes.srcDropZone.classList.remove("drag-over");
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) { setPickedFile(file); showSrcView("file"); }
+    });
+
+    // File sub-zone click → open file picker
+    nodes.srcFileZone.addEventListener("click", function () { nodes.srcFileInp.click(); });
+    nodes.srcFileZone.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      nodes.srcFileZone.classList.add("drag-over");
+    });
+    nodes.srcFileZone.addEventListener("dragleave", function () {
+      nodes.srcFileZone.classList.remove("drag-over");
+    });
+    nodes.srcFileZone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      nodes.srcFileZone.classList.remove("drag-over");
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) setPickedFile(file);
+    });
+    nodes.srcFileInp.addEventListener("change", function () {
+      if (nodes.srcFileInp.files && nodes.srcFileInp.files[0]) setPickedFile(nodes.srcFileInp.files[0]);
+    });
+
+    function setPickedFile(file) {
+      _srcFile = file;
+      nodes.srcFileLbl.textContent = file.name;
+    }
+
+    nodes.srcTextOk.addEventListener("click", async function () {
+      var title = nodes.srcTextTitle.value.trim();
+      var body = nodes.srcTextBody.value.trim();
+      if (!title) { nodes.srcTextTitle.focus(); return; }
+      if (!body) { nodes.srcTextBody.focus(); return; }
+      nodes.srcTextOk.disabled = true;
+      nodes.srcTextOk.textContent = "Добавляю…";
+      try {
+        await ProjectsApi.addSource(state.activeProjectId, { type: "text", title: title, contentRef: body });
+        closeSourceModal();
+        await loadSources(false);
+        await refreshProjects();
+      } catch (e) {
+        alert("Ошибка: " + (e.message || e));
+      } finally {
+        nodes.srcTextOk.disabled = false;
+        nodes.srcTextOk.textContent = "Добавить";
+      }
+    });
+
+    nodes.srcUrlOk.addEventListener("click", async function () {
+      var title = nodes.srcUrlTitle.value.trim();
+      var href = nodes.srcUrlHref.value.trim();
+      if (!href) { nodes.srcUrlHref.focus(); return; }
+      if (!title) title = href;
+      nodes.srcUrlOk.disabled = true;
+      nodes.srcUrlOk.textContent = "Добавляю…";
+      try {
+        await ProjectsApi.addSource(state.activeProjectId, { type: "url", title: title, contentRef: href });
+        closeSourceModal();
+        await loadSources(false);
+        await refreshProjects();
+      } catch (e) {
+        alert("Ошибка: " + (e.message || e));
+      } finally {
+        nodes.srcUrlOk.disabled = false;
+        nodes.srcUrlOk.textContent = "Добавить";
+      }
+    });
+
+    nodes.srcFileOk.addEventListener("click", async function () {
+      if (!_srcFile) { nodes.srcFileInp.click(); return; }
+      nodes.srcFileOk.disabled = true;
+      nodes.srcFileOk.textContent = "Загружаю…";
+      try {
+        var text = await readFileAsText(_srcFile);
+        await ProjectsApi.addSource(state.activeProjectId, { type: "file", title: _srcFile.name, contentRef: text });
+        closeSourceModal();
+        await loadSources(false);
+        await refreshProjects();
+      } catch (e) {
+        alert("Ошибка: " + (e.message || e));
+      } finally {
+        nodes.srcFileOk.disabled = false;
+        nodes.srcFileOk.textContent = "Загрузить";
+      }
+    });
+
+    function readFileAsText(file) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function (e) { resolve(e.target.result || ""); };
+        reader.onerror = function () { reject(new Error("Не удалось прочитать файл")); };
+        reader.readAsText(file);
+      });
+    }
+
+    function openSourceModal() {
+      _srcFile = null;
+      nodes.srcTextTitle.value = "";
+      nodes.srcTextBody.value = "";
+      nodes.srcUrlTitle.value = "";
+      nodes.srcUrlHref.value = "";
+      nodes.srcFileInp.value = "";
+      nodes.srcFileLbl.textContent = "Выберите или перетащите файл (.txt, .md, .csv)";
+      showSrcView("main");
+      nodes.srcModal.classList.add("open");
+    }
+
+    function closeSourceModal() {
+      nodes.srcModal.classList.remove("open");
+    }
+
+    function showSrcView(view) {
+      nodes.srcViewMain.style.display = view === "main" ? "" : "none";
+      nodes.srcViewText.style.display = view === "text" ? "" : "none";
+      nodes.srcViewUrl.style.display = view === "url" ? "" : "none";
+      nodes.srcViewFile.style.display = view === "file" ? "" : "none";
+      nodes.srcBack.style.display = view === "main" ? "none" : "";
+      nodes.srcTitle.textContent =
+        view === "main" ? "Добавить источник" :
+        view === "text" ? "Вручную" :
+        view === "url" ? "По ссылке" : "Загрузить файл";
+    }
 
     async function refreshProjects() {
       var data = await ProjectsApi.listProjects();
@@ -314,7 +513,7 @@
         nodes.content.innerHTML = "<div class='projects-empty'><div><h3>Дайте больше контекста</h3><p>Источники = база знаний проекта.</p>" +
           "<div style='margin-top:12px'><button class='projects-btn primary' id='projects-add-source-empty'>Добавить источник</button></div></div></div>";
         var be = root.querySelector("#projects-add-source-empty");
-        if (be) be.addEventListener("click", openSourcePrompt);
+        if (be) be.addEventListener("click", openSourceModal);
         return;
       }
       nodes.content.innerHTML = "<div class='projects-tools'><button class='projects-btn primary' id='projects-add-source'>+ Добавить источник</button>" +
@@ -323,7 +522,7 @@
         "<div class='projects-virtual' id='projects-sources-virtual'><div class='projects-virtual-spacer' id='projects-sources-list'></div></div>" +
         "<div class='projects-load-more'><button class='projects-btn' id='projects-sources-more' " + (state.sourcesHasMore ? "" : "style='display:none'") + ">Показать ещё</button></div>";
       var addBtn = root.querySelector("#projects-add-source");
-      if (addBtn) addBtn.addEventListener("click", openSourcePrompt);
+      if (addBtn) addBtn.addEventListener("click", openSourceModal);
       var qInp = root.querySelector("#projects-sources-q");
       var tSel = root.querySelector("#projects-sources-type");
       var list = root.querySelector("#projects-sources-list");
@@ -431,18 +630,6 @@
       });
     }
 
-    async function openSourcePrompt() {
-      var type = prompt("Тип источника: file | url | text | document", "text");
-      if (!type) return;
-      var title = prompt("Название источника", "");
-      if (!title) return;
-      var contentRef = prompt("Содержимое / URL / путь", "");
-      if (!contentRef) return;
-      await ProjectsApi.addSource(state.activeProjectId, { type: type, title: title, contentRef: contentRef });
-      await loadSources();
-      await refreshProjects();
-    }
-
     function openCreateModal() {
       nodes.modal.classList.add("open");
       nodes.createName.value = "";
@@ -467,7 +654,7 @@
       if (nodes.createKB.value === "add") {
         state.tab = "sources";
         await renderTab();
-        await openSourcePrompt();
+        openSourceModal();
       } else {
         state.tab = "settings";
         await renderTab();
@@ -491,6 +678,7 @@
         "<button class='projects-tab' data-tab='sources'>Источники</button>" +
         "<button class='projects-tab' data-tab='settings'>Настройки</button>" +
         "</div><div class='projects-content' id='projects-content'></div></main></div>" +
+        // Create project modal
         "<div class='projects-modal-bg' id='projects-create-modal'><div class='projects-modal'>" +
         "<div class='projects-modal-h'><div style='font-size:16px;font-weight:900'>Создать проект</div><button class='projects-btn' id='projects-create-close'>✕</button></div>" +
         "<div class='projects-modal-b'><div class='projects-form'>" +
@@ -498,7 +686,55 @@
         "<div><label>IP / Домен бота</label><input id='projects-create-host' placeholder='Например: bot.example.com'></div>" +
         "<div><label>База знаний</label><select id='projects-create-kb'><option value='skip'>Пропустить</option><option value='add'>Добавить сейчас</option></select></div>" +
         "</div></div><div class='projects-modal-f'><button class='projects-btn' id='projects-create-cancel'>Отмена</button>" +
-        "<button class='projects-btn primary' id='projects-create-submit'>Создать проект</button></div></div></div>";
+        "<button class='projects-btn primary' id='projects-create-submit'>Создать проект</button></div></div></div>" +
+        // Add source modal
+        "<div class='src-modal-bg' id='projects-source-modal'>" +
+        "<div class='src-modal'>" +
+        "<div class='src-modal-h'>" +
+        "<button class='src-back-btn' id='src-back' style='display:none'>←</button>" +
+        "<div class='src-modal-title' id='src-title'>Добавить источник</div>" +
+        "<button class='src-close-btn' id='src-close'>✕</button>" +
+        "</div>" +
+        // Main view
+        "<div id='src-view-main' class='src-modal-b'>" +
+        "<div class='src-drop-zone' id='src-drop-zone'>" +
+        "<div class='src-drop-icon'>📄</div>" +
+        "<div class='src-drop-text'>Перетащите файл сюда</div>" +
+        "</div>" +
+        "<div class='src-type-btns'>" +
+        "<div class='src-type-btn' id='src-pick-file'><div class='src-type-icon'>⬆️</div><div class='src-type-label'>Загрузить файл</div></div>" +
+        "<div class='src-type-btn' id='src-pick-text'><div class='src-type-icon'>✏️</div><div class='src-type-label'>Вручную</div></div>" +
+        "<div class='src-type-btn' id='src-pick-url'><div class='src-type-icon'>🔗</div><div class='src-type-label'>По ссылке</div></div>" +
+        "</div>" +
+        "</div>" +
+        // Text sub-view
+        "<div id='src-view-text' style='display:none'>" +
+        "<div class='src-modal-b'><div class='projects-form'>" +
+        "<div><label>Название</label><input id='src-text-title' placeholder='Например: Частые вопросы'></div>" +
+        "<div><label>Текст</label><textarea id='src-text-body' placeholder='Вставьте текст базы знаний...' style='min-height:140px'></textarea></div>" +
+        "</div></div>" +
+        "<div class='src-modal-f'><button class='projects-btn' id='src-text-cancel'>Отмена</button><button class='projects-btn primary' id='src-text-ok'>Добавить</button></div>" +
+        "</div>" +
+        // URL sub-view
+        "<div id='src-view-url' style='display:none'>" +
+        "<div class='src-modal-b'><div class='projects-form'>" +
+        "<div><label>Название</label><input id='src-url-title' placeholder='Например: Официальный сайт'></div>" +
+        "<div><label>URL</label><input id='src-url-href' placeholder='https://...' type='url'></div>" +
+        "</div></div>" +
+        "<div class='src-modal-f'><button class='projects-btn' id='src-url-cancel'>Отмена</button><button class='projects-btn primary' id='src-url-ok'>Добавить</button></div>" +
+        "</div>" +
+        // File sub-view
+        "<div id='src-view-file' style='display:none'>" +
+        "<div class='src-modal-b'>" +
+        "<div class='src-drop-zone' id='src-file-zone'>" +
+        "<div class='src-drop-icon'>📁</div>" +
+        "<div class='src-drop-text' id='src-file-lbl'>Выберите или перетащите файл (.txt, .md, .csv)</div>" +
+        "<input type='file' id='src-file-inp' accept='.txt,.md,.csv' style='display:none'>" +
+        "</div>" +
+        "</div>" +
+        "<div class='src-modal-f'><button class='projects-btn' id='src-file-cancel'>Отмена</button><button class='projects-btn primary' id='src-file-ok'>Загрузить</button></div>" +
+        "</div>" +
+        "</div></div>";
     }
 
     function emptyHtml() {
