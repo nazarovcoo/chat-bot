@@ -684,13 +684,19 @@ exports.telegramWebhook = onRequest(
         db.doc(`users/${uid}/settings/plan`).get(),
         db.doc(`users/${uid}/usage/${monthKey}`).get(),
       ]);
-      const planData = planDoc.exists ? planDoc.data() : null;
+      let planData = planDoc.exists ? planDoc.data() : null;
+      // Auto-create 14-day trial if no plan exists (user may not have opened admin panel yet)
+      if (!planData) {
+        const trialEnds = new admin.firestore.Timestamp(Math.floor(Date.now() / 1000) + 14 * 24 * 3600, 0);
+        planData = { type: 'trial', trialEnds, monthlyLimit: 2000 };
+        planDoc.ref.set({ ...planData, createdAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+      }
       let monthlyLimit = 0;
       if (planData) {
         const ptype = planData.type || 'trial';
         const PLAN_LIMITS = { trial: 2000, starter: 5000, pro: 20000, business: 100000, premium: 20000 };
         if (ptype === 'trial') {
-          const te = planData.trialEnds?.toDate?.();
+          const te = planData.trialEnds?.toDate?.() || (planData.trialEnds?.seconds ? new Date(planData.trialEnds.seconds * 1000) : null);
           if (te && te > nowDate) monthlyLimit = planData.monthlyLimit || PLAN_LIMITS.trial;
         } else if (['starter', 'pro', 'business', 'premium'].includes(ptype)) {
           const pu = planData.paidUntil?.toDate?.();
