@@ -12755,7 +12755,9 @@ ${kbSummary}`,
         next: { '🤖 Создать бота': 'BOT_NAME', '🔧 Улучшить бота': 'ACTIVE', '📚 База знаний': 'ACTIVE', '✈️ Подключить Telegram': 'ACTIVE' }
       },
       BOT_NAME: {
-        chips: [],
+        chips: [
+          { label: '⬅ Назад', action: 'go_back' }
+        ],
         placeholder: 'Опишите бота: название + для чего нужен + для кого'
       },
       ACTIVE: {
@@ -12776,6 +12778,7 @@ ${kbSummary}`,
     let _pendingNextStep = null;
     let _flowUid = null;
     let _chatActiveBotId = null; // active bot ID for KB verify / status cards
+    let _navHistory = []; // navigation stack: [{stepId, dynamicChips}]
 
     function getDefaultNextStep(stepId) {
       const idx = FLOW_ORDER.indexOf(stepId);
@@ -12801,9 +12804,30 @@ ${kbSummary}`,
           btn.addEventListener('click', () => onFlowChipClick(chip, _flowState.stepId));
           chipsEl.appendChild(btn);
         });
+        // Append dynamic "Назад" chip when history exists and step doesn't already have go_back
+        if (_navHistory && _navHistory.length > 0 && stepId !== 'WELCOME' &&
+            !step.chips.some(c => c.action === 'go_back')) {
+          const backBtn = document.createElement('button');
+          backBtn.className = 'ob-chip';
+          backBtn.type = 'button';
+          backBtn.textContent = '⬅ Назад';
+          backBtn.addEventListener('click', () => goBack());
+          chipsEl.appendChild(backBtn);
+        }
         chipsEl.style.display = 'flex';
       } else {
-        chipsEl.style.display = 'none';
+        // No static chips but there's history — show just the "Назад" chip
+        if (_navHistory && _navHistory.length > 0 && stepId !== 'WELCOME') {
+          const backBtn = document.createElement('button');
+          backBtn.className = 'ob-chip';
+          backBtn.type = 'button';
+          backBtn.textContent = '⬅ Назад';
+          backBtn.addEventListener('click', () => goBack());
+          chipsEl.appendChild(backBtn);
+          chipsEl.style.display = 'flex';
+        } else {
+          chipsEl.style.display = 'none';
+        }
       }
       CHAT_OS.inputEl.placeholder = step.placeholder || 'Напишите ответ...';
     }
@@ -12865,6 +12889,7 @@ ${kbSummary}`,
       if (chip.action === 'test_exit') { exitTestMode(); return; }
       if (chip.action === 'noop') { return; } // disabled chip
       if (chip.action === 'debug_kb') { showKbDebugInfo(); return; }
+      if (chip.action === 'go_back') { goBack(); return; }
       // Post-reset choice chips
       if (chip.action === 'reset_continue') {
         const stepId = chip._savedStepId || 'ACTIVE';
@@ -12875,8 +12900,9 @@ ${kbSummary}`,
       }
       if (chip.action === 'reset_restart') {
         _lastDynamicChips = null;
+        _navHistory = [];
         _tgWizardStatus = 'idle';
-        advanceFlowStep('WELCOME');
+        advanceFlowStep('WELCOME', {}, false);
         if (_flowUid) {
           db.collection('users').doc(_flowUid).collection('chatosState').doc('tgWizard')
             .set({ status: 'idle' }, { merge: true }).catch(() => { });
@@ -12888,8 +12914,11 @@ ${kbSummary}`,
       if (msg !== null) handleChatObSend(msg); // send contextual sentence, not bare label
     }
 
-    async function advanceFlowStep(nextStepId, extraData = {}) {
+    async function advanceFlowStep(nextStepId, extraData = {}, pushToHistory = true) {
       const isNewStep = nextStepId !== _flowState.stepId;
+      if (pushToHistory && isNewStep) {
+        _navHistory.push({ stepId: _flowState.stepId, dynamicChips: _lastDynamicChips || null });
+      }
       _flowState.stepId = nextStepId;
       _flowState.data = { ..._flowState.data, ...extraData };
       _flowState.active = nextStepId !== 'WELCOME';
@@ -13328,6 +13357,7 @@ ${kbSummary}`,
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <div class="welcome-config-title" style="margin:0;">🎨 Приветствие <span style="font-weight:400;opacity:.5">/start</span></div>
           <button class="info-btn" onclick="showInfoPopover('welcome')" title="Как это работает?">ⓘ</button>
+          <button class="kap-back-link" style="margin-left:auto;" onclick="closeWelcomeConfigCard()">← Назад</button>
         </div>
         <div class="welcome-preview-label">Предпросмотр в Telegram</div>
         <div class="welcome-tg-preview" id="wc-preview">${esc(msgText).replace(/\n/g, '<br>')}</div>
@@ -13578,7 +13608,8 @@ ${kbSummary}`,
           <div class="kap-hint-row">
             <span class="kap-hint">Файл = PDF/DOCX/TXT · Ссылка = сайт · Текст = вставить вручную</span>
             <button class="kap-help-btn" onclick="showInfoPopover('kb_add_flow')">ℹ️ Как это работает?</button>
-          </div>`;
+          </div>
+          <span class="kap-back-link" onclick="hideKbAddPanel()">← Закрыть</span>`;
       } else if (step === 'kb-file') {
         panel.innerHTML = `
           <div class="kap-status-bar kap-pending"><span>📎</span><span>Выберите файл (PDF, DOCX, TXT)…</span></div>
@@ -13629,6 +13660,25 @@ ${kbSummary}`,
       _kbPanelCooldownTs = Date.now();
       const panel = document.getElementById('kb-add-panel');
       if (panel) { panel.innerHTML = ''; panel.classList.add('hidden'); }
+      renderFlowChips(_flowState.stepId);
+    }
+
+    function goBack() {
+      if (_navHistory.length > 0) {
+        const prev = _navHistory.pop();
+        if (prev.dynamicChips && prev.dynamicChips.length > 0) {
+          advanceFlowStep(prev.stepId, {}, false);
+          applyDynamicChips(prev.dynamicChips, true);
+        } else {
+          advanceFlowStep(prev.stepId, {}, false);
+        }
+      } else {
+        advanceFlowStep('WELCOME', {}, false);
+      }
+    }
+
+    function closeWelcomeConfigCard() {
+      document.getElementById('welcome-config-card')?.remove();
       renderFlowChips(_flowState.stepId);
     }
 
@@ -14533,7 +14583,12 @@ ${kbSummary}`,
         // Dynamic chips: infer contextual chips from AI reply (ACTIVE mode only)
         if (_flowState.stepId === 'ACTIVE' && data.reply) {
           const dynChips = inferChipsFromReply(data.reply, data.actions);
-          if (dynChips) applyDynamicChips(dynChips);
+          if (dynChips) {
+            if (!dynChips.some(c => c.action === 'go_back' || c.action === 'reset_to_active')) {
+              dynChips.push({ label: '⬅ Назад', action: 'reset_to_active' });
+            }
+            applyDynamicChips(dynChips);
+          }
         }
         // After file upload — show KB processing status card in chat
         if (uploadBubble && _chatActiveBotId) {

@@ -1590,7 +1590,8 @@ exports.chatOsHandler = onRequest(
           mode: session.mode,
           activeBotId: session.activeBotId,
           business_profile: session.business_profile,
-          onboarding_state: session.onboarding_state
+          onboarding_state: session.onboarding_state,
+          assistant_expectation: session.assistant_expectation || null
         });
       }
 
@@ -2355,7 +2356,10 @@ CAPABILITIES: ${JSON.stringify(capabilities || { fileUpload: true })}${attachmen
         }, { merge: true });
       });
 
-      res.status(200).json({ reply: finalReply || "Готово. Уточните, что нужно сделать дальше?" });
+      res.status(200).json({
+        reply: finalReply || "Готово. Уточните, что нужно сделать дальше?",
+        assistant_expectation: currentSession.assistant_expectation !== undefined ? currentSession.assistant_expectation : null
+      });
 
     } catch (err) {
       console.error("chatOsHandler error:", err);
