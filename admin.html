@@ -13873,8 +13873,8 @@ ${kbSummary}`,
       addChatOsMsg('bot', '...');
       try {
         const [kbSnap, jobsSnap] = await Promise.all([
-          db.collection(`users / ${ window.resolvedUid } /bots/${ _chatActiveBotId }/knowledge_base`).get(),
-        db.collection(`users/${window.resolvedUid}/bots/${_chatActiveBotId}/jobs`).orderBy('updatedAt', 'desc').limit(3).get().catch(() => ({ empty: true, docs: [] }))
+          db.collection(`users/${window.resolvedUid}/bots/${_chatActiveBotId}/knowledge_base`).get(),
+          db.collection(`users/${window.resolvedUid}/bots/${_chatActiveBotId}/jobs`).orderBy('updatedAt', 'desc').limit(3).get().catch(() => ({ empty: true, docs: [] }))
         ]);
       const total = kbSnap.size;
       const withContent = kbSnap.docs.filter(d => d.data().content).length;
