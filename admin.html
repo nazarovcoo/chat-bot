@@ -1171,6 +1171,30 @@
     /* ── Field caption ── */
     .field-caption { font-size: 11.5px; color: #94a3b8; margin-top: 5px; line-height: 1.5; }
 
+    /* ── KB Status Card (in chat) ── */
+    .kb-status-card {
+      background: #fff; border: 1px solid rgba(51,144,236,.2);
+      border-radius: 12px; padding: 12px 14px; margin: 4px 0; font-size: 13px;
+    }
+    .ksc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .ksc-icon { font-size: 16px; flex-shrink: 0; }
+    .ksc-title { font-weight: 700; color: #374151; flex: 1; font-size: 13.5px; }
+    .ksc-badge {
+      font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 20px; flex-shrink: 0;
+    }
+    .ksc-badge.pending { background: rgba(59,130,246,.1); color: #3b82f6; }
+    .ksc-badge.ready   { background: rgba(34,197,94,.12);  color: #16a34a; }
+    .ksc-badge.warn    { background: rgba(245,158,11,.1);  color: #d97706; }
+    .ksc-badge.error   { background: rgba(239,68,68,.1);   color: #dc2626; }
+    .ksc-body { font-size: 12.5px; color: #64748b; margin-bottom: 8px; line-height: 1.5; }
+    .ksc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ksc-btn {
+      border: 1px solid rgba(51,144,236,.3); background: none; border-radius: 8px;
+      padding: 5px 12px; font-size: 12px; cursor: pointer; color: #3390ec; transition: background .15s;
+    }
+    .ksc-btn:hover { background: rgba(51,144,236,.06); }
+    .ksc-btn-ghost { border-color: rgba(0,0,0,.1); color: #374151; }
+
     .guide-tip-close:hover {
       color: var(--text);
     }
@@ -11986,6 +12010,7 @@ ${kbSummary}`,
     let _flowState = { stepId: 'WELCOME', data: {}, active: false };
     let _pendingNextStep = null;
     let _flowUid = null;
+    let _chatActiveBotId = null; // active bot ID for KB verify / status cards
 
     function getDefaultNextStep(stepId) {
       const idx = FLOW_ORDER.indexOf(stepId);
@@ -12052,6 +12077,17 @@ ${kbSummary}`,
       // Welcome message config
       if (chip.action === 'welcome_config' || label === '🎨 Приветствие') {
         showWelcomeConfigCard();
+        return;
+      }
+      // Reset to default ACTIVE chips (back from KB method choice etc.)
+      if (chip.action === 'reset_to_active') {
+        _lastDynamicChips = null;
+        renderFlowChips('ACTIVE');
+        return;
+      }
+      // KB verify
+      if (chip.action === 'kb_verify') {
+        kbVerifyTest(_chatActiveBotId);
         return;
       }
       // Test mode
@@ -12602,6 +12638,157 @@ ${kbSummary}`,
       }
     }
 
+    // ── KB VERIFY ────────────────────────────────────────────────────────────────
+
+    function _showKbStatusCard(botId) {
+      if (!botId || !window.resolvedUid) return;
+      // Remove any existing card first
+      document.getElementById('kb-status-card')?.remove();
+
+      const card = document.createElement('div');
+      card.id = 'kb-status-card';
+      card.className = 'kb-status-card';
+      card.innerHTML = `
+        <div class="ksc-header">
+          <span class="ksc-icon">📚</span>
+          <span class="ksc-title">База знаний</span>
+          <span class="ksc-badge pending" id="ksc-badge">⏳ Обработка</span>
+        </div>
+        <div class="ksc-body" id="ksc-body">Файл загружен. Идёт индексация — обычно 1–2 минуты.</div>
+        <div class="ksc-actions">
+          <button class="ksc-btn" id="ksc-check-btn">🔄 Проверить статус</button>
+          <button class="ksc-btn ksc-btn-ghost" id="ksc-verify-btn" style="display:none">🧪 Тест-вопрос</button>
+        </div>
+      `;
+
+      const scrollBtn = document.getElementById('cos-scroll-btn');
+      if (scrollBtn) CHAT_OS.messagesEl.insertBefore(card, scrollBtn);
+      else CHAT_OS.messagesEl.appendChild(card);
+
+      // Auto-check after 4 seconds
+      setTimeout(() => _checkKbStatus(botId, card), 4000);
+
+      card.querySelector('#ksc-check-btn').addEventListener('click', () => _checkKbStatus(botId, card));
+      card.querySelector('#ksc-verify-btn').addEventListener('click', () => kbVerifyTest(botId));
+
+      scrollToBottomChatOs();
+    }
+
+    async function _checkKbStatus(botId, card) {
+      if (!card || !card.isConnected) return;
+      const badge    = card.querySelector('#ksc-badge');
+      const body     = card.querySelector('#ksc-body');
+      const checkBtn = card.querySelector('#ksc-check-btn');
+      const verifyBtn = card.querySelector('#ksc-verify-btn');
+      if (badge) { badge.className = 'ksc-badge pending'; badge.textContent = '⏳ Проверяю...'; }
+      if (checkBtn) checkBtn.disabled = true;
+
+      try {
+        const kbSnap = await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId).collection('knowledge_base').get();
+        const count = kbSnap.size;
+
+        // Check for running jobs in Firestore
+        const jobsSnap = await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId).collection('jobs')
+          .where('status', 'in', ['running', 'queued']).limit(1).get();
+        const stillProcessing = !jobsSnap.empty;
+
+        if (stillProcessing) {
+          if (badge) { badge.className = 'ksc-badge pending'; badge.textContent = '⏳ Обрабатывается'; }
+          if (body) body.textContent = `Индексация в процессе. Сохранено: ${count} записей.`;
+          // Auto-recheck in 5s
+          setTimeout(() => _checkKbStatus(botId, card), 5000);
+        } else if (count > 0) {
+          if (badge) { badge.className = 'ksc-badge ready'; badge.textContent = '✅ Готова'; }
+          const noun = count === 1 ? 'запись' : count < 5 ? 'записи' : 'записей';
+          if (body) body.textContent = `База знаний содержит ${count} ${noun}. Бот готов отвечать.`;
+          if (verifyBtn) verifyBtn.style.display = '';
+          // Update status bar
+          const elKb = document.getElementById('cs-kb');
+          if (elKb) elKb.textContent = `📚 KB: ${count}`;
+        } else {
+          if (badge) { badge.className = 'ksc-badge warn'; badge.textContent = '⚠️ Нет данных'; }
+          if (body) body.textContent = 'Данные ещё не появились. Попробуйте через минуту.';
+          // Auto-recheck in 10s
+          setTimeout(() => _checkKbStatus(botId, card), 10000);
+        }
+      } catch (e) {
+        console.error('[KbStatus] check error:', e);
+        if (badge) { badge.className = 'ksc-badge error'; badge.textContent = '❌ Ошибка'; }
+        if (body) body.textContent = 'Не удалось проверить статус. Попробуйте вручную.';
+      } finally {
+        if (checkBtn) checkBtn.disabled = false;
+      }
+    }
+
+    async function kbVerifyTest(botId) {
+      if (!window.resolvedUid || isWaitingForAI) return;
+      const _botId = botId || _chatActiveBotId;
+      if (!_botId) {
+        addChatOsMsg('bot', '⚠️ Сначала создайте бота и добавьте базу знаний.');
+        return;
+      }
+
+      addChatOsMsg('bot', '🔍 **Проверяю базу знаний...**\nЗадам боту вопрос и оценю использование KB.');
+
+      // Pick a topic from KB for a targeted test
+      let testQ = 'Расскажи, чем ты можешь помочь на основе базы знаний?';
+      try {
+        const snap = await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(_botId).collection('knowledge_base').limit(3).get();
+        if (!snap.empty) {
+          const d = snap.docs[0].data();
+          const title = d.title || d.name || d.source || '';
+          if (title && title.length > 2) testQ = `Расскажи подробнее о "${title.slice(0, 60)}"`;
+        }
+      } catch (_) {}
+
+      addChatOsMsg('bot', `**Тест-вопрос:** _${testQ}_`);
+      addChatOsMsg('bot', '...');
+
+      isWaitingForAI = true;
+      CHAT_OS.inputEl.disabled = true;
+      CHAT_OS.sendBtn.disabled = true;
+
+      try {
+        const resp = await fetch(CHAT_OS_HANDLER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: window.resolvedUid,
+            action: 'message',
+            text: testQ,
+            capabilities: { fileUpload: false, textPaste: true, urlInput: true }
+          })
+        });
+        const data = await resp.json();
+        removeTypingIndicator();
+
+        if (data.reply) {
+          addChatOsMsg('bot', data.reply);
+          // Heuristic: long reply + no "не знаю" → KB likely used
+          const r = data.reply.toLowerCase();
+          const kbUsed = data.reply.length > 120 &&
+            !r.includes('не знаю') && !r.includes('не могу ответить') &&
+            !r.includes('нет информации');
+          addChatOsMsg('bot', kbUsed
+            ? '✅ **KB работает** — бот использует загруженные данные.'
+            : '⚠️ **KB не используется** — данные ещё обрабатываются или тема не совпадает. Подождите 1–2 мин и попробуйте снова.'
+          );
+        } else {
+          addChatOsMsg('bot', 'Пустой ответ. Попробуйте позже.');
+        }
+      } catch (_) {
+        removeTypingIndicator();
+        addChatOsMsg('bot', '⚠️ Ошибка сети при тест-запросе. Попробуйте позже.');
+      } finally {
+        isWaitingForAI = false;
+        CHAT_OS.inputEl.disabled = false;
+        CHAT_OS.sendBtn.disabled = false;
+      }
+    }
+
     // ── KB SUGGESTIONS ──────────────────────────────────────────────────────────
     async function submitKbSuggestion(assistantMsg, proposedFix) {
       if (!window.resolvedUid) return;
@@ -12737,9 +12924,9 @@ ${kbSummary}`,
       { test: /поведен|тон|стиль|правил|persona|инструкц/i,    chip: { label: '🎛 Поведение',      msg: 'Хочу изменить поведение и тон бота' } },
       { test: /telegram|токен|подключ|activat/i,               chip: { label: '✈️ Telegram',       msg: 'Хочу подключить Telegram к боту' } },
       { test: /тест|сценар|проверить|test/i,                   chip: { label: '🧪 Тестировать',    action: 'test_mode' } },
-      { test: /загрузить файл|upload|file/i,                   chip: { label: '📎 Загрузить файл', msg: null, action: 'file' } },
+      { test: /загрузить файл|upload|\bфайл\b/i,               chip: { label: '📎 Загрузить файл', msg: null, action: 'file' } },
       { test: /ссылк|url|сайт|link/i,                          chip: { label: '🔗 Ссылка',         msg: 'Хочу добавить ссылку в базу знаний' } },
-      { test: /текст.*знан|добавить текст|вставить/i,          chip: { label: '✏️ Текст',          msg: 'Хочу добавить текст в базу знаний' } },
+      { test: /текст.*знан|добавить текст|вставить|\bтекст\b/i, chip: { label: '✏️ Текст',         msg: 'Хочу добавить текст в базу знаний' } },
       { test: /имя|назван|назови|name.*bot|bot.*name/i,        chip: { label: '✏️ Назвать бота',   msg: 'Хочу задать имя и описание бота' } },
       { test: /аудитори|целев|для кого/i,                      chip: { label: '🎯 Аудитория',      msg: 'Хочу описать целевую аудиторию бота' } },
     ];
@@ -12790,7 +12977,32 @@ ${kbSummary}`,
           }
         }
       }
-      return chips.length > 0 ? chips : null;
+      // Special case: bot is asking HOW to add KB (text vs file vs link mentioned together)
+      if (chips.length <= 1 && _flowState.stepId === 'ACTIVE') {
+        const hasText = /\bтекст\b/i.test(replyText);
+        const hasFile = /\bфайл\b/i.test(replyText);
+        const hasLink = /\bссылк/i.test(replyText);
+        if (hasText && hasFile && hasLink) {
+          console.log('[DynChips] KB method choice detected — returning 4-chip set');
+          return [
+            { label: '📝 Текст',  msg: 'Хочу добавить текст в базу знаний' },
+            { label: '📎 Файл',   msg: null, action: 'file' },
+            { label: '🔗 Ссылка', msg: 'Хочу добавить ссылку в базу знаний' },
+            { label: '⬅ Назад',  action: 'reset_to_active' },
+          ];
+        }
+      }
+
+      const result = chips.length > 0 ? chips : null;
+      // Diagnostic logging for ACTIVE mode
+      if (_flowState.stepId === 'ACTIVE') {
+        if (!result) {
+          console.log('[DynChips] fallback — no chips inferred. reply_len=%d', replyText?.length || 0);
+        } else {
+          console.log('[DynChips] chips=%d labels=[%s]', result.length, result.map(c => c.label).join(', '));
+        }
+      }
+      return result;
     }
 
     // Render dynamic chips in the chip bar and persist them
@@ -12865,6 +13077,7 @@ ${kbSummary}`,
           ; (async () => {
             try {
               if (data.activeBotId) {
+                _chatActiveBotId = data.activeBotId; // store for KB verify / status cards
                 const botDoc = await db.collection("users").doc(uid).collection("bots").doc(data.activeBotId).get();
                 const b = botDoc.data() || {};
                 const kbSnap = await db.collection("users").doc(uid).collection("bots").doc(data.activeBotId).collection("knowledge_base").get();
@@ -13422,6 +13635,10 @@ ${kbSummary}`,
         if (_flowState.stepId === 'ACTIVE' && data.reply) {
           const dynChips = inferChipsFromReply(data.reply, data.actions);
           if (dynChips) applyDynamicChips(dynChips);
+        }
+        // After file upload — show KB processing status card in chat
+        if (uploadBubble && _chatActiveBotId) {
+          setTimeout(() => _showKbStatusCard(_chatActiveBotId), 700);
         }
 
       } catch (err) {
