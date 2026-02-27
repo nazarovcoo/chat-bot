@@ -6411,6 +6411,7 @@
 </head>
 
 <body>
+  <div id="projects-ui-root" style="display:none;"></div>
 
   <!-- Mobile overlay -->
   <div class="mob-overlay" id="mob-overlay" onclick="closeMobileSidebar()"></div>
@@ -6605,6 +6606,9 @@
           data-i18n="nav.language">Язык</span></div>
       <div class="nav-item" id="nav-designv3" onclick="goAgentScreen('design-v3')"><span class="nav-ico">🧩</span>
         <span>Новый дизайн (v3)</span>
+      </div>
+      <div class="nav-item" onclick="openProjectsUiV1()"><span class="nav-ico">📁</span>
+        <span>Projects UI v1</span>
       </div>
       <div class="nav-item" onclick="showToast(T[LANG]['help.soon'])"><span class="nav-ico">❓</span> <span
           data-i18n="nav.help">Помощь</span></div>
@@ -15108,6 +15112,13 @@ ${kbSummary}`,
       }
     }
 
+    function openProjectsUiV1() {
+      localStorage.setItem('projects_ui_v1', '1');
+      const u = new URL(window.location.href);
+      u.searchParams.set('projects', '1');
+      window.location.href = u.toString();
+    }
+
     async function _bridgeOpenChatOs() {
       if (!window.resolvedUid) throw new Error('Сначала авторизуйтесь');
       if (!chatOsInitDone) {
@@ -15217,6 +15228,31 @@ ${kbSummary}`,
       </div>
     </div>
   </div>
+  <script src="/js/projects-api.js"></script>
+  <script src="/js/projects-ui.js"></script>
+  <script>
+    (function () {
+      const qp = new URLSearchParams(window.location.search);
+      const byQuery = qp.get('projects') === '1';
+      const byFlag = localStorage.getItem('projects_ui_v1') === '1';
+      const enabled = byQuery || byFlag;
+      if (!enabled || !window.ProjectsUI) return;
+
+      const root = document.getElementById('projects-ui-root');
+      const onboarding = document.getElementById('onboarding-chat-overlay');
+      const main = document.getElementById('main-content');
+      const side = document.querySelector('.sidebar');
+      const mob = document.getElementById('mob-overlay');
+      const cta = document.querySelector('.mob-cta');
+      if (onboarding) onboarding.style.display = 'none';
+      if (main) main.style.display = 'none';
+      if (side) side.style.display = 'none';
+      if (mob) mob.style.display = 'none';
+      if (cta) cta.style.display = 'none';
+      root.style.display = 'block';
+      window.__projectsUiMounted = window.ProjectsUI.mount(root, {});
+    })();
+  </script>
 </body>
 
 </html>

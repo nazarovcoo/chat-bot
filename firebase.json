@@ -47,6 +47,22 @@
         "function": "importUrlKnowledge"
       },
       {
+        "source": "/api/projects",
+        "function": "projectsApi"
+      },
+      {
+        "source": "/api/projects/**",
+        "function": "projectsApi"
+      },
+      {
+        "source": "/api/sources/**",
+        "function": "projectsApi"
+      },
+      {
+        "source": "/api/chats/**",
+        "function": "projectsApi"
+      },
+      {
         "source": "/api/admin-send-message",
         "function": "adminSendMessage"
       },

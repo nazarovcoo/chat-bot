@@ -1305,6 +1305,436 @@ exports.importUrlKnowledge = onRequest(
   }
 );
 
+// ─── Projects API (ChatGPT-style workspace) ───────────────────────────────────
+function _apiPath(req) {
+  const p = String(req.path || req.url || "").split("?")[0];
+  if (p.startsWith("/api/")) return p.slice(5);
+  if (p.startsWith("/")) return p.slice(1);
+  return p;
+}
+
+async function _requireAuthUid(req) {
+  const h = req.headers.authorization || req.headers.Authorization || "";
+  const m = String(h).match(/^Bearer\s+(.+)$/i);
+  if (!m) throw new Error("UNAUTHORIZED");
+  const decoded = await admin.auth().verifyIdToken(m[1]);
+  return decoded.uid;
+}
+
+function _asIso(ts) {
+  if (!ts) return null;
+  if (typeof ts.toDate === "function") return ts.toDate().toISOString();
+  return null;
+}
+
+async function ensureDefaultProject(uid) {
+  const db = admin.firestore();
+  const projectsCol = db.collection(`users/${uid}/projects`);
+  const existing = await projectsCol.limit(1).get();
+  if (!existing.empty) return existing.docs[0].id;
+
+  const [firstBotSnap, rulesSnap] = await Promise.all([
+    db.collection(`users/${uid}/bots`).limit(1).get(),
+    db.doc(`users/${uid}/settings/rules`).get().catch(() => null),
+  ]);
+  const bot = !firstBotSnap.empty ? firstBotSnap.docs[0].data() : {};
+  const defaultName = bot.name || "Default Project";
+  const defaultHost = bot.username ? `@${String(bot.username).replace(/^@/, "")}` : (bot.domain || bot.ip || "");
+  const defaultInstructions = bot.rules || bot.description || (rulesSnap && rulesSnap.exists ? (rulesSnap.data().text || "") : "");
+
+  const projectRef = projectsCol.doc();
+  await projectRef.set({
+    name: defaultName,
+    botHost: defaultHost,
+    instructions: defaultInstructions,
+    legacyDefault: true,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  const projectId = projectRef.id;
+  const batchWrites = [];
+
+  // Migrate old bot KB into project_sources (non-destructive copy)
+  if (!firstBotSnap.empty) {
+    const botId = firstBotSnap.docs[0].id;
+    const kbSnap = await db.collection(`users/${uid}/bots/${botId}/knowledge_base`).limit(500).get().catch(() => ({ docs: [] }));
+    for (const d of kbSnap.docs || []) {
+      const item = d.data() || {};
+      const sourceRef = db.collection(`users/${uid}/project_sources`).doc();
+      batchWrites.push({
+        ref: sourceRef,
+        data: {
+          projectId,
+          ownerId: uid,
+          type: item.type === "url" ? "url" : (item.type === "file" ? "file" : "text"),
+          title: item.title || item.name || "Legacy source",
+          contentRef: item.url || item.content || item.path || "",
+          status: item.status === "error" ? "error" : "ready",
+          legacyRef: `users/${uid}/bots/${botId}/knowledge_base/${d.id}`,
+          createdAt: item.createdAt || admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      });
+    }
+  }
+
+  // Migrate old chats into project_chats and messages subcollection copy
+  const chatsSnap = await db.collection(`users/${uid}/chats`).limit(500).get().catch(() => ({ docs: [] }));
+  for (const c of chatsSnap.docs || []) {
+    const cd = c.data() || {};
+    const pChatRef = db.collection(`users/${uid}/project_chats`).doc(c.id);
+    batchWrites.push({
+      ref: pChatRef,
+      data: {
+        projectId,
+        ownerId: uid,
+        channel: cd.channel || (cd.username ? "telegram" : "web"),
+        userExternalId: c.id,
+        name: cd.name || "",
+        username: cd.username || "",
+        lastMessage: cd.lastMessage || "",
+        lastMessageAt: cd.lastTs || cd._ts || admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: cd._ts || admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        legacyRef: `users/${uid}/chats/${c.id}`,
+      },
+    });
+
+    const histDoc = await db.doc(`users/${uid}/chatHistory/${c.id}`).get().catch(() => null);
+    const msgs = histDoc && histDoc.exists ? (histDoc.data().messages || []) : [];
+    for (let i = 0; i < Math.min(msgs.length, 80); i++) {
+      const m = msgs[i] || {};
+      const msgRef = pChatRef.collection("messages").doc();
+      batchWrites.push({
+        ref: msgRef,
+        data: {
+          chatId: c.id,
+          role: m.role || "user",
+          text: m.content || "",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      });
+    }
+  }
+
+  for (let i = 0; i < batchWrites.length; i += 400) {
+    const b = db.batch();
+    for (const w of batchWrites.slice(i, i + 400)) b.set(w.ref, w.data, { merge: true });
+    await b.commit();
+  }
+
+  return projectId;
+}
+
+function _projectPublic(id, d) {
+  return {
+    id,
+    name: d.name || "",
+    botHost: d.botHost || "",
+    instructions: d.instructions || "",
+    legacyDefault: !!d.legacyDefault,
+    createdAt: _asIso(d.createdAt),
+    updatedAt: _asIso(d.updatedAt),
+  };
+}
+
+exports.projectsApi = onRequest(
+  { cors: true, timeoutSeconds: 60 },
+  async (req, res) => {
+    if (req.method === "OPTIONS") { res.status(204).end(); return; }
+    let uid = "";
+    try {
+      uid = await _requireAuthUid(req);
+    } catch (_) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const db = admin.firestore();
+    const path = _apiPath(req);
+
+    try {
+      // GET /projects
+      if (req.method === "GET" && path === "projects") {
+        await ensureDefaultProject(uid);
+        const snap = await db.collection(`users/${uid}/projects`).orderBy("updatedAt", "desc").get();
+        const items = snap.docs.map((d) => _projectPublic(d.id, d.data() || {}));
+        res.json({ ok: true, projects: items });
+        return;
+      }
+
+      // POST /projects
+      if (req.method === "POST" && path === "projects") {
+        await ensureDefaultProject(uid);
+        const { name, botHost, instructions = "" } = req.body || {};
+        if (!name || !String(name).trim()) { res.status(400).json({ error: "name required" }); return; }
+        if (!botHost || !String(botHost).trim()) { res.status(400).json({ error: "botHost required" }); return; }
+        const ref = db.collection(`users/${uid}/projects`).doc();
+        await ref.set({
+          name: String(name).trim(),
+          botHost: String(botHost).trim(),
+          instructions: String(instructions || "").trim(),
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        const fresh = await ref.get();
+        res.status(201).json({ ok: true, project: _projectPublic(ref.id, fresh.data() || {}) });
+        return;
+      }
+
+      // GET/PATCH/DELETE /projects/:id
+      const pm = path.match(/^projects\/([^/]+)$/);
+      if (pm) {
+        const projectId = decodeURIComponent(pm[1]);
+        const ref = db.doc(`users/${uid}/projects/${projectId}`);
+        const snap = await ref.get();
+        if (!snap.exists) { res.status(404).json({ error: "Project not found" }); return; }
+
+        if (req.method === "GET") {
+          res.json({ ok: true, project: _projectPublic(projectId, snap.data() || {}) });
+          return;
+        }
+        if (req.method === "PATCH") {
+          const { name, botHost, instructions } = req.body || {};
+          const upd = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+          if (name !== undefined) upd.name = String(name).trim();
+          if (botHost !== undefined) upd.botHost = String(botHost).trim();
+          if (instructions !== undefined) upd.instructions = String(instructions);
+          await ref.set(upd, { merge: true });
+          const fresh = await ref.get();
+          res.json({ ok: true, project: _projectPublic(projectId, fresh.data() || {}) });
+          return;
+        }
+        if (req.method === "DELETE") {
+          const [srcSnap, chatSnap] = await Promise.all([
+            db.collection(`users/${uid}/project_sources`).where("projectId", "==", projectId).limit(500).get(),
+            db.collection(`users/${uid}/project_chats`).where("projectId", "==", projectId).limit(500).get(),
+          ]);
+          for (let i = 0; i < srcSnap.docs.length; i += 400) {
+            const b = db.batch();
+            for (const d of srcSnap.docs.slice(i, i + 400)) b.delete(d.ref);
+            await b.commit();
+          }
+          for (let i = 0; i < chatSnap.docs.length; i += 120) {
+            const b = db.batch();
+            for (const d of chatSnap.docs.slice(i, i + 120)) {
+              const msgs = await d.ref.collection("messages").limit(500).get();
+              msgs.docs.forEach((m) => b.delete(m.ref));
+              b.delete(d.ref);
+            }
+            await b.commit();
+          }
+          await ref.delete();
+          res.json({ ok: true });
+          return;
+        }
+      }
+
+      // GET/POST /projects/:id/sources
+      const ps = path.match(/^projects\/([^/]+)\/sources$/);
+      if (ps) {
+        const projectId = decodeURIComponent(ps[1]);
+        const pRef = db.doc(`users/${uid}/projects/${projectId}`);
+        if (!(await pRef.get()).exists) { res.status(404).json({ error: "Project not found" }); return; }
+
+        if (req.method === "GET") {
+          const snap = await db.collection(`users/${uid}/project_sources`)
+            .where("projectId", "==", projectId)
+            .orderBy("createdAt", "desc")
+            .get();
+          let sources = snap.docs.map((d) => {
+            const s = d.data() || {};
+            return {
+              id: d.id,
+              projectId: s.projectId,
+              type: s.type || "text",
+              title: s.title || "",
+              contentRef: s.contentRef || "",
+              status: s.status || "pending",
+              createdAt: _asIso(s.createdAt),
+              updatedAt: _asIso(s.updatedAt),
+            };
+          });
+          // Non-breaking fallback for legacy users: read bot knowledge directly
+          if (sources.length === 0) {
+            const p = (await pRef.get()).data() || {};
+            if (p.legacyDefault) {
+              const botSnap = await db.collection(`users/${uid}/bots`).limit(1).get();
+              if (!botSnap.empty) {
+                const botId = botSnap.docs[0].id;
+                const legacyKb = await db.collection(`users/${uid}/bots/${botId}/knowledge_base`).limit(300).get();
+                sources = legacyKb.docs.map((d) => {
+                  const s = d.data() || {};
+                  return {
+                    id: `legacy-${d.id}`,
+                    projectId,
+                    type: s.type || "text",
+                    title: s.title || s.name || "Legacy source",
+                    contentRef: s.url || s.content || s.path || "",
+                    status: s.status || "ready",
+                    createdAt: _asIso(s.createdAt),
+                    updatedAt: _asIso(s.updatedAt) || _asIso(s.createdAt),
+                  };
+                });
+              }
+            }
+          }
+          res.json({ ok: true, sources });
+          return;
+        }
+
+        if (req.method === "POST") {
+          const { type, title, contentRef } = req.body || {};
+          if (!type || !["file", "url", "text", "document"].includes(String(type))) {
+            res.status(400).json({ error: "type must be file|url|text|document" });
+            return;
+          }
+          if (!title || !String(title).trim()) { res.status(400).json({ error: "title required" }); return; }
+          if (!contentRef || !String(contentRef).trim()) { res.status(400).json({ error: "contentRef required" }); return; }
+          const status = (type === "file" || type === "document") ? "pending" : "ready";
+          const ref = db.collection(`users/${uid}/project_sources`).doc();
+          await ref.set({
+            projectId,
+            ownerId: uid,
+            type: String(type),
+            title: String(title).trim(),
+            contentRef: String(contentRef).trim(),
+            status,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          await pRef.set({ updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          const fresh = await ref.get();
+          const d = fresh.data() || {};
+          res.status(201).json({
+            ok: true,
+            source: {
+              id: ref.id,
+              projectId: d.projectId,
+              type: d.type,
+              title: d.title,
+              contentRef: d.contentRef,
+              status: d.status,
+              createdAt: _asIso(d.createdAt),
+              updatedAt: _asIso(d.updatedAt),
+            },
+          });
+          return;
+        }
+      }
+
+      // GET /projects/:id/chats
+      const pc = path.match(/^projects\/([^/]+)\/chats$/);
+      if (pc && req.method === "GET") {
+        const projectId = decodeURIComponent(pc[1]);
+        const pRef = db.doc(`users/${uid}/projects/${projectId}`);
+        if (!(await pRef.get()).exists) { res.status(404).json({ error: "Project not found" }); return; }
+        const q = String(req.query.q || "").toLowerCase().trim();
+        const sort = String(req.query.sort || "newest");
+        const snap = await db.collection(`users/${uid}/project_chats`)
+          .where("projectId", "==", projectId)
+          .orderBy("lastMessageAt", sort === "oldest" ? "asc" : "desc")
+          .limit(200)
+          .get();
+        let chats = snap.docs.map((d) => {
+          const c = d.data() || {};
+          return {
+            id: d.id,
+            projectId: c.projectId,
+            channel: c.channel || "web",
+            userExternalId: c.userExternalId || "",
+            name: c.name || "",
+            username: c.username || "",
+            lastMessage: c.lastMessage || "",
+            lastMessageAt: _asIso(c.lastMessageAt),
+            createdAt: _asIso(c.createdAt),
+          };
+        });
+        if (chats.length === 0) {
+          const p = (await pRef.get()).data() || {};
+          if (p.legacyDefault) {
+            const legacyChats = await db.collection(`users/${uid}/chats`)
+              .orderBy("lastTs", sort === "oldest" ? "asc" : "desc")
+              .limit(200)
+              .get();
+            chats = legacyChats.docs.map((d) => {
+              const c = d.data() || {};
+              return {
+                id: d.id,
+                projectId,
+                channel: c.channel || (c.username ? "telegram" : "web"),
+                userExternalId: d.id,
+                name: c.name || "",
+                username: c.username || "",
+                lastMessage: c.lastMessage || "",
+                lastMessageAt: _asIso(c.lastTs || c._ts),
+                createdAt: _asIso(c._ts),
+              };
+            });
+          }
+        }
+        if (q) {
+          chats = chats.filter((c) =>
+            `${c.name} ${c.username} ${c.userExternalId} ${c.lastMessage}`.toLowerCase().includes(q));
+        }
+        res.json({ ok: true, chats });
+        return;
+      }
+
+      // DELETE /sources/:id
+      const ds = path.match(/^sources\/([^/]+)$/);
+      if (ds && req.method === "DELETE") {
+        const id = decodeURIComponent(ds[1]);
+        const ref = db.doc(`users/${uid}/project_sources/${id}`);
+        if (!(await ref.get()).exists) { res.status(404).json({ error: "Source not found" }); return; }
+        await ref.delete();
+        res.json({ ok: true });
+        return;
+      }
+
+      // GET /chats/:id/messages
+      const cm = path.match(/^chats\/([^/]+)\/messages$/);
+      if (cm && req.method === "GET") {
+        const chatId = decodeURIComponent(cm[1]);
+        const chatRef = db.doc(`users/${uid}/project_chats/${chatId}`);
+        let messages = [];
+        if ((await chatRef.get()).exists) {
+          const snap = await chatRef.collection("messages").orderBy("createdAt", "asc").limit(300).get();
+          messages = snap.docs.map((d) => {
+            const m = d.data() || {};
+            return {
+              id: d.id,
+              chatId,
+              role: m.role || "user",
+              text: m.text || "",
+              createdAt: _asIso(m.createdAt),
+            };
+          });
+        } else {
+          // Legacy fallback
+          const hist = await db.doc(`users/${uid}/chatHistory/${chatId}`).get();
+          if (!hist.exists) { res.status(404).json({ error: "Chat not found" }); return; }
+          messages = (hist.data().messages || []).slice(-300).map((m, idx) => ({
+            id: `legacy-${idx}`,
+            chatId,
+            role: m.role || "user",
+            text: m.content || "",
+            createdAt: null,
+          }));
+        }
+        res.json({ ok: true, messages });
+        return;
+      }
+
+      res.status(404).json({ error: "Not found" });
+    } catch (err) {
+      console.error("projectsApi error:", err);
+      res.status(500).json({ error: err.message || "Projects API error" });
+    }
+  }
+);
+
 // ─── adminSendMessage — оператор отправляет сообщение клиенту напрямую ────────
 exports.adminSendMessage = onRequest(
   { cors: true, timeoutSeconds: 30 },
