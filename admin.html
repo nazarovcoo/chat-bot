@@ -1084,6 +1084,36 @@
     .welcome-status { font-size: 11.5px; color: #4caf50; margin-top: 6px; display: none; }
     .welcome-status.visible { display: block; }
 
+    /* ── Test Mode / Test Report card ── */
+    .test-report-card {
+      background: #fff; border: 1px solid rgba(76,175,80,.25);
+      border-radius: 14px; padding: 14px; margin: 6px 0;
+    }
+    .tr-title { font-weight: 700; font-size: 14px; color: #2e7d32; margin-bottom: 10px; }
+    .tr-stats { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+    .tr-stat {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12.5px; padding: 4px 0; border-bottom: 1px solid #f0f2f5;
+    }
+    .tr-stat:last-child { border-bottom: none; }
+    .tr-stat-label { color: #64748b; }
+    .tr-stat-val { font-weight: 600; }
+    .tr-ok { color: #4caf50; }
+    .tr-warn { color: #f59e0b; }
+    .tr-section { margin-bottom: 10px; }
+    .tr-label { font-size: 11.5px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+    .tr-rec { font-size: 12.5px; color: #374151; line-height: 1.5; padding: 2px 0; }
+    .tr-rec.ok-text { color: #4caf50; }
+    .tr-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .tr-btn {
+      border: 1px solid #e2e8f0; background: none; border-radius: 8px;
+      padding: 7px 14px; cursor: pointer; font-size: 12.5px; transition: background .15s;
+    }
+    .tr-btn:hover { background: #f8f9fa; }
+    .tr-btn-primary {
+      background: #3390ec; color: #fff; border-color: #3390ec; font-weight: 700;
+    }
+    .tr-btn-primary:hover { background: #2778d0; border-color: #2778d0; }
 
     .guide-tip-close:hover {
       color: var(--text);
@@ -11875,6 +11905,7 @@ ${kbSummary}`,
           { label: '🔗 Добавить ссылку',  msg: 'Хочу добавить ссылку в базу знаний бота' },
           { label: '✈️ Telegram',          msg: 'Хочу подключить Telegram к боту' },
           { label: '🎨 Приветствие',       action: 'welcome_config' },
+          { label: '🧪 Тестировать',       action: 'test_mode' },
         ]
       }
     };
@@ -11952,6 +11983,15 @@ ${kbSummary}`,
         showWelcomeConfigCard();
         return;
       }
+      // Test mode
+      if (chip.action === 'test_mode' || label === '🧪 Тестировать') {
+        showTestModeEntry();
+        return;
+      }
+      if (chip.action === 'run_auto_test') { runAutoTest(); return; }
+      if (chip.action === 'custom_test')   { startCustomTestMode(); return; }
+      if (chip.action === 'test_exit')     { exitTestMode(); return; }
+      if (chip.action === 'noop')          { return; } // disabled chip
       // Post-reset choice chips
       if (chip.action === 'reset_continue') {
         const stepId = chip._savedStepId || 'ACTIVE';
@@ -12170,6 +12210,210 @@ ${kbSummary}`,
         }
       }
       return `👋 Привет! Я ${name}.\n\nЗадайте любой вопрос — постараюсь помочь!\n\nЧем могу помочь?`;
+    }
+
+    // ── TEST MODE ──────────────────────────────────────────────────────────────
+    let _testMode = false;
+    let _testState = null; // { botId, botName, kbCount, tgStatus, systemPrompt, questions, answers }
+
+    const TEST_ENTRY_CHIPS = [
+      { label: '🚀 Запустить авто-тест', action: 'run_auto_test' },
+      { label: '✏ Свой сценарий',        action: 'custom_test' },
+      { label: '⬅ Назад',               action: 'test_exit' },
+    ];
+
+    function _buildTestQuestions(kbCount) {
+      return [
+        'Привет! Что ты умеешь?',
+        kbCount > 0 ? 'Расскажи подробнее о своей специализации' : 'Расскажи, чем конкретно можешь помочь',
+        'А что будет, если я спрошу тебя о чём-то не по теме?',
+        'Как я могу получить поддержку или уточнить что-то?',
+      ];
+    }
+
+    async function showTestModeEntry() {
+      if (!window.resolvedUid) return;
+      try {
+        const sessionSnap = await db.collection('users').doc(window.resolvedUid)
+          .collection('chat_os_sessions').doc('default').get();
+        const botId = sessionSnap.exists ? sessionSnap.data().activeBotId : null;
+        if (!botId) {
+          addChatOsMsg('bot', '⚠️ Сначала создайте бота, чтобы запустить тест.');
+          return;
+        }
+        const botDoc = await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId).get();
+        const bot = botDoc.data() || {};
+        const kbSnap = await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId).collection('knowledge_base').get();
+        const kbCount  = kbSnap.size;
+        const tgStatus = bot.telegram?.status || 'none';
+        const hasPrompt = !!(bot.systemPrompt || bot.description);
+
+        _testState = {
+          botId, botName: bot.name || 'Бот', kbCount, tgStatus,
+          systemPrompt: bot.systemPrompt || bot.description || '',
+          questions: [], answers: []
+        };
+
+        const kbLine     = kbCount === 0 ? 'нет ⚠️' : `${kbCount} ${kbCount === 1 ? 'документ' : kbCount < 5 ? 'документа' : 'документов'} ✅`;
+        const tgLine     = tgStatus === 'active' ? 'подключён ✅' : 'не подключён ⚠️';
+        const promptLine = hasPrompt ? 'заданы ✅' : 'не заданы ⚠️';
+
+        addChatOsMsg('bot',
+          `🧪 **Тестовый режим**\n\n` +
+          `Конфигурация **${bot.name || 'бота'}**:\n` +
+          `• База знаний: ${kbLine}\n` +
+          `• Telegram: ${tgLine}\n` +
+          `• Инструкции: ${promptLine}\n\n` +
+          `Что проверим:\n` +
+          `1️⃣ Приветствие и тон\n` +
+          `2️⃣ ${kbCount > 0 ? 'Использование базы знаний' : 'Ответы без базы знаний'}\n` +
+          `3️⃣ Обработка off-topic запросов\n` +
+          `4️⃣ Fallback и граничные случаи\n\n` +
+          `Запустить авто-тест?`
+        );
+        applyDynamicChips(TEST_ENTRY_CHIPS, true);
+      } catch (e) {
+        console.error('[Test] showTestModeEntry error:', e);
+        addChatOsMsg('bot', 'Не удалось загрузить информацию о боте. Попробуйте позже.');
+      }
+    }
+
+    async function runAutoTest() {
+      if (!_testState) { await showTestModeEntry(); return; }
+      const { kbCount, tgStatus } = _testState;
+      _testMode = true;
+      _testState.questions = _buildTestQuestions(kbCount);
+      _testState.answers   = [];
+
+      // Lock input during test
+      isWaitingForAI = true;
+      CHAT_OS.inputEl.disabled = true;
+      CHAT_OS.sendBtn.disabled = true;
+
+      applyDynamicChips([{ label: '⏳ Тест выполняется...', action: 'noop' }], true);
+      addChatOsMsg('bot', `🚀 Запускаю авто-тест — задам ${_testState.questions.length} вопроса боту.`);
+
+      for (let i = 0; i < _testState.questions.length; i++) {
+        const q = _testState.questions[i];
+        addChatOsMsg('bot', `**Тест ${i + 1}/${_testState.questions.length}:** _${q}_`);
+        addChatOsMsg('bot', '...'); // typing indicator
+        try {
+          const resp = await fetch(CHAT_OS_HANDLER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: window.resolvedUid,
+              action: 'message',
+              text: q,
+              capabilities: { fileUpload: false, textPaste: true, urlInput: true }
+            })
+          });
+          const d = await resp.json();
+          removeTypingIndicator();
+          const answer = d.reply || '(пустой ответ)';
+          addChatOsMsg('bot', answer);
+          _testState.answers.push({ q, a: answer, ok: !!d.reply });
+        } catch (_) {
+          removeTypingIndicator();
+          addChatOsMsg('bot', '⚠️ Ошибка сети при запросе.');
+          _testState.answers.push({ q, a: '', ok: false });
+        }
+        await new Promise(r => setTimeout(r, 400));
+      }
+
+      isWaitingForAI = false;
+      CHAT_OS.inputEl.disabled = false;
+      CHAT_OS.sendBtn.disabled = false;
+      _showTestReport();
+    }
+
+    function _showTestReport() {
+      if (!_testState) return;
+      const { answers, kbCount, tgStatus } = _testState;
+      const okCount = answers.filter(a => a.ok).length;
+      const total   = answers.length || 1;
+      const allOk   = okCount === total;
+
+      const recs = [];
+      if (kbCount === 0)        recs.push('📚 Добавьте базу знаний — бот станет точнее');
+      if (tgStatus !== 'active') recs.push('✈️ Подключите Telegram для публикации бота');
+      const avgLen = answers.reduce((s, a) => s + (a.a?.length || 0), 0) / total;
+      if (avgLen < 80)           recs.push('📝 Уточните системный промт для более развёрнутых ответов');
+
+      const recsHtml = recs.length > 0
+        ? `<div class="tr-section"><div class="tr-label">Рекомендации</div>${recs.map(r => `<div class="tr-rec">${esc(r)}</div>`).join('')}</div>`
+        : `<div class="tr-section"><div class="tr-rec ok-text">✅ Всё выглядит хорошо!</div></div>`;
+
+      const kbVal = kbCount > 0 ? `${kbCount} ${kbCount < 5 ? 'документа' : 'документов'}` : 'Нет';
+      const tgVal = tgStatus === 'active' ? 'Подключён' : 'Не подключён';
+
+      const card = document.createElement('div');
+      card.id = 'test-report-card';
+      card.className = 'test-report-card';
+      card.innerHTML = `
+        <div class="tr-title">📊 Результат теста</div>
+        <div class="tr-stats">
+          <div class="tr-stat">
+            <span class="tr-stat-label">Ответы корректны</span>
+            <span class="tr-stat-val ${allOk ? 'tr-ok' : 'tr-warn'}">${okCount}/${answers.length}</span>
+          </div>
+          <div class="tr-stat">
+            <span class="tr-stat-label">База знаний</span>
+            <span class="tr-stat-val ${kbCount > 0 ? 'tr-ok' : 'tr-warn'}">${kbVal}</span>
+          </div>
+          <div class="tr-stat">
+            <span class="tr-stat-label">Telegram webhook</span>
+            <span class="tr-stat-val ${tgStatus === 'active' ? 'tr-ok' : 'tr-warn'}">${tgVal}</span>
+          </div>
+        </div>
+        ${recsHtml}
+        <div class="tr-actions">
+          <button class="tr-btn tr-btn-primary" id="tr-done-btn">✅ Готово</button>
+          <button class="tr-btn" id="tr-retest-btn">🔄 Повторить</button>
+          ${kbCount === 0 ? '<button class="tr-btn" id="tr-kb-btn">📚 База знаний</button>' : ''}
+        </div>
+      `;
+
+      const scrollBtn = document.getElementById('cos-scroll-btn');
+      if (scrollBtn) CHAT_OS.messagesEl.insertBefore(card, scrollBtn);
+      else CHAT_OS.messagesEl.appendChild(card);
+
+      card.querySelector('#tr-done-btn').addEventListener('click', exitTestMode);
+      card.querySelector('#tr-retest-btn').addEventListener('click', () => {
+        card.remove();
+        _testState.answers = [];
+        runAutoTest();
+      });
+      card.querySelector('#tr-kb-btn')?.addEventListener('click', () => { openKBDrawer(); exitTestMode(); });
+
+      applyDynamicChips([
+        { label: '🔄 Повторить тест', action: 'run_auto_test' },
+        { label: '⬅ Выйти',          action: 'test_exit' },
+      ], true);
+      scrollToBottomChatOs();
+    }
+
+    function exitTestMode() {
+      _testMode  = false;
+      _testState = null;
+      document.getElementById('test-report-card')?.remove();
+      renderFlowChips(_flowState.stepId);
+      addChatOsMsg('bot', 'Тестовый режим завершён. Чем займёмся дальше?');
+    }
+
+    function startCustomTestMode() {
+      _testMode = true;
+      if (!_testState) _testState = { questions: [], answers: [] };
+      applyDynamicChips([{ label: '⬅ Выйти из теста', action: 'test_exit' }], true);
+      addChatOsMsg('bot',
+        '✏️ **Свой тест-сценарий**\n\n' +
+        'Напишите любой вопрос — как если бы вы были пользователем бота.\n' +
+        'Я отвечу, и вы сможете оценить качество.'
+      );
+      CHAT_OS.inputEl.placeholder = 'Введите тестовый вопрос...';
+      CHAT_OS.inputEl.focus();
     }
 
     async function showWelcomeConfigCard() {
@@ -12418,7 +12662,7 @@ ${kbSummary}`,
       { test: /база знан|базу знан|knowledge|знани/i,          chip: { label: '📚 База знаний',    msg: 'Хочу добавить базу знаний боту' } },
       { test: /поведен|тон|стиль|правил|persona|инструкц/i,    chip: { label: '🎛 Поведение',      msg: 'Хочу изменить поведение и тон бота' } },
       { test: /telegram|токен|подключ|activat/i,               chip: { label: '✈️ Telegram',       msg: 'Хочу подключить Telegram к боту' } },
-      { test: /тест|сценар|проверить|test/i,                   chip: { label: '🧪 Тест',           msg: 'Хочу протестировать бота' } },
+      { test: /тест|сценар|проверить|test/i,                   chip: { label: '🧪 Тестировать',    action: 'test_mode' } },
       { test: /загрузить файл|upload|file/i,                   chip: { label: '📎 Загрузить файл', msg: null, action: 'file' } },
       { test: /ссылк|url|сайт|link/i,                          chip: { label: '🔗 Ссылка',         msg: 'Хочу добавить ссылку в базу знаний' } },
       { test: /текст.*знан|добавить текст|вставить/i,          chip: { label: '✏️ Текст',          msg: 'Хочу добавить текст в базу знаний' } },
