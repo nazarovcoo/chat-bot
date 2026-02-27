@@ -14749,8 +14749,15 @@ ${kbSummary}`,
         const data = await response.json();
         removeTypingIndicator();
 
-        // Switch upload bubble to done state after AI responds
-        if (uploadBubble) uploadBubble.dataset.state = 'done';
+        // Switch upload bubble to done state and auto-hide it after a short delay
+        if (uploadBubble) {
+          uploadBubble.dataset.state = 'done';
+          setTimeout(() => {
+            if (uploadBubble && uploadBubble.isConnected && uploadBubble.dataset.state === 'done') {
+              uploadBubble.remove();
+            }
+          }, 4500);
+        }
 
         if (data.reply) {
           addChatOsMsg('bot', data.reply);
