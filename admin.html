@@ -13938,26 +13938,75 @@ ${kbSummary}`,
       catch { btn.disabled = true; }
     }
 
-    function _kbAddLink() {
+    async function _resolveActiveBotForKb() {
+      if (!window.resolvedUid) return null;
+      if (_chatActiveBotId) return _chatActiveBotId;
+      try {
+        const sessionSnap = await db.collection('users').doc(window.resolvedUid)
+          .collection('chat_os_sessions').doc('default').get();
+        const botId = sessionSnap.exists ? sessionSnap.data().activeBotId : null;
+        if (botId) _chatActiveBotId = botId;
+        return botId || null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function _kbAddLink() {
       const inp = document.getElementById('kap-link-input');
       if (!inp) return;
       const url = inp.value.trim();
       try { new URL(url); } catch { inp.classList.add('kap-error'); showToast('Введите корректный URL'); return; }
-      CHAT_OS.inputEl.value = 'Добавь в базу знаний содержимое страницы: ' + url;
-      CHAT_OS.sendBtn.disabled = false;
-      handleChatObSend();
-      _kbPanelSetDone('✅', 'Ссылка принята. Обрабатываем…', 'Добавить ещё ссылку', 'kb-link');
+      if (!window.resolvedUid) { showToast('Сначала авторизуйтесь'); return; }
+      const botId = await _resolveActiveBotForKb();
+      if (!botId) { showToast('Сначала выберите/создайте бота'); return; }
+
+      const btn = document.getElementById('kap-link-submit');
+      if (btn) { btn.disabled = true; btn.textContent = 'Добавляю…'; }
+      try {
+        const resp = await fetch('/api/import-url', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: window.resolvedUid, botId, url }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data.ok) {
+          throw new Error(data.error || 'Не удалось добавить ссылку');
+        }
+        _kbPanelSetDone('✅', 'Ссылка добавлена в базу знаний', 'Добавить ещё ссылку', 'kb-link');
+        addChatOsMsg('bot', `✅ Ссылка добавлена в базу знаний: ${data.title || url}`);
+      } catch (e) {
+        showToast(e.message || 'Ошибка добавления ссылки');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Добавить →'; }
+      }
     }
 
-    function _kbAddText() {
+    async function _kbAddText() {
       const ta = document.getElementById('kap-text-input');
       if (!ta) return;
       const text = ta.value.trim();
       if (text.length < 10) { showToast('Введите не менее 10 символов'); ta.focus(); return; }
-      CHAT_OS.inputEl.value = 'Добавь в базу знаний следующий текст:\n' + text;
-      CHAT_OS.sendBtn.disabled = false;
-      handleChatObSend();
-      _kbPanelSetDone('✅', 'Текст принят. Обрабатываем…', 'Добавить ещё текст', 'kb-text');
+      if (!window.resolvedUid) { showToast('Сначала авторизуйтесь'); return; }
+      const botId = await _resolveActiveBotForKb();
+      if (!botId) { showToast('Сначала выберите/создайте бота'); return; }
+
+      try {
+        await db.collection('users').doc(window.resolvedUid)
+          .collection('bots').doc(botId)
+          .collection('knowledge_base').add({
+            type: 'text',
+            source: 'manual_text',
+            title: text.slice(0, 80),
+            content: text,
+            status: 'active',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        _kbPanelSetDone('✅', 'Текст добавлен в базу знаний', 'Добавить ещё текст', 'kb-text');
+        addChatOsMsg('bot', '✅ Текст добавлен в базу знаний.');
+      } catch (e) {
+        showToast(e.message || 'Ошибка добавления текста');
+      }
     }
 
     // ── KB SUGGESTIONS ──────────────────────────────────────────────────────────

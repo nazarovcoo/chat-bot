@@ -43,6 +43,10 @@
         "function": "transcribeYouTube"
       },
       {
+        "source": "/api/import-url",
+        "function": "importUrlKnowledge"
+      },
+      {
         "source": "/api/admin-send-message",
         "function": "adminSendMessage"
       },

@@ -1233,6 +1233,78 @@ exports.transcribeYouTube = onRequest(
   }
 );
 
+// ─── importUrlKnowledge — fetch URL, extract text, save into bot knowledge base ──
+exports.importUrlKnowledge = onRequest(
+  { cors: true, timeoutSeconds: 60 },
+  async (req, res) => {
+    if (req.method !== "POST") { res.status(405).end(); return; }
+    const { uid, botId, url } = req.body || {};
+    if (!uid || !botId || !url) {
+      res.status(400).json({ error: "uid, botId, url required" });
+      return;
+    }
+
+    try {
+      let parsed;
+      try { parsed = new URL(url); } catch { parsed = null; }
+      if (!parsed || !/^https?:$/.test(parsed.protocol)) {
+        res.status(400).json({ error: "Invalid URL" });
+        return;
+      }
+
+      const pageResp = await fetch(parsed.toString(), {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatible; BotPanel/1.0; +https://chatbot-acd16.web.app)",
+          "Accept-Language": "ru,en;q=0.9",
+        },
+      });
+      if (!pageResp.ok) {
+        res.status(400).json({ error: `Cannot fetch URL (${pageResp.status})` });
+        return;
+      }
+
+      const html = await pageResp.text();
+      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      const title = (titleMatch?.[1] || parsed.hostname).replace(/\s+/g, " ").trim().slice(0, 160);
+      const text = html
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " ")
+        .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+        .replace(/<!--[\s\S]*?-->/g, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, "\"")
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 24000);
+
+      if (!text || text.length < 60) {
+        res.status(400).json({ error: "URL content is too short or unreadable" });
+        return;
+      }
+
+      const db = admin.firestore();
+      const ref = await db.collection(`users/${uid}/bots/${botId}/knowledge_base`).add({
+        type: "url",
+        source: "url_import",
+        url: parsed.toString(),
+        title: title || "Web page",
+        content: text,
+        status: "active",
+        chars: text.length,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      res.json({ ok: true, id: ref.id, title, chars: text.length });
+    } catch (err) {
+      console.error("importUrlKnowledge error:", err);
+      res.status(500).json({ error: err.message || "Import failed" });
+    }
+  }
+);
+
 // ─── adminSendMessage — оператор отправляет сообщение клиенту напрямую ────────
 exports.adminSendMessage = onRequest(
   { cors: true, timeoutSeconds: 30 },
