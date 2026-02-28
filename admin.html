@@ -8,7 +8,7 @@
   <title>BotPanel — Создайте AI-бота для Telegram за 5 минут</title>
 
   <script>
-    window.BUILD_VERSION = "2026-02-28.1";
+    window.BUILD_VERSION = "2026-02-28.4";
     window.FORCE_PROJECTS_MAIN = true;
     (function initMiniAppIosFixFlag() {
       try {
@@ -83,7 +83,6 @@
   <script src="./js/api.js"></script>
   <script src="./js/ui.js"></script>
   <script src="./js/i18n.js"></script>
-  <script>if (typeof I18n !== 'undefined' && I18n.initPlaceholders) I18n.initPlaceholders();</script>
   <style>
     *,
     *::before,
@@ -8092,7 +8091,7 @@
             <button class="s-copy-btn" onclick="copyRefLink()">Копировать</button>
           </div>
           <div style="margin-top:12px;font-size:0.72rem;color:var(--indigo);cursor:pointer;"
-            onclick="showToast(I18n.t('refConditions'))">" + I18n.t('refConditions') + " →</div>
+            onclick="showToast('Условия партнёрской программы')">Условия партнёрской программы →</div>
         </div>
       </div>
 
@@ -8968,7 +8967,7 @@
         document.getElementById('bot-switcher').style.display = 'none';
       } else if (id === 'design-v3') {
         document.getElementById('topbar-title').style.display = '';
-        document.getElementById('topbar-title').textContent = 'Новый дизайн (v3)';
+        document.getElementById('topbar-title').textContent = I18n.t('newDesignV3');
         document.getElementById('topbar-count').textContent = '';
         document.getElementById('bot-switcher').style.display = 'none';
       } else if (id === 'bot-overview') {
@@ -8983,7 +8982,7 @@
         }
       } else if (id === 'automations') {
         document.getElementById('topbar-title').style.display = '';
-        document.getElementById('topbar-title').textContent = 'Боты';
+        document.getElementById('topbar-title').textContent = I18n.t('botsTitle');
         document.getElementById('topbar-count').textContent = STATE.bots.length > 0 ? STATE.bots.length : '';
         document.getElementById('bot-switcher').style.display = 'none';
       } else {
@@ -9294,9 +9293,9 @@
       e.stopPropagation();
       showConfirm({
         icon: '🗑',
-        title: 'Удалить бота?',
+        title: I18n.t('deleteBot'),
         desc: `Бот «${name}» будет удалён. Это действие нельзя отменить.`,
-        action: 'Удалить',
+        action: I18n.t('delete'),
         danger: true,
         onOk: () => fsDel('bots', id),
       });
@@ -9320,7 +9319,7 @@
       if (!name) { document.getElementById('bot-name').focus(); return; }
       if (!token) { alert(I18n.t('invalidToken')); document.getElementById('bot-token').focus(); return; }
       const btn = document.getElementById('add-bot-btn');
-      if (btn) { btn.disabled = true; btn.textContent = 'Подключаю...'; }
+      if (btn) { btn.disabled = true; btn.textContent = I18n.t('connecting') + '...'; }
       try {
         const ref = await fsAdd('bots', { name, token, username: username || '@' + name.toLowerCase().replace(/\s+/g, ''), contacts: 0, conversion: 0 });
         if (STATE.agentActive && currentUser) {
@@ -9328,7 +9327,7 @@
         }
         closeModal();
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Подключить'; }
+        if (btn) { btn.disabled = false; btn.textContent = I18n.t('connect'); }
       }
     }
 
@@ -9344,7 +9343,7 @@
       const btn = document.getElementById('btn-activate-bots');
       const msg = document.getElementById('webhook-status-msg');
       btn.disabled = true;
-      btn.textContent = '⏳ Подключаю...';
+      btn.textContent = '⏳ ' + I18n.t('connecting') + '...';
       msg.textContent = '';
       const botsSnap = await db.collection('users').doc(currentUser.uid).collection('bots').get();
       if (botsSnap.empty) {
@@ -9382,7 +9381,7 @@
         const d = doc.data();
         const active = STATE.agentActive;
         return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:0.85rem;">
-        <span>🤖 ${d.name || d.username || 'Бот'}</span>
+        <span>🤖 ${d.name || d.username || I18n.t('emptyBot')}</span>
         <span style="color:${active ? '#22c55e' : 'var(--text-sec)'};">${active ? '● Активен' : '○ Не активен'}</span>
       </div>`;
       }).join('');
@@ -12417,7 +12416,7 @@ ${kbSummary}`,
       if (!token) { err.textContent = 'Введите Telegram Bot API токен'; err.style.display = ''; return; }
       err.style.display = 'none';
       const btn = document.getElementById('wz-step1-btn');
-      btn.disabled = true; btn.textContent = '⏳ Подключаю...';
+      btn.disabled = true; btn.textContent = '⏳ ' + I18n.t('connecting') + '...';
       try {
         const username = document.getElementById('wz-username').value.trim();
         const ref = await fsAdd('bots', {
@@ -13553,7 +13552,7 @@ ${kbSummary}`,
     // ── WELCOME MESSAGE CONFIG ───────────────────────────────────────────────────
     // Generates a default welcome text from bot name + system prompt (no AI call needed)
     function _buildDefaultWelcome(botName, systemPrompt) {
-      const name = botName || 'Бот';
+      const name = botName || I18n.t('emptyBot');
       if (systemPrompt && systemPrompt.length > 20) {
         const excerpt = systemPrompt.split('\n')[0].replace(/^(ты|вы|this bot|you are)\s*/i, '').slice(0, 130).trim();
         if (excerpt.length > 10) {
@@ -13602,7 +13601,7 @@ ${kbSummary}`,
         const hasPrompt = !!(bot.systemPrompt || bot.description);
 
         _testState = {
-          botId, botName: bot.name || 'Бот', kbCount, tgStatus,
+          botId, botName: bot.name || I18n.t('emptyBot'), kbCount, tgStatus,
           systemPrompt: bot.systemPrompt || bot.description || '',
           questions: [], answers: []
         };
@@ -15602,6 +15601,7 @@ ${kbSummary}`,
       })();
     })();
   </script>
+  <script>document.addEventListener('DOMContentLoaded', function(){ if(typeof I18n !== 'undefined' && I18n.initPlaceholders) I18n.initPlaceholders(); });</script>
 </body>
 
 </html>
