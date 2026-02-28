@@ -308,6 +308,9 @@
       emptyAnswer: 'Пустой ответ от AI.',
       emptyBotAnswer: 'Пустой ответ. Попробуйте позже.',
       dataAfterChats: 'данные появятся после диалогов',
+      deleteSourceTitle: 'Удалить источник?',
+      deleteSourceText: 'Источник будет удалён из базы знаний.',
+      createAccount: 'Создать аккаунт',
     },
     en: {
       ok: 'OK',
@@ -596,6 +599,9 @@
       emptyAnswer: 'Empty AI answer.',
       emptyBotAnswer: 'Empty answer. Try later.',
       dataAfterChats: 'data will appear after conversations',
+      deleteSourceTitle: 'Delete source?',
+      deleteSourceText: 'Source will be removed from knowledge base.',
+      createAccount: 'Create account',
     }
   };
 

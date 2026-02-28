@@ -8333,7 +8333,7 @@
               onkeydown="if(event.key==='Enter')authSubmit()">
           </div>
 
-          <button class="btn-auth" id="auth-submit-btn" onclick="authSubmit()">Войти</button>
+          <button class="btn-auth" id="auth-submit-btn" onclick="authSubmit()">...
         </div>
       </section>
 
@@ -10496,7 +10496,7 @@
         } catch (e) {
           showToast('❌ ' + I18n.t('error') + ': ' + e.message);
           btn.disabled = false;
-          btn.textContent = 'Сохранить';
+          btn.textContent = I18n.t('save');
         }
       };
     }
@@ -11579,7 +11579,7 @@ ${kbSummary}`,
     /* ══ CONFIRM MODAL ══ */
     let _confirmCallback = null;
 
-    function showConfirm({ title, desc, action = 'Подтвердить', cancel = 'Отмена', icon = '', danger = false, onOk }) {
+    function showConfirm({ title, desc, action = I18n.t('confirmButton'), cancel = I18n.t('cancel'), icon = '', danger = false, onOk }) {
       _confirmCallback = onOk || null;
       const iconEl = document.getElementById('modal-confirm-icon');
       const titleEl = document.getElementById('modal-confirm-title');
@@ -11629,7 +11629,7 @@ ${kbSummary}`,
       document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
       el.classList.add('active');
       document.getElementById('auth-name-wrap').style.display = mode === 'register' ? 'block' : 'none';
-      document.getElementById('auth-submit-btn').textContent = mode === 'login' ? 'Войти' : 'Создать аккаунт';
+      document.getElementById('auth-submit-btn').textContent = mode === 'login' ? I18n.t('login') : I18n.t('createAccount');
       document.getElementById('auth-error').classList.remove('show');
     }
 
