@@ -51,6 +51,10 @@
       ".del-cancel-btn:hover{background:#f3f4f6}",
       ".del-ok-btn{background:#dc2626;color:#fff;border:none;border-radius:999px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:700;font-family:inherit}",
       ".del-ok-btn:hover{background:#b91c1c}",
+      ".del-ok-btn-primary{background:#111827;color:#fff;border:none;border-radius:999px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:700;font-family:inherit}",
+      ".del-ok-btn-primary:hover{background:#374151}",
+      ".del-confirm-input{width:100%;box-sizing:border-box;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;font-size:15px;font-family:inherit;margin-bottom:18px;outline:none}",
+      ".del-confirm-input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}",
       ".projects-main{display:flex;flex-direction:column;min-width:0;padding:14px;gap:12px;overflow:hidden}",
       ".projects-top{border:1px solid #e6e8ef;border-radius:22px;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,.06);padding:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}",
       ".projects-top h1{margin:0;font-size:16px;line-height:1.2;letter-spacing:.2px}",
@@ -587,8 +591,8 @@
     }
 
     async function doRenameProject(p) {
-      var newName = prompt(I18n.t('renameProject') + ":", p.name);
-      if (!newName || !newName.trim() || newName.trim() === p.name) return;
+      var newName = await showInlinePrompt('Переименовать проект:', p.name);
+      if (!newName || newName === p.name) return;
       await ProjectsApi.updateProject(p.id, { name: newName.trim() });
       notify(I18n.t('saved'));
       await refreshProjects();
@@ -608,6 +612,47 @@
         overlay.querySelector(".del-cancel-btn").addEventListener("click", function () { overlay.remove(); resolve(false); });
         overlay.querySelector(".del-ok-btn").addEventListener("click", function () { overlay.remove(); resolve(true); });
         overlay.addEventListener("click", function (e) { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+      });
+    }
+
+    function showInlineConfirm(title, body) {
+      return new Promise(function (resolve) {
+        var overlay = document.createElement("div");
+        overlay.className = "del-confirm-bg";
+        overlay.innerHTML =
+          "<div class='del-confirm-modal'>" +
+          "<div class='del-confirm-title'>" + esc(title) + "</div>" +
+          (body ? "<div class='del-confirm-body'>" + esc(body) + "</div>" : "") +
+          "<div class='del-confirm-btns'><button class='del-cancel-btn'>Отменить</button><button class='del-ok-btn'>Удалить</button></div>" +
+          "</div>";
+        document.getElementById("projects-ui-root").appendChild(overlay);
+        overlay.querySelector(".del-cancel-btn").addEventListener("click", function () { overlay.remove(); resolve(false); });
+        overlay.querySelector(".del-ok-btn").addEventListener("click", function () { overlay.remove(); resolve(true); });
+        overlay.addEventListener("click", function (e) { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+      });
+    }
+
+    function showInlinePrompt(title, defaultValue) {
+      return new Promise(function (resolve) {
+        var overlay = document.createElement("div");
+        overlay.className = "del-confirm-bg";
+        overlay.innerHTML =
+          "<div class='del-confirm-modal'>" +
+          "<div class='del-confirm-title'>" + esc(title) + "</div>" +
+          "<input class='del-confirm-input' value='" + esc(defaultValue || '') + "'>" +
+          "<div class='del-confirm-btns'><button class='del-cancel-btn'>Отменить</button><button class='del-ok-btn-primary'>OK</button></div>" +
+          "</div>";
+        var input = overlay.querySelector(".del-confirm-input");
+        document.getElementById("projects-ui-root").appendChild(overlay);
+        input.focus();
+        input.select();
+        overlay.querySelector(".del-cancel-btn").addEventListener("click", function () { overlay.remove(); resolve(null); });
+        overlay.querySelector(".del-ok-btn-primary").addEventListener("click", function () { var v = input.value.trim(); overlay.remove(); resolve(v || null); });
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") { var v = input.value.trim(); overlay.remove(); resolve(v || null); }
+          if (e.key === "Escape") { overlay.remove(); resolve(null); }
+        });
+        overlay.addEventListener("click", function (e) { if (e.target === overlay) { overlay.remove(); resolve(null); } });
       });
     }
 
@@ -845,7 +890,7 @@
       vbox.onclick = async function (evt) {
         var btn = evt.target && evt.target.closest ? evt.target.closest("[data-del-source]") : null;
         if (!btn) return;
-        if (!confirm(I18n.t('deleteSource'))) return;
+        if (!(await showInlineConfirm('Удалить источник?', 'Источник будет удалён из базы знаний.'))) return;
         await ProjectsApi.deleteSource(btn.getAttribute("data-del-source"));
         state.sourcesCursor = null;
         state.sourcesLoadedProjectId = null;

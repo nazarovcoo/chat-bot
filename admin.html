@@ -9533,7 +9533,7 @@
 
       const saveBtn = document.getElementById('ea-save-btn');
       saveBtn.disabled = true;
-      saveBtn.textContent = 'Сохраняю…';
+      saveBtn.textContent = I18n.t('saving');
 
       try {
         if (_eaState.source === 'unanswered') {
@@ -10414,9 +10414,9 @@
     async function deleteKBItem(botId, itemId) {
       if (!botId || !itemId) return;
       const ok = await showInlineConfirm({
-        title: 'Удалить источник?',
-        text: 'Источник будет удалён из базы знаний.',
-        okText: 'Удалить', cancelText: 'Отмена'
+        title: I18n.t('deleteSourceTitle'),
+        text: I18n.t('deleteSourceText'),
+        okText: I18n.t('delete'), cancelText: I18n.t('cancel')
       });
       if (!ok) return;
       try {
