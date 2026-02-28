@@ -245,6 +245,66 @@
       enterAnswerText: 'Введите текст ответа',
       qaGenerating: 'Текст принят — генерирую Q&A…',
       generate: 'сгенерировать',
+      
+      // Placeholders
+      messagePlaceholder: 'Напишите сообщение...',
+      notesPlaceholder: 'Заметки оператора (сохраняются автоматически)...',
+      replyPlaceholder: 'Ответить клиенту напрямую (Enter — отправить)...',
+      instructionsPlaceholder: 'Например: Ты — вежливый ассистент компании...',
+      keywordPlaceholder: 'Например: цена, прайс, стоимость',
+      answerPlaceholder: 'Текст ответа, который получит пользователь...',
+      flowTriggerPlaceholder: 'Например: цена, прайс, тариф',
+      flowTextPlaceholder: 'Выберите интересующий вариант:',
+      companyNamePlaceholder: 'Например: MyShop',
+      expiryPlaceholder: 'ММ/ГГ',
+      promoPlaceholder: 'Введите промокод...',
+      ownerIdPlaceholder: 'Например: 123456789',
+      authNamePlaceholder: 'Ваше имя',
+      botNamePlaceholder: 'Например: Мой магазин бот',
+      broadcastPlaceholder: 'Введите текст рассылки...',
+      kbTitlePlaceholder: 'Например: О компании',
+      kbContentPlaceholder: 'Введите текст...',
+      newAnswerPlaceholder: 'Новые данные для ответа на вопрос',
+      searchPlaceholder: 'Поиск по названию',
+      refLinkLoading: 'Загрузка...',
+      accountTitle: 'Аккаунт',
+      botsTitle: 'Боты',
+      newDesignV3: 'Новый дизайн (v3)',
+      kb: 'База знаний',
+      deleteBot: 'Удалить бота?',
+      delete: 'Удалить',
+      connecting: 'Подключаю...',
+      connect: 'Подключить',
+      uploadFileTitle: 'Загрузить файл',
+      addTextTitle: 'Добавить текст',
+      emptyBot: 'Бот',
+      tgConnected: 'подключён',
+      noTitle: 'Без названия',
+      edit: 'Редактировать',
+      open: 'Открыть',
+      deleteSourceTitle: 'Удалить источник?',
+      deleteSourceText: 'Источник будет удалён из базы знаний.',
+      titleLabel: 'Заголовок',
+      textLabel: 'Текст',
+      saving: 'Сохраняю…',
+      confirmAction: 'Подтвердить действие',
+      areYouSure: 'Вы уверены?',
+      userName: 'Пользователь',
+      error: 'Ошибка',
+      networkErrorRetry: 'Сетевая ошибка. Попробуйте ещё раз.',
+      startProcessing: 'Запускаю обработка...',
+      toggleOn: 'Вкл',
+      toggleOff: 'Выкл',
+      loading: 'Загрузка...',
+      trialEnded: 'Пробный период завершён',
+      planActive: 'Активен',
+      planExpired: 'Истёк',
+      confirmButton: 'Подтвердить',
+      login: 'Войти',
+      createAccount: 'Создать аккаунт',
+      accountConnected: 'Подключаем аккаунт...',
+      menu: 'Меню',
+      scrollDown: 'Прокрутить вниз',
     },
     en: {
       ok: 'OK',
@@ -470,6 +530,66 @@
       enterAnswerText: 'Enter answer text',
       qaGenerating: 'Text received — generating Q&A...',
       generate: 'generate',
+      
+      // Placeholders
+      messagePlaceholder: 'Write a message...',
+      notesPlaceholder: 'Operator notes (auto-saved)...',
+      replyPlaceholder: 'Reply to customer directly (Enter to send)...',
+      instructionsPlaceholder: 'You are a friendly assistant company...',
+      keywordPlaceholder: 'e.g., price, cost',
+      answerPlaceholder: 'Answer text user will receive...',
+      flowTriggerPlaceholder: 'e.g., price, cost, tariff',
+      flowTextPlaceholder: 'Choose an option:',
+      companyNamePlaceholder: 'e.g., MyShop',
+      expiryPlaceholder: 'MM/YY',
+      promoPlaceholder: 'Enter promo code...',
+      ownerIdPlaceholder: 'e.g., 123456789',
+      authNamePlaceholder: 'Your name',
+      botNamePlaceholder: 'e.g., My Shop Bot',
+      broadcastPlaceholder: 'Enter broadcast text...',
+      kbTitlePlaceholder: 'e.g., About company',
+      kbContentPlaceholder: 'Enter text...',
+      newAnswerPlaceholder: 'New answer data',
+      searchPlaceholder: 'Search by name',
+      refLinkLoading: 'Loading...',
+      accountTitle: 'Account',
+      botsTitle: 'Bots',
+      newDesignV3: 'New design (v3)',
+      kb: 'Knowledge base',
+      deleteBot: 'Delete bot?',
+      delete: 'Delete',
+      connecting: 'Connecting...',
+      connect: 'Connect',
+      uploadFileTitle: 'Upload file',
+      addTextTitle: 'Add text',
+      emptyBot: 'Bot',
+      tgConnected: 'connected',
+      noTitle: 'No title',
+      edit: 'Edit',
+      open: 'Open',
+      deleteSourceTitle: 'Delete source?',
+      deleteSourceText: 'Source will be removed from knowledge base.',
+      titleLabel: 'Title',
+      textLabel: 'Text',
+      saving: 'Saving...',
+      confirmAction: 'Confirm action',
+      areYouSure: 'Are you sure?',
+      userName: 'User',
+      error: 'Error',
+      networkErrorRetry: 'Network error. Try again.',
+      startProcessing: 'Starting processing...',
+      toggleOn: 'On',
+      toggleOff: 'Off',
+      loading: 'Loading...',
+      trialEnded: 'Trial ended',
+      planActive: 'Active',
+      planExpired: 'Expired',
+      confirmButton: 'Confirm',
+      login: 'Login',
+      createAccount: 'Create account',
+      accountConnected: 'Connecting account...',
+      menu: 'Menu',
+      scrollDown: 'Scroll down',
     }
   };
 
@@ -512,11 +632,56 @@
 
   init();
 
+  function initPlaceholders() {
+    var map = {
+      'global-search': 'searchPlaceholder',
+      'chat-input': 'messagePlaceholder',
+      'ov-chat-input': 'messagePlaceholder',
+      'chat-ob-input': 'accountConnected',
+      'ar-keyword': 'keywordPlaceholder',
+      'ar-response': 'answerPlaceholder',
+      'flow-trigger': 'flowTriggerPlaceholder',
+      'flow-text': 'flowTextPlaceholder',
+      's-company-name': 'companyNamePlaceholder',
+      'card-expiry-input': 'expiryPlaceholder',
+      's-promo-input': 'promoPlaceholder',
+      'notif-owner-id': 'ownerIdPlaceholder',
+      'auth-name': 'authNamePlaceholder',
+      'bot-name': 'botNamePlaceholder',
+      'bc-text': 'broadcastPlaceholder',
+      'kb-title': 'kbTitlePlaceholder',
+      'kb-content': 'kbContentPlaceholder',
+      'ea-textarea': 'newAnswerPlaceholder',
+      'sp-ref-link': 'refLinkLoading',
+    };
+    
+    Object.keys(map).forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.placeholder = t(map[id]);
+    });
+    
+    var titleMap = {
+      'btn-open-kb': 'kb',
+      'theme-icon': 'theme',
+      'refresh-chat-btn': 'refresh',
+      'clear-chat-btn': 'clearChat',
+      'kb-close': 'close',
+      'cos-scroll-btn': 'scrollDown',
+      'mob-menu-btn': 'menu',
+    };
+    
+    Object.keys(titleMap).forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.title = t(titleMap[id]);
+    });
+  }
+
   var I18n = {
     t: t,
     setLang: setLang,
     getLang: getLang,
-    lang: currentLang
+    lang: currentLang,
+    initPlaceholders: initPlaceholders
   };
 
   if (typeof module !== 'undefined' && module.exports) {

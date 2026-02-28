@@ -83,6 +83,7 @@
   <script src="./js/api.js"></script>
   <script src="./js/ui.js"></script>
   <script src="./js/i18n.js"></script>
+  <script>if (typeof I18n !== 'undefined' && I18n.initPlaceholders) I18n.initPlaceholders();</script>
   <style>
     *,
     *::before,
@@ -6675,7 +6676,7 @@
       <div class="topbar-right">
         <div class="search-box">
           <span>🔍</span>
-          <input placeholder="Поиск по названию" id="global-search" oninput="onSearch()">
+          <input id="global-search" oninput="onSearch()">
         </div>
         <button class="theme-btn" onclick="toggleTheme()" title="Сменить тему" id="theme-icon">🌙</button>
         <div class="user-pill" id="user-pill" style="display:none;" onclick="toggleAvDropdown(event)">
@@ -7063,7 +7064,7 @@
               </div>
             </div>
             <div class="chat-foot">
-              <input class="chat-inp" id="chat-input" placeholder="Напишите сообщение..."
+              <input class="chat-inp" id="chat-input" placeholder="...
                 onkeydown="if(event.key==='Enter')sendChat()">
               <button class="icon-btn">🙂</button>
               <button class="icon-btn">🎤</button>
