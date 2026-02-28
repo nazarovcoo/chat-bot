@@ -1,4 +1,5 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const admin = require("firebase-admin");
 const crypto = require("crypto");
@@ -839,11 +840,22 @@ exports.telegramWebhook = onRequest(
         if (kbItems === null) {
           const _langFilter = item => !item.lang || item.lang === 'auto' || item.lang === detectedLang;
           if (botId) {
-            kbItems = primaryKbSnap.docs
+            let botKbItems = primaryKbSnap.docs
               .map(d => ({ ...d.data(), _id: d.id }))
               .filter(_langFilter)
               .map(d => ({ title: d.title || d.question || d.name || "", content: d.content || d.answer || d.text || "", _id: d._id }))
               .filter(k => k.content.trim().length > 0);
+            // If bot-specific KB is empty, also pull from kbQA (project sources pipeline)
+            if (botKbItems.length === 0) {
+              const kbQaSnap = await db.collection(`users/${uid}/kbQA`).where("status", "==", "active").limit(200).get();
+              if (kbQaSnap.size > 0) {
+                botKbItems = kbQaSnap.docs
+                  .map(d => ({ ...d.data(), _id: d.id }))
+                  .filter(_langFilter)
+                  .map(d => ({ title: d.question || "", content: d.answer || "", _id: d._id }));
+              }
+            }
+            kbItems = botKbItems;
           } else if (primaryKbSnap.size > 0) {
             kbItems = primaryKbSnap.docs
               .map(d => ({ ...d.data(), _id: d.id }))
@@ -1954,8 +1966,9 @@ exports.projectsApi = onRequest(
           }
           if (!title || !String(title).trim()) { res.status(400).json({ error: "title required" }); return; }
           if (!contentRef || !String(contentRef).trim()) { res.status(400).json({ error: "contentRef required" }); return; }
-          // Client extracts text before upload, so contentRef already contains content → ready
-          const status = String(contentRef).trim().length > 0 ? "ready" : "pending";
+          // URL sources are ready immediately; file/text/document types go through KB pipeline
+          const hasContent = String(contentRef).trim().length > 0;
+          const status = !hasContent ? "pending" : (String(type) === "url" ? "ready" : "processing");
           const ref = db.collection(`users/${uid}/project_sources`).doc();
           await ref.set({
             projectId,
@@ -2090,6 +2103,40 @@ exports.projectsApi = onRequest(
           return out;
         });
         res.json({ ok: true, chats: result, nextCursor, hasMore });
+        return;
+      }
+
+      // GET /sources/:id — status polling
+      const gsId = path.match(/^sources\/([^/]+)$/);
+      if (gsId && req.method === "GET") {
+        const id = decodeURIComponent(gsId[1]);
+        const ref = db.doc(`users/${uid}/project_sources/${id}`);
+        const snap = await ref.get();
+        if (!snap.exists) { res.status(404).json({ error: "Source not found" }); return; }
+        const s = snap.data() || {};
+        res.json({ ok: true, source: {
+          id: snap.id, projectId: s.projectId, type: s.type, title: s.title,
+          contentRef: s.contentRef, status: s.status, kbQaCount: s.kbQaCount || 0,
+          errorMessage: s.errorMessage || null,
+          createdAt: _asIso(s.createdAt), updatedAt: _asIso(s.updatedAt),
+        }});
+        return;
+      }
+
+      // POST /sources/:id/reprocess — retry failed sources
+      const rpId = path.match(/^sources\/([^/]+)\/reprocess$/);
+      if (rpId && req.method === "POST") {
+        const id = decodeURIComponent(rpId[1]);
+        const ref = db.doc(`users/${uid}/project_sources/${id}`);
+        const snap = await ref.get();
+        if (!snap.exists) { res.status(404).json({ error: "Source not found" }); return; }
+        const d = snap.data() || {};
+        if (d.type === "url") { res.status(400).json({ error: "URL sources do not need reprocessing" }); return; }
+        const text = String(d.contentRef || "").trim();
+        if (!text) { res.status(400).json({ error: "No content to process" }); return; }
+        // Reset to "processing" — onDocumentWritten trigger will pick it up
+        await ref.update({ status: "processing", errorMessage: null, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        res.json({ ok: true, message: "Reprocessing started" });
         return;
       }
 
@@ -3470,6 +3517,103 @@ exports.getUploadUrl = onRequest(
     } catch (err) {
       console.error("getUploadUrl error:", err);
       return res.status(500).json({ error: err.message });
+    }
+  }
+);
+
+// ─── Firestore trigger: project_sources → kbQA pipeline ──────────────────────
+exports.processProjectSource = onDocumentWritten(
+  { document: "users/{uid}/project_sources/{sourceId}", timeoutSeconds: 540, memory: "512MiB" },
+  async (event) => {
+    const { uid, sourceId } = event.params;
+    const afterSnap = event.data && event.data.after;
+    if (!afterSnap || !afterSnap.exists) return; // Deleted — nothing to do
+
+    const after = afterSnap.data();
+    const before = event.data.before && event.data.before.exists ? event.data.before.data() : null;
+
+    // Only run pipeline when status TRANSITIONS to "processing"
+    if (after.status !== "processing") return;
+    if (before && before.status === "processing") return; // Already processing, skip loop
+
+    // Skip URL sources — no text content to chunk
+    if (after.type === "url") {
+      await afterSnap.ref.update({ status: "ready", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      return;
+    }
+
+    const text = String(after.contentRef || "").trim();
+    if (!text || text.length < 50) {
+      await afterSnap.ref.update({ status: "ready", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+      return;
+    }
+
+    const db = admin.firestore();
+
+    try {
+      // Determine AI provider from user settings
+      const aiDoc = await db.doc(`users/${uid}/settings/ai`).get();
+      const aiProviders = aiDoc.exists ? (aiDoc.data().providers || {}) : {};
+      let provider = "openai";
+      let model = "gpt-4o-mini";
+      if (aiProviders.openai && aiProviders.openai.apiKey) {
+        provider = "openai";
+        model = aiProviders.openai.model || "gpt-4o-mini";
+      } else if (aiProviders.gemini && aiProviders.gemini.apiKey) {
+        provider = "gemini";
+        model = aiProviders.gemini.model || "gemini-1.5-flash";
+      } else if (aiProviders.claude && aiProviders.claude.apiKey) {
+        provider = "claude";
+        model = aiProviders.claude.model || "claude-haiku-4-5-20251001";
+      }
+
+      // Chunk the source text and generate Q&A pairs
+      const chunks = chunkText(text, 1500);
+      if (chunks.length === 0) {
+        await afterSnap.ref.update({ status: "ready", kbQaCount: 0, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        return;
+      }
+
+      const kbRef = db.collection(`users/${uid}/kbQA`);
+      let savedCount = 0;
+
+      for (const chunk of chunks) {
+        const pairs = await generateQAFromChunk(chunk, provider, model);
+        for (const pair of pairs) {
+          if (!pair.question || !pair.answer) continue;
+          const key = semanticKey(pair.question, pair.answer);
+          // Deduplicate by semantic key
+          const existing = await kbRef.where("_key", "==", key).limit(1).get();
+          if (!existing.empty) continue;
+          await kbRef.doc().set({
+            question: String(pair.question).trim(),
+            answer: String(pair.answer).trim(),
+            topic: String(pair.topic || after.title || "").trim(),
+            _key: key,
+            sourceId: sourceId,
+            projectId: after.projectId || null,
+            status: "active",
+            lang: "auto",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          savedCount++;
+        }
+      }
+
+      await afterSnap.ref.update({
+        status: "ready",
+        kbQaCount: savedCount,
+        processedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`processProjectSource: uid=${uid} sourceId=${sourceId} saved ${savedCount} kbQA docs`);
+    } catch (e) {
+      console.error(`processProjectSource error uid=${uid} sourceId=${sourceId}:`, e.message);
+      await afterSnap.ref.update({
+        status: "failed",
+        errorMessage: String(e.message).slice(0, 500),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
     }
   }
 );

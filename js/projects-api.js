@@ -152,6 +152,14 @@
     return request("/api/sources/" + encodeURIComponent(sourceId), { method: "DELETE" });
   }
 
+  function getSource(sourceId) {
+    return request("/api/sources/" + encodeURIComponent(sourceId));
+  }
+
+  function reprocessSource(sourceId) {
+    return request("/api/sources/" + encodeURIComponent(sourceId) + "/reprocess", { method: "POST", body: JSON.stringify({}) });
+  }
+
   function listChats(projectId, query) {
     var params = new URLSearchParams();
     var q = (query && query.q) || "";
@@ -180,6 +188,8 @@
     listSources: listSources,
     addSource: addSource,
     deleteSource: deleteSource,
+    getSource: getSource,
+    reprocessSource: reprocessSource,
     listChats: listChats,
     listMessages: listMessages,
   };

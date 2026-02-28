@@ -55,6 +55,17 @@
       ".del-ok-btn-primary:hover{background:#374151}",
       ".del-confirm-input{width:100%;box-sizing:border-box;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;font-size:15px;font-family:inherit;margin-bottom:18px;outline:none}",
       ".del-confirm-input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.15)}",
+      ".src-status-ready{background:#dcfce7!important;color:#16a34a!important;border-color:#bbf7d0!important}",
+      ".src-status-failed{background:#fee2e2!important;color:#dc2626!important;border-color:#fecaca!important}",
+      ".src-status-processing{background:#fef9c3!important;color:#ca8a04!important;border-color:#fde68a!important}",
+      ".src-status-pending{background:#f1f5f9!important;color:#64748b!important;border-color:#e2e8f0!important}",
+      ".src-preview-btn{padding:6px 10px!important;font-size:14px!important}",
+      ".src-retry-btn{padding:6px 10px!important;font-size:13px!important;white-space:nowrap}",
+      ".src-preview-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100001;display:flex;align-items:center;justify-content:center;padding:16px}",
+      ".src-preview-box{background:#fff;border-radius:20px;padding:24px;max-width:680px;width:100%;max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.2)}",
+      ".src-preview-title{font-size:17px;font-weight:700;margin:0}",
+      ".src-preview-body{overflow-y:auto;flex:1;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;border:1px solid #e5e7eb;border-radius:10px;padding:12px;background:#f9fafb}",
+      ".src-preview-footer{display:flex;justify-content:flex-end;gap:8px}",
       ".projects-main{display:flex;flex-direction:column;min-width:0;padding:14px;gap:12px;overflow:hidden}",
       ".projects-top{border:1px solid #e6e8ef;border-radius:22px;background:#fff;box-shadow:0 10px 30px rgba(15,23,42,.06);padding:14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}",
       ".projects-top h1{margin:0;font-size:16px;line-height:1.2;letter-spacing:.2px}",
@@ -329,10 +340,11 @@
       nodes.srcTextOk.disabled = true;
       nodes.srcTextOk.textContent = I18n.t('add') + "…";
       try {
-        await ProjectsApi.addSource(state.activeProjectId, { type: "text", title: title, contentRef: body });
+        var textResult = await ProjectsApi.addSource(state.activeProjectId, { type: "text", title: title, contentRef: body });
         closeSourceModal();
         await loadSources(false);
         await refreshProjects();
+        if (textResult && textResult.source && textResult.source.id) startSourcePolling(textResult.source.id);
       } catch (e) {
         alert(I18n.t('error') + ": " + (e.message || e));
       } finally {
@@ -364,13 +376,18 @@
     nodes.srcFileOk.addEventListener("click", async function () {
       if (!_srcFile) { nodes.srcFileInp.click(); return; }
       nodes.srcFileOk.disabled = true;
-      nodes.srcFileOk.textContent = I18n.t('loading');
+      nodes.srcFileOk.textContent = "Извлечение текста…";
       try {
         var text = await readFileAsText(_srcFile);
-        await ProjectsApi.addSource(state.activeProjectId, { type: "file", title: _srcFile.name, contentRef: text });
+        nodes.srcFileOk.textContent = "Загрузка…";
+        var result = await ProjectsApi.addSource(state.activeProjectId, { type: "file", title: _srcFile.name, contentRef: text });
         closeSourceModal();
         await loadSources(false);
         await refreshProjects();
+        // Start polling for KB pipeline completion
+        if (result && result.source && result.source.id) {
+          startSourcePolling(result.source.id);
+        }
       } catch (e) {
         alert(I18n.t('error') + ": " + (e.message || e));
       } finally {
@@ -883,20 +900,96 @@
       if (more) more.addEventListener("click", function () { loadSources(true); });
       renderVirtualRows(vbox, list, state.sources, function (s) {
         var d = s.createdAt ? new Date(s.createdAt).toLocaleDateString("ru-RU") : "—";
-        return "<div class='projects-item'><div><h4>" + esc(s.title) + "</h4><p>" + esc(s.type) + " • " + esc(d) +
-          "</p></div><div style='display:flex;flex-direction:column;gap:8px;align-items:flex-end'><div class='projects-status'>" + esc(s.status) +
-          "</div><button class='projects-btn' data-del-source='" + esc(s.id) + "'>Удалить</button></div></div>";
-      }, 92);
+        var statusClass = s.status === "ready" ? "src-status-ready" : s.status === "failed" ? "src-status-failed" : s.status === "processing" ? "src-status-processing" : "src-status-pending";
+        var statusLabel = s.status === "ready" ? "✓ Готово" : s.status === "failed" ? "✗ Ошибка" : s.status === "processing" ? "⏳ Обработка…" : "⌛ Ожидание";
+        var hasContent = s.contentRef && s.contentRef.length > 0 && s.type !== "url";
+        var previewBtn = hasContent ? "<button class='projects-btn src-preview-btn' data-preview-source='" + esc(s.id) + "' title='Предпросмотр'>👁</button>" : "";
+        var retryBtn = s.status === "failed" ? "<button class='projects-btn src-retry-btn' data-retry-source='" + esc(s.id) + "' title='Повторить обработку'>↺ Повторить</button>" : "";
+        var kbCount = s.kbQaCount > 0 ? "<span style='font-size:11px;color:#6b7280;margin-left:4px'>(" + s.kbQaCount + " пар)</span>" : "";
+        return "<div class='projects-item'><div style='min-width:0;flex:1'><h4 style='overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>" + esc(s.title) + "</h4><p>" + esc(s.type) + " • " + esc(d) + kbCount + "</p></div>" +
+          "<div style='display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0'>" +
+          "<div class='projects-status " + statusClass + "'>" + statusLabel + "</div>" +
+          "<div style='display:flex;gap:4px'>" + previewBtn + retryBtn +
+          "<button class='projects-btn' data-del-source='" + esc(s.id) + "'>Удалить</button></div></div></div>";
+      }, 100);
       vbox.onclick = async function (evt) {
-        var btn = evt.target && evt.target.closest ? evt.target.closest("[data-del-source]") : null;
-        if (!btn) return;
+        // Preview
+        var prevBtn = evt.target && evt.target.closest ? evt.target.closest("[data-preview-source]") : null;
+        if (prevBtn) { openSourcePreview(prevBtn.getAttribute("data-preview-source")); return; }
+        // Retry
+        var retryBtn = evt.target && evt.target.closest ? evt.target.closest("[data-retry-source]") : null;
+        if (retryBtn) {
+          retryBtn.disabled = true; retryBtn.textContent = "…";
+          try {
+            await ProjectsApi.reprocessSource(retryBtn.getAttribute("data-retry-source"));
+            notify("Повторная обработка запущена");
+            // Update state to processing locally for immediate feedback
+            var sid = retryBtn.getAttribute("data-retry-source");
+            state.sources = state.sources.map(function(s) { return s.id === sid ? Object.assign({}, s, { status: "processing" }) : s; });
+            renderSourcesView();
+            startSourcePolling(sid);
+          } catch (e) { notify((e.message || "Ошибка"), true); retryBtn.disabled = false; retryBtn.textContent = "↺ Повторить"; }
+          return;
+        }
+        // Delete
+        var delBtn = evt.target && evt.target.closest ? evt.target.closest("[data-del-source]") : null;
+        if (!delBtn) return;
         if (!(await showInlineConfirm('Удалить источник?', 'Источник будет удалён из базы знаний.'))) return;
-        await ProjectsApi.deleteSource(btn.getAttribute("data-del-source"));
+        await ProjectsApi.deleteSource(delBtn.getAttribute("data-del-source"));
         state.sourcesCursor = null;
         state.sourcesLoadedProjectId = null;
         await loadSources(false);
         await refreshProjects();
       };
+    }
+
+    // ── Source Preview Modal ───────────────────────────────────────────────────
+    function openSourcePreview(sourceId) {
+      var src = state.sources.find(function(s) { return s.id === sourceId; });
+      if (!src) return;
+      var overlay = document.createElement("div");
+      overlay.className = "src-preview-modal";
+      var bodyText = (src.contentRef || "").trim();
+      var MAX_PREVIEW = 6000;
+      var truncated = bodyText.length > MAX_PREVIEW;
+      var previewText = truncated ? bodyText.slice(0, MAX_PREVIEW) : bodyText;
+      overlay.innerHTML =
+        "<div class='src-preview-box'>" +
+        "<div class='src-preview-title'>" + esc(src.title) + "</div>" +
+        "<div class='src-preview-body' id='src-preview-body-text'>" + esc(previewText) + (truncated ? "\n\n… (текст обрезан до 6000 символов из " + bodyText.length + ")" : "") + "</div>" +
+        "<div class='src-preview-footer'><button class='projects-btn' id='src-preview-close'>Закрыть</button></div>" +
+        "</div>";
+      document.getElementById("projects-ui-root").appendChild(overlay);
+      overlay.querySelector("#src-preview-close").addEventListener("click", function () { overlay.remove(); });
+      overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    // ── Source Status Polling ──────────────────────────────────────────────────
+    var _srcPollingTimers = {};
+    function startSourcePolling(sourceId) {
+      if (_srcPollingTimers[sourceId]) return; // Already polling
+      var attempts = 0;
+      var maxAttempts = 30; // 30 * 3s = 90s max
+      function poll() {
+        attempts++;
+        if (attempts > maxAttempts) { clearPolling(); return; }
+        ProjectsApi.getSource(sourceId).then(function(data) {
+          var s = data && data.source;
+          if (!s) { clearPolling(); return; }
+          if (s.status === "processing" || s.status === "pending") {
+            _srcPollingTimers[sourceId] = setTimeout(poll, 3000);
+          } else {
+            // Status changed — update state and re-render
+            clearPolling();
+            state.sources = state.sources.map(function(x) { return x.id === sourceId ? Object.assign({}, x, s) : x; });
+            if (state.tab === "sources") renderSourcesView();
+            if (s.status === "ready") notify("Источник \"" + (s.title || sourceId) + "\" готов (" + (s.kbQaCount || 0) + " пар)");
+            else if (s.status === "failed") notify("Ошибка обработки источника: " + (s.errorMessage || "неизвестная ошибка"), true);
+          }
+        }).catch(function() { clearPolling(); });
+      }
+      function clearPolling() { clearTimeout(_srcPollingTimers[sourceId]); delete _srcPollingTimers[sourceId]; }
+      _srcPollingTimers[sourceId] = setTimeout(poll, 3000);
     }
 
     async function loadSources(append, options) {
