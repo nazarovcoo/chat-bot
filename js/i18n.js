@@ -244,6 +244,7 @@
       answerUpdated: 'Ответ обновлён',
       enterAnswerText: 'Введите текст ответа',
       qaGenerating: 'Текст принят — генерирую Q&A…',
+      generate: 'сгенерировать',
     },
     en: {
       ok: 'OK',
@@ -468,6 +469,7 @@
       answerUpdated: 'Answer updated',
       enterAnswerText: 'Enter answer text',
       qaGenerating: 'Text received — generating Q&A...',
+      generate: 'generate',
     }
   };
 
