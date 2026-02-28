@@ -49,7 +49,7 @@
 
     if (step === 'kb-text') {
       return (
-        '<textarea id="kap-text-input" class="kap-textarea" placeholder="Вставьте FAQ, правила, описание услуг…" rows="4"></textarea>' +
+        '<textarea id="kap-text-input" class="kap-textarea" placeholder="' + I18n.t('sourceTextPlaceholder') + '" rows="4"></textarea>' +
         '<div class="kap-actions-row">' +
           '<button class="kap-submit-btn" onclick="_kbAddText()">' + I18n.t('save') + ' →</button>' +
         '</div>' +
@@ -65,13 +65,13 @@
       '<div class="kap-status-bar kap-success"><span>' + escHtml(icon) + '</span><span>' + escHtml(line1) + '</span></div>' +
       '<div class="kap-done-row">' +
         '<button class="kap-ghost-btn" onclick="showKbAddPanel(\'' + escHtml(againStep) + '\')">' + escHtml(againLabel) + '</button>' +
-        '<button class="kap-primary-btn" onclick="hideKbAddPanel()">Готово ✓</button>' +
+        '<button class="kap-primary-btn" onclick="hideKbAddPanel()">' + I18n.t('done') + ' ✓</button>' +
       '</div>'
     );
   }
 
   function kbUploadingMarkup(filename) {
-    return '<div class="kap-status-bar kap-pending"><span>📎</span><span>' + escHtml(filename) + ' — загружаем…</span></div>';
+    return '<div class="kap-status-bar kap-pending"><span>📎</span><span>' + escHtml(filename) + ' — ' + I18n.t('loading') + '</span></div>';
   }
 
   function setProviderTestStatus(span, text, cssVar) {
@@ -82,13 +82,13 @@
 
   function renderAutoRepliesHtml(rules) {
     if (!rules || !rules.length) {
-      return '<div class="empty-state" style="padding:30px;"><div class="empty-icon">⚡</div><div class="empty-sub">Нет правил. Добавьте первое правило выше.</div></div>';
+      return '<div class="empty-state" style="padding:30px;"><div class="empty-icon">⚡</div><div class="empty-sub">' + I18n.t('noData') + '. ' + I18n.t('addFirstSource') + '.</div></div>';
     }
 
     return rules.map(function (r, i) {
-      var matchText = r && r.matchType === 'exact' ? 'точное' : 'содержит';
+      var matchText = r && r.matchType === 'exact' ? I18n.t('exactMatch') : I18n.t('containsMatch');
       var disabledBadge = r && !r.enabled
-        ? '<span style="font-size:0.6rem;background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:1px 6px;color:#ef4444;">выкл</span>'
+        ? '<span style="font-size:0.6rem;background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:1px 6px;color:#ef4444;">' + I18n.t('disable') + '</span>'
         : '';
       return (
         '<div class="rules-card" style="padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">' +
@@ -101,7 +101,7 @@
             '<div style="font-size:0.75rem;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml((r && r.response) || '') + '</div>' +
           '</div>' +
           '<div style="display:flex;gap:6px;flex-shrink:0;">' +
-            '<button class="chat-ctrl-btn" onclick="toggleAutoReply(' + i + ')">' + (r && r.enabled ? 'Выкл' : 'Вкл') + '</button>' +
+            '<button class="chat-ctrl-btn" onclick="toggleAutoReply(' + i + ')">' + (r && r.enabled ? I18n.t('disable') : I18n.t('enable')) + '</button>' +
             '<button class="chat-ctrl-btn" onclick="showAddAutoReply(' + i + ')">✏️</button>' +
             '<button class="chat-ctrl-btn" style="color:var(--red);" onclick="deleteAutoReply(' + i + ')">🗑️</button>' +
           '</div>' +
