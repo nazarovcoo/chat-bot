@@ -18,22 +18,22 @@
     if (step === 'kb-choose') {
       return (
         '<div class="kap-btns">' +
-          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-text\')"><span class="kap-icon">📝</span><span>Вставить текст</span></button>' +
-          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-file\')"><span class="kap-icon">📎</span><span>Загрузить файл</span></button>' +
-          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-link\')"><span class="kap-icon">🔗</span><span>Добавить ссылку</span></button>' +
+          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-text\')"><span class="kap-icon">📝</span><span>' + I18n.t('addManually') + '</span></button>' +
+          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-file\')"><span class="kap-icon">📎</span><span>' + I18n.t('uploadFile') + '</span></button>' +
+          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-link\')"><span class="kap-icon">🔗</span><span>' + I18n.t('addByUrl') + '</span></button>' +
         '</div>' +
         '<div class="kap-hint-row">' +
           '<span class="kap-hint">Файл = PDF/DOCX/TXT · Ссылка = сайт · Текст = вставить вручную</span>' +
-          '<button class="kap-help-btn" onclick="showInfoPopover(\'kb_add_flow\')">ℹ️ Как это работает?</button>' +
+          '<button class="kap-help-btn" onclick="showInfoPopover(\'kb_add_flow\')">ℹ️ ' + I18n.t('howItWorks') + '</button>' +
         '</div>' +
-        '<span class="kap-back-link" onclick="hideKbAddPanel()">← Закрыть</span>'
+        '<span class="kap-back-link" onclick="hideKbAddPanel()">← ' + I18n.t('close') + '</span>'
       );
     }
 
     if (step === 'kb-file') {
       return (
-        '<div class="kap-status-bar kap-pending"><span>📎</span><span>Выберите файл (PDF, DOCX, TXT)…</span></div>' +
-        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← Назад</span>'
+        '<div class="kap-status-bar kap-pending"><span>📎</span><span>' + I18n.t('uploadFile') + ' (PDF, DOCX, TXT)…</span></div>' +
+        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← ' + I18n.t('cancel') + '</span>'
       );
     }
 
@@ -41,9 +41,9 @@
       return (
         '<input type="url" id="kap-link-input" class="kap-url-input" placeholder="https://example.com" oninput="_kbLinkChange()">' +
         '<div class="kap-actions-row">' +
-          '<button class="kap-submit-btn" id="kap-link-submit" onclick="_kbAddLink()" disabled>Добавить →</button>' +
+          '<button class="kap-submit-btn" id="kap-link-submit" onclick="_kbAddLink()" disabled>' + I18n.t('add') + ' →</button>' +
         '</div>' +
-        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← Назад</span>'
+        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← ' + I18n.t('cancel') + '</span>'
       );
     }
 
@@ -51,9 +51,9 @@
       return (
         '<textarea id="kap-text-input" class="kap-textarea" placeholder="Вставьте FAQ, правила, описание услуг…" rows="4"></textarea>' +
         '<div class="kap-actions-row">' +
-          '<button class="kap-submit-btn" onclick="_kbAddText()">Сохранить →</button>' +
+          '<button class="kap-submit-btn" onclick="_kbAddText()">' + I18n.t('save') + ' →</button>' +
         '</div>' +
-        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← Назад</span>'
+        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← ' + I18n.t('cancel') + '</span>'
       );
     }
 

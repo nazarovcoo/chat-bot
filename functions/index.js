@@ -1859,13 +1859,19 @@ exports.projectsApi = onRequest(
           const snap = await query.get();
           let sources = snap.docs.map((d) => {
             const s = d.data() || {};
+            // Auto-heal: client already extracted text, but status was wrongly set to "pending"
+            const hasContent = String(s.contentRef || "").trim().length > 0;
+            const effectiveStatus = (s.status === "pending" && hasContent) ? "ready" : (s.status || "pending");
+            if (s.status === "pending" && hasContent) {
+              d.ref.update({ status: "ready", updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+            }
             return {
               id: d.id,
               projectId: s.projectId,
               type: s.type || "text",
               title: s.title || "",
               contentRef: s.contentRef || "",
-              status: s.status || "pending",
+              status: effectiveStatus,
               createdAtMs: Number(s.createdAtMs || 0),
               createdAt: _asIso(s.createdAt),
               updatedAt: _asIso(s.updatedAt),
@@ -1878,13 +1884,18 @@ exports.projectsApi = onRequest(
             const fallbackSnap = await fallbackQuery.orderBy("createdAtMs", "desc").limit(Math.min(limit * 4, 120)).get();
             sources = fallbackSnap.docs.map((d) => {
               const s = d.data() || {};
+              const hasContent = String(s.contentRef || "").trim().length > 0;
+              const effectiveStatus = (s.status === "pending" && hasContent) ? "ready" : (s.status || "pending");
+              if (s.status === "pending" && hasContent) {
+                d.ref.update({ status: "ready", updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+              }
               return {
                 id: d.id,
                 projectId: s.projectId,
                 type: s.type || "text",
                 title: s.title || "",
                 contentRef: s.contentRef || "",
-                status: s.status || "pending",
+                status: effectiveStatus,
                 createdAtMs: Number(s.createdAtMs || 0),
                 createdAt: _asIso(s.createdAt),
                 updatedAt: _asIso(s.updatedAt),
@@ -1943,7 +1954,8 @@ exports.projectsApi = onRequest(
           }
           if (!title || !String(title).trim()) { res.status(400).json({ error: "title required" }); return; }
           if (!contentRef || !String(contentRef).trim()) { res.status(400).json({ error: "contentRef required" }); return; }
-          const status = (type === "file" || type === "document") ? "pending" : "ready";
+          // Client extracts text before upload, so contentRef already contains content → ready
+          const status = String(contentRef).trim().length > 0 ? "ready" : "pending";
           const ref = db.collection(`users/${uid}/project_sources`).doc();
           await ref.set({
             projectId,

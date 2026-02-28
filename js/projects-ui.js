@@ -323,17 +323,17 @@
       if (!title) { nodes.srcTextTitle.focus(); return; }
       if (!body) { nodes.srcTextBody.focus(); return; }
       nodes.srcTextOk.disabled = true;
-      nodes.srcTextOk.textContent = "Добавляю…";
+      nodes.srcTextOk.textContent = I18n.t('add') + "…";
       try {
         await ProjectsApi.addSource(state.activeProjectId, { type: "text", title: title, contentRef: body });
         closeSourceModal();
         await loadSources(false);
         await refreshProjects();
       } catch (e) {
-        alert("Ошибка: " + (e.message || e));
+        alert(I18n.t('error') + ": " + (e.message || e));
       } finally {
         nodes.srcTextOk.disabled = false;
-        nodes.srcTextOk.textContent = "Добавить";
+        nodes.srcTextOk.textContent = I18n.t('add');
       }
     });
 
@@ -343,24 +343,24 @@
       if (!href) { nodes.srcUrlHref.focus(); return; }
       if (!title) title = href;
       nodes.srcUrlOk.disabled = true;
-      nodes.srcUrlOk.textContent = "Добавляю…";
+      nodes.srcUrlOk.textContent = I18n.t('add') + "…";
       try {
         await ProjectsApi.addSource(state.activeProjectId, { type: "url", title: title, contentRef: href });
         closeSourceModal();
         await loadSources(false);
         await refreshProjects();
       } catch (e) {
-        alert("Ошибка: " + (e.message || e));
+        alert(I18n.t('error') + ": " + (e.message || e));
       } finally {
         nodes.srcUrlOk.disabled = false;
-        nodes.srcUrlOk.textContent = "Добавить";
+        nodes.srcUrlOk.textContent = I18n.t('add');
       }
     });
 
     nodes.srcFileOk.addEventListener("click", async function () {
       if (!_srcFile) { nodes.srcFileInp.click(); return; }
       nodes.srcFileOk.disabled = true;
-      nodes.srcFileOk.textContent = "Загружаю…";
+      nodes.srcFileOk.textContent = I18n.t('loading');
       try {
         var text = await readFileAsText(_srcFile);
         await ProjectsApi.addSource(state.activeProjectId, { type: "file", title: _srcFile.name, contentRef: text });
@@ -368,10 +368,10 @@
         await loadSources(false);
         await refreshProjects();
       } catch (e) {
-        alert("Ошибка: " + (e.message || e));
+        alert(I18n.t('error') + ": " + (e.message || e));
       } finally {
         nodes.srcFileOk.disabled = false;
-        nodes.srcFileOk.textContent = "Загрузить";
+        nodes.srcFileOk.textContent = I18n.t('uploadFile');
       }
     });
 
@@ -432,7 +432,7 @@
       return new Promise(function (resolve, reject) {
         var reader = new FileReader();
         reader.onload = function (e) { resolve(e.target.result || ""); };
-        reader.onerror = function () { reject(new Error("Не удалось прочитать файл")); };
+        reader.onerror = function () { reject(new Error(I18n.t('errorLoading'))); };
         reader.readAsText(file);
       });
     }
@@ -444,7 +444,7 @@
       nodes.srcUrlTitle.value = "";
       nodes.srcUrlHref.value = "";
       nodes.srcFileInp.value = "";
-      nodes.srcFileLbl.textContent = "Выберите или перетащите файл (.txt, .md, .csv, .pdf, .docx, .pptx)";
+      nodes.srcFileLbl.textContent = I18n.t('uploadFileHint');
       showSrcView("main");
       nodes.srcModal.classList.add("open");
     }
@@ -460,9 +460,9 @@
       nodes.srcViewFile.style.display = view === "file" ? "" : "none";
       nodes.srcBack.style.display = view === "main" ? "none" : "";
       nodes.srcTitle.textContent =
-        view === "main" ? "Добавить источник" :
-        view === "text" ? "Вручную" :
-        view === "url" ? "По ссылке" : "Загрузить файл";
+        view === "main" ? I18n.t('addSource') :
+        view === "text" ? I18n.t('addManually') :
+        view === "url" ? I18n.t('addByUrl') : I18n.t('uploadFile');
     }
 
     async function refreshProjects() {
@@ -483,12 +483,12 @@
         throw new Error("Firebase client unavailable");
       }
       var user = firebase.auth().currentUser;
-      if (!user || !user.uid) throw new Error("Сначала авторизуйтесь");
+      if (!user || !user.uid) throw new Error(I18n.t('unauthorized'));
       var uid = user.uid;
 
       var verify = await postJSON("/api/verify-telegram-token", { token: token });
       if (!verify.ok || !verify.data || !verify.data.ok) {
-        throw new Error((verify.data && verify.data.error) || "Невалидный Telegram токен");
+        throw new Error((verify.data && verify.data.error) || I18n.t('invalidToken'));
       }
       var tg = verify.data.result || {};
       var usernameClean = String(tg.username || "").replace(/^@/, "");
@@ -580,17 +580,17 @@
       var link = host.startsWith("@") ? ("https://t.me/" + host.slice(1)) : host || p.name;
       try {
         await navigator.clipboard.writeText(link);
-        notify("Скопировано: " + link);
+        notify(I18n.t('copied') + link);
       } catch (_) {
-        notify("Ссылка: " + link);
+        notify(I18n.t('refLink') + ": " + link);
       }
     }
 
     async function doRenameProject(p) {
-      var newName = prompt("Новое название:", p.name);
+      var newName = prompt(I18n.t('renameProject') + ":", p.name);
       if (!newName || !newName.trim() || newName.trim() === p.name) return;
       await ProjectsApi.updateProject(p.id, { name: newName.trim() });
-      notify("Переименовано");
+      notify(I18n.t('saved'));
       await refreshProjects();
     }
 
@@ -626,7 +626,7 @@
         el.className = "project-row" + (p.id === state.activeProjectId ? " active" : "");
         el.innerHTML = _icFolder +
           "<span class='project-name'>" + esc(p.name) + "</span>" +
-          "<span class='proj-menu-btn' title='Настройки проекта'>•••</span>";
+          "<span class='proj-menu-btn' title='" + I18n.t('projectSettings') + "'>•••</span>";
         var menuBtn = el.querySelector(".proj-menu-btn");
         menuBtn.addEventListener("click", function (e) {
           e.stopPropagation();
@@ -655,7 +655,7 @@
     function renderHeader() {
       var p = getActiveProject();
       if (!p) {
-        nodes.title.textContent = "Выберите проект";
+        nodes.title.textContent = I18n.t('selectProject');
         nodes.meta.textContent = "—";
         nodes.tabs.style.display = "none";
         nodes.btnTopChats.style.display = "none";
@@ -807,7 +807,7 @@
         return;
       }
       nodes.content.innerHTML = "<div class='projects-tools'><button class='projects-btn primary' id='projects-add-source'>+ Добавить источник</button>" +
-        "<input id='projects-sources-q' placeholder='Поиск по источникам...' style='max-width:280px'>" +
+        "<input id='projects-sources-q' placeholder='" + I18n.t('searchSources') + "' style='max-width:280px'>" +
         "<select id='projects-sources-type' style='width:auto'><option value=''>Все</option><option value='file'>file</option><option value='url'>url</option><option value='text'>text</option><option value='document'>document</option></select></div>" +
         "<div class='projects-virtual' id='projects-sources-virtual'><div class='projects-virtual-spacer' id='projects-sources-list'></div></div>" +
         "<div class='projects-load-more'><button class='projects-btn' id='projects-sources-more' " + (state.sourcesHasMore ? "" : "style='display:none'") + ">Показать ещё</button></div>";
@@ -845,7 +845,7 @@
       vbox.onclick = async function (evt) {
         var btn = evt.target && evt.target.closest ? evt.target.closest("[data-del-source]") : null;
         if (!btn) return;
-        if (!confirm("Удалить источник?")) return;
+        if (!confirm(I18n.t('deleteSource'))) return;
         await ProjectsApi.deleteSource(btn.getAttribute("data-del-source"));
         state.sourcesCursor = null;
         state.sourcesLoadedProjectId = null;
@@ -923,10 +923,9 @@
             var linked = await connectTelegramToken(hostInput, state.activeProjectId, root.querySelector("#projects-set-name").value.trim());
             notify("Telegram подключён" + (linked && linked.username ? (": " + linked.username) : ""));
           } catch (e) {
-            notify(e.message || "Не удалось подключить Telegram", true);
-          }
-        } else {
-          notify("Сохранено");
+notify(e.message || I18n.t('error') + " " + I18n.t('connectTelegram'), true);
+      } else {
+        notify(I18n.t('saved'));
         }
         await refreshProjects();
       });
@@ -947,7 +946,7 @@
       state.createRequestId = makeRequestId();
       state.createInFlight = false;
       nodes.modalCreate.disabled = false;
-      nodes.modalCreate.textContent = "Создать проект";
+      nodes.modalCreate.textContent = I18n.t('createProject');
       nodes.createName.focus();
     }
 
@@ -955,7 +954,7 @@
       nodes.modal.classList.remove("open");
       state.createInFlight = false;
       nodes.modalCreate.disabled = false;
-      nodes.modalCreate.textContent = "Создать проект";
+      nodes.modalCreate.textContent = I18n.t('createProject');
       state.createRequestId = null;
     }
 
@@ -963,12 +962,12 @@
       if (state.createInFlight) return;
       var name = nodes.createName.value.trim();
       var botHost = nodes.createHost.value.trim();
-      if (name.length < 2) { alert("Введите название проекта"); return; }
-      if (botHost.length < 3) { alert("Введите IP/домен"); return; }
+      if (name.length < 2) { alert(I18n.t('projectName') + "!"); return; }
+      if (botHost.length < 3) { alert(I18n.t('botDomain') + "!"); return; }
       if (!state.createRequestId) state.createRequestId = makeRequestId();
       state.createInFlight = true;
       nodes.modalCreate.disabled = true;
-      nodes.modalCreate.textContent = "Создаю...";
+      nodes.modalCreate.textContent = I18n.t('creatingProject');
       try {
         var hostLooksLikeToken = isTelegramToken(botHost);
         var created = await ProjectsApi.createProject({
@@ -985,7 +984,7 @@
             }
             notify("Telegram подключён" + (linked && linked.username ? (": " + linked.username) : ""));
           } catch (e) {
-            notify("Проект создан, но Telegram не подключён: " + (e.message || "ошибка"), true);
+            notify(I18n.t('projectCreated') + ", " + I18n.t('connectTelegram') + ": " + (e.message || I18n.t('error').toLowerCase()), true);
           }
         }
         closeCreateModal();
@@ -999,12 +998,12 @@
           await renderTab();
         }
       } catch (e) {
-        notify(e.message || "Не удалось создать проект. Повторите попытку.", true);
+        notify(e.message || I18n.t('error') + " " + I18n.t('createProject') + ". " + I18n.t('tryAgain') + ".", true);
       } finally {
         state.createInFlight = false;
         if (nodes.modal.classList.contains("open")) {
           nodes.modalCreate.disabled = false;
-          nodes.modalCreate.textContent = "Создать проект";
+          nodes.modalCreate.textContent = I18n.t('createProject');
         }
       }
     }
@@ -1030,8 +1029,8 @@
         "<div class='projects-modal-bg' id='projects-create-modal'><div class='projects-modal'>" +
         "<div class='projects-modal-h'><div style='font-size:16px;font-weight:900'>Создать проект</div><button class='projects-btn' id='projects-create-close'>✕</button></div>" +
         "<div class='projects-modal-b'><div class='projects-form'>" +
-        "<div><label>Название проекта (имя бота)</label><input id='projects-create-name' placeholder='Например: CreateBot AI'></div>" +
-        "<div><label>IP / Домен бота</label><input id='projects-create-host' placeholder='Например: bot.example.com'></div>" +
+        "<div><label>" + I18n.t('projectName') + "</label><input id='projects-create-name' placeholder='" + I18n.t('projectNamePlaceholder') + "'></div>" +
+        "<div><label>" + I18n.t('botDomain') + "</label><input id='projects-create-host' placeholder='" + I18n.t('botDomainPlaceholder') + "'></div>" +
         "<div><label>База знаний</label><select id='projects-create-kb'><option value='skip'>Пропустить</option><option value='add'>Добавить сейчас</option></select></div>" +
         "</div></div><div class='projects-modal-f'><button class='projects-btn' id='projects-create-cancel'>Отмена</button>" +
         "<button class='projects-btn primary' id='projects-create-submit'>Создать проект</button></div></div></div>" +
@@ -1058,15 +1057,15 @@
         // Text sub-view
         "<div id='src-view-text' style='display:none'>" +
         "<div class='src-modal-b'><div class='projects-form'>" +
-        "<div><label>Название</label><input id='src-text-title' placeholder='Например: Частые вопросы'></div>" +
-        "<div><label>Текст</label><textarea id='src-text-body' placeholder='Вставьте текст базы знаний...' style='min-height:140px'></textarea></div>" +
+        "<div><label>" + I18n.t('sourceTitle') + "</label><input id='src-text-title' placeholder='" + I18n.t('sourceTitlePlaceholder') + "'></div>" +
+        "<div><label>" + I18n.t('sourceText') + "</label><textarea id='src-text-body' placeholder='" + I18n.t('sourceTextPlaceholder') + "' style='min-height:140px'></textarea></div>" +
         "</div></div>" +
         "<div class='src-modal-f'><button class='projects-btn' id='src-text-cancel'>Отмена</button><button class='projects-btn primary' id='src-text-ok'>Добавить</button></div>" +
         "</div>" +
         // URL sub-view
         "<div id='src-view-url' style='display:none'>" +
         "<div class='src-modal-b'><div class='projects-form'>" +
-        "<div><label>Название</label><input id='src-url-title' placeholder='Например: Официальный сайт'></div>" +
+        "<div><label>" + I18n.t('sourceTitle') + "</label><input id='src-url-title' placeholder='" + I18n.t('sourceUrlPlaceholder') + "'></div>" +
         "<div><label>URL</label><input id='src-url-href' placeholder='https://...' type='url'></div>" +
         "</div></div>" +
         "<div class='src-modal-f'><button class='projects-btn' id='src-url-cancel'>Отмена</button><button class='projects-btn primary' id='src-url-ok'>Добавить</button></div>" +
