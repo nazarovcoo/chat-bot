@@ -6474,7 +6474,7 @@
           </button>
           <button class="chat-header-btn"
             style="font-size:0.78rem;width:auto;padding:0 10px;color:#707579;border-radius:20px;"
-            onclick="auth.signOut()">Выйти</button>
+            onclick="auth.signOut()">...</button>
         </div>
       </div>
 
@@ -6575,7 +6575,7 @@
       <!-- In-chat confirm modal -->
       <div id="chat-confirm" class="chat-confirm hidden" role="dialog" aria-modal="true">
         <div class="cc-card">
-          <div class="cc-title" id="cc-title">Подтвердить действие</div>
+          <div class="cc-title" id="cc-title">...
           <div class="cc-text" id="cc-text">Вы уверены?</div>
           <div class="cc-actions">
             <button id="cc-cancel" class="cc-btn cc-btn--ghost" type="button">Отмена</button>
@@ -6698,7 +6698,7 @@
             <div class="av-dd-item" onclick="closeAvDropdown()"><span class="av-dd-ico">🌐</span> Язык</div>
             <div class="av-dd-item" onclick="closeAvDropdown()"><span class="av-dd-ico">❓</span> Помощь</div>
             <div class="av-dd-sep"></div>
-            <div class="av-dd-item danger" onclick="signOut()"><span class="av-dd-ico">🚪</span> Выйти</div>
+            <div class="av-dd-item danger" onclick="signOut()"><span class="av-dd-ico">🚪</span> ...
           </div>
         </div>
       </div>
@@ -8650,7 +8650,7 @@
       <input type="tel" id="tg-phone-input" class="form-input" placeholder="+_ (___) ___-__-__"
         style="font-size:1.1rem;text-align:center;letter-spacing:1px;margin-bottom:20px;">
       <button class="btn-primary" id="tg-phone-save-btn" style="width:100%;"
-        onclick="saveTgPhone()">Подтвердить</button>
+        onclick="saveTgPhone()">...</button>
     </div>
   </div>
 
@@ -8834,7 +8834,7 @@
         <button class="btn-ghost" style="flex:1;" onclick="_confirmCancel()"
           id="modal-confirm-cancel-btn">Отмена</button>
         <button class="btn-primary" style="flex:1;" onclick="_confirmOk()"
-          id="modal-confirm-ok-btn">Подтвердить</button>
+          id="modal-confirm-ok-btn">...</button>
       </div>
     </div>
   </div>
@@ -10469,7 +10469,7 @@
 
         const btn = document.getElementById('edit-kb-save');
         btn.disabled = true;
-        btn.textContent = 'Сохраняю...';
+        btn.textContent = I18n.t('saving');
 
         try {
           await db.collection("users").doc(window.resolvedUid)
@@ -10510,7 +10510,7 @@
       const d = document.getElementById('cc-text');
       const ok = document.getElementById('cc-ok');
       const cancel = document.getElementById('cc-cancel');
-      if (t) t.textContent = title || 'Подтвердить действие';
+      if (t) t.textContent = title || I18n.t('confirmAction');
       if (d) d.textContent = text || 'Вы уверены?';
       if (ok) ok.textContent = okText || 'ОК';
       if (cancel) cancel.textContent = cancelText || 'Отмена';
@@ -11642,7 +11642,7 @@ ${kbSummary}`,
     async function authSubmit() {
       const email = document.getElementById('auth-email').value.trim();
       const pass = document.getElementById('auth-password').value;
-      if (!email || !pass) { showAuthError('Заполните email и пароль'); return; }
+      if (!email || !pass) { showAuthError(I18n.t('fillEmailPassword')); return; }
       try {
         if (authMode === 'login') {
           await auth.signInWithEmailAndPassword(email, pass);
@@ -11680,9 +11680,9 @@ ${kbSummary}`,
     async function signOut() {
       showConfirm({
         icon: '🚪',
-        title: 'Выйти из аккаунта?',
-        desc: 'Вы будете перенаправлены на страницу входа.',
-        action: 'Выйти',
+        title: I18n.t('logoutConfirm'),
+        desc: I18n.t('logoutDesc'),
+        action: I18n.t('logout'),
         onOk: async () => {
           stopListeners();
           await auth.signOut();
@@ -11754,7 +11754,7 @@ ${kbSummary}`,
           input.focus();
           return;
         }
-        if (btn) { btn.disabled = true; btn.textContent = 'Сохранение…'; }
+        if (btn) { btn.disabled = true; btn.textContent = I18n.t('saving') + '…'; }
         try {
           await db.collection('users').doc(currentUser.uid).set({
             phone,
@@ -11771,7 +11771,7 @@ ${kbSummary}`,
         } catch (e) {
           showToast('❌ ' + I18n.t('errorSaving') + ': ' + e.message);
         } finally {
-          if (btn) { btn.disabled = false; btn.textContent = 'Подтвердить'; }
+          if (btn) { btn.disabled = false; btn.textContent = I18n.t('confirmButton'); }
         }
       };
 
