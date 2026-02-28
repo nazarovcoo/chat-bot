@@ -6576,7 +6576,7 @@
       <div id="chat-confirm" class="chat-confirm hidden" role="dialog" aria-modal="true">
         <div class="cc-card">
           <div class="cc-title" id="cc-title">...
-          <div class="cc-text" id="cc-text">Вы уверены?</div>
+          <div class="cc-text" id="cc-text">...</div>
           <div class="cc-actions">
             <button id="cc-cancel" class="cc-btn cc-btn--ghost" type="button">Отмена</button>
             <button id="cc-ok" class="cc-btn cc-btn--danger" type="button">ОК</button>
@@ -7547,7 +7547,7 @@
           <div>
             <div class="rules-card-title" style="margin-bottom:4px;">Текущий план: <span style="color:var(--indigo);"
                 id="plan-name-lbl">—</span></div>
-            <div class="rules-card-sub" id="plan-desc-lbl">Загрузка...</div>
+            <div class="rules-card-sub" id="plan-desc-lbl">...</div>
           </div>
           <div id="plan-status-badge"
             style="background:var(--primary-dim);border:1px solid var(--primary-brd);border-radius:8px;padding:5px 14px;font-size:0.75rem;font-weight:700;color:var(--indigo);white-space:nowrap;">
@@ -8473,7 +8473,7 @@
           вопрос</span>
       </div>
 
-      <textarea class="form-input" id="ea-textarea" placeholder="Новые данные для ответа на вопрос" rows="5"
+      <textarea class="form-input" id="ea-textarea" placeholder=" rows="5"
         style="resize:vertical;margin-bottom:0;"></textarea>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;margin-bottom:8px;">
@@ -9389,7 +9389,7 @@
 
     /* ══ KB MODAL ══ */
     function showKbModal(type) {
-      document.getElementById('kb-modal-title').textContent = type === 'file' ? 'Загрузить файл' : 'Добавить текст';
+      document.getElementById('kb-modal-title').textContent = type === 'file' ? I18n.t('uploadFileTitle') : I18n.t('addTextTitle');
       document.getElementById('modal-kb').classList.add('open');
       setTimeout(() => document.getElementById('kb-title').focus(), 100);
     }
@@ -9433,13 +9433,13 @@
         curWrap.style.display = 'none';
       }
       document.getElementById('ea-textarea').value = '';
-      document.getElementById('ea-textarea').placeholder = 'Новые данные для ответа на вопрос';
+      document.getElementById('ea-textarea').placeholder = I18n.t('newAnswer');
       document.getElementById('ea-confidence').style.display = 'none';
       document.getElementById('ea-admin-note').style.display = 'none';
       document.getElementById('ea-insert-btn').style.display = answer ? '' : 'none';
 
       // Set title
-      const title = source === 'unanswered' ? 'Добавить ответ' : 'Редактирование ответа';
+      const title = source === 'unanswered' ? I18n.t('newAnswer') : I18n.t('editAnswer');
       document.getElementById('ea-modal-title').textContent = title;
 
       // Hide tabs for unanswered (only draft mode)
@@ -9456,10 +9456,10 @@
       document.getElementById('ea-tab-append')?.classList.toggle('active', tab === 'append');
       const hintText = document.getElementById('ea-hint-text');
       if (tab === 'replace') {
-        hintText.textContent = 'Замена ответа позволяет изменить информацию, которую ИИ-агент использует отвечая на вопрос';
-        document.getElementById('ea-textarea').placeholder = 'Новые данные для ответа на вопрос';
+        hintText.textContent = I18n.t('replaceAnswer');
+        document.getElementById('ea-textarea').placeholder = I18n.t('newAnswer');
       } else {
-        hintText.textContent = 'Дайте особые указания по поведению, условиям и стилю ответа на вопрос';
+        hintText.textContent = I18n.t('additionalInfo');
         document.getElementById('ea-textarea').placeholder = 'Как дополнить существующие данные для ответа?';
       }
     }
@@ -10511,9 +10511,9 @@
       const ok = document.getElementById('cc-ok');
       const cancel = document.getElementById('cc-cancel');
       if (t) t.textContent = title || I18n.t('confirmAction');
-      if (d) d.textContent = text || 'Вы уверены?';
-      if (ok) ok.textContent = okText || 'ОК';
-      if (cancel) cancel.textContent = cancelText || 'Отмена';
+      if (d) d.textContent = text || I18n.t('areYouSure');
+      if (ok) ok.textContent = okText || I18n.t('ok');
+      if (cancel) cancel.textContent = cancelText || I18n.t('cancel');
       modal.classList.remove('hidden');
       return new Promise(resolve => { __confirmResolve = resolve; });
     }
@@ -11382,7 +11382,7 @@ ${kbSummary}`,
 
       if (el('plan-desc-lbl')) {
         if (!plan) {
-          el('plan-desc-lbl').textContent = 'Загрузка...';
+          el('plan-desc-lbl').textContent = I18n.t('loadingDots');
         } else if (plan.type === 'trial') {
           const te = plan.trialEnds?.seconds ? new Date(plan.trialEnds.seconds * 1000) : null;
           const daysLeft = te ? Math.max(0, Math.ceil((te - Date.now()) / 86400000)) : 0;
