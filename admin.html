@@ -6779,6 +6779,9 @@
             <button class="step-tab" data-step="autoreplies" onclick="goStep('autoreplies')">
               <span class="step-num">5</span> Автоответы
             </button>
+            <button class="step-tab" data-step="flows" onclick="goStep('flows')">
+              <span class="step-num">⚡</span> Сценарии
+            </button>
             <button class="step-tab" data-step="chats" onclick="goStep('chats')">
               <span class="step-num">6</span> Чаты
             </button>
@@ -7244,6 +7247,49 @@
         </div>
         <!-- Rules list -->
         <div id="ar-list"></div>
+      </div>
+
+      <!-- ══ FLOWS (Сценарии) ══ -->
+      <div class="screen" id="screen-flows">
+        <div class="page-label">Сценарии</div>
+        <div class="rules-card">
+          <div class="rules-card-title">Flow Builder — интерактивные кнопки</div>
+          <div class="rules-card-sub">Когда сообщение содержит ключевое слово — бот отправляет кнопки с вариантами ответов. Нажав кнопку, пользователь получает нужный ответ.</div>
+          <button class="btn-primary" style="margin-top:10px;" onclick="showAddFlow()">+ Добавить сценарий</button>
+        </div>
+        <!-- Flow add/edit form -->
+        <div id="flow-form" class="rules-card" style="display:none;">
+          <div class="rules-card-title" id="flow-form-title">Новый сценарий</div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div>
+              <div class="form-label">Триггер (ключевое слово)</div>
+              <input class="form-input" id="flow-trigger" placeholder="Например: цена, прайс, тариф" style="margin-bottom:0;">
+            </div>
+            <div style="display:flex;gap:10px;">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.78rem;color:var(--text-sec);">
+                <input type="radio" name="flow-match" value="contains" checked> Содержит
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.78rem;color:var(--text-sec);">
+                <input type="radio" name="flow-match" value="exact"> Точное совпадение
+              </label>
+            </div>
+            <div>
+              <div class="form-label">Текст сообщения с кнопками</div>
+              <textarea class="form-input" id="flow-text" rows="2" placeholder="Выберите интересующий вариант:" style="margin-bottom:0;resize:vertical;"></textarea>
+            </div>
+            <div>
+              <div class="form-label" style="margin-bottom:8px;">Кнопки</div>
+              <div id="flow-buttons-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+              <button class="btn-secondary" style="margin-top:8px;font-size:0.72rem;" onclick="addFlowButton()">+ Добавить кнопку</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-primary" onclick="saveFlow()">💾 Сохранить</button>
+              <button class="btn-secondary" onclick="cancelFlow()">Отмена</button>
+            </div>
+          </div>
+        </div>
+        <!-- Flows list -->
+        <div id="flows-list"></div>
       </div>
 
       <!-- ══ TOPICS (База знаний) ══ -->
@@ -8969,7 +9015,7 @@
     }
 
     /* ═══ STEP NAVIGATION (SPA) ═══ */
-    const STEP_SCREENS = ['rules', 'topics', 'testing', 'launch', 'autoreplies', 'chats', 'analytics'];
+    const STEP_SCREENS = ['rules', 'topics', 'testing', 'launch', 'autoreplies', 'flows', 'chats', 'analytics'];
     let _stepOrigParent = {}; // track original parent for cleanup
 
     function goStep(step) {
@@ -9021,6 +9067,7 @@
       if (step === 'launch') renderLaunchScreen();
       if (step === 'topics') switchKbTab(STATE.kbTab || 'topics');
       if (step === 'chats') { if (typeof renderChatList === 'function') renderChatList(); }
+      if (step === 'flows') renderFlowsScreen();
 
       // Keep overview highlighted in sidebar
       document.querySelectorAll('#nav-agent .nav-item').forEach(n => n.classList.remove('active'));
@@ -10146,7 +10193,7 @@
       // Chat-originated questions from STATE.topics are NOT shown here
       const all = STATE.kbQA
         .filter(qa => qa.question)
-        .map(qa => ({ id: qa.id, name: qa.question, answer: qa.answer, chats: qa.asked || 0, source: 'kb' }))
+        .map(qa => ({ id: qa.id, name: qa.question, answer: qa.answer, chats: qa.asked || 0, source: 'kb', lang: qa.lang || 'auto' }))
         .sort((a, b) => b.chats - a.chats);
 
       const filtered = all.filter(t => t.name.toLowerCase().includes(search));
@@ -10168,6 +10215,9 @@
           ? `<span style="color:var(--text-dim);font-size:11px;transition:transform 0.2s;display:inline-block;transform:rotate(${isExpanded ? 90 : 0}deg);">▶</span>`
           : '';
 
+        const langLabels = { auto: '🌐', ru: '🇷🇺 RU', en: '🇺🇸 EN', uz: '🇺🇿 UZ' };
+        const langBadge = `<span style="font-size:0.65rem;padding:1px 6px;border-radius:4px;background:var(--bg-3);border:1px solid var(--border);color:var(--text-sec);cursor:pointer;" onclick="event.stopPropagation();cycleKbLang('${t.id}')" title="Язык (кликните чтобы изменить)">${langLabels[t.lang] || '🌐'}</span>`;
+
         const menuId = `topic-menu-${t.id}`;
         const menuBtn = `<div style="position:relative;display:inline-block;">
           <span style="color:var(--text-dim);cursor:pointer;font-size:18px;letter-spacing:1px;" onclick="event.stopPropagation();toggleTopicMenu('${menuId}')">···</span>
@@ -10183,7 +10233,7 @@
         tr.innerHTML = `
         <td><div class="td-name" style="gap:6px;">${icon}<span style="flex:1;">${esc(t.name)}</span>${chevron}</div></td>
         <td>${countBadge}</td>
-        <td class="td-muted">📚 База знаний</td>
+        <td class="td-muted" style="white-space:nowrap;">📚 База знаний ${langBadge}</td>
         <td onclick="event.stopPropagation()">${menuBtn}</td>`;
         tbody.appendChild(tr);
 
@@ -10215,6 +10265,17 @@
       const item = STATE.kbQA.find(q => q.id === id);
       if (!item) { showToast('⚠️ Элемент не найден'); return; }
       openEditAnswer(id, item.question || '', item.answer || '', 'kb');
+    }
+
+    async function cycleKbLang(id) {
+      if (!currentUser) return;
+      const item = STATE.kbQA.find(q => q.id === id);
+      if (!item) return;
+      const langs = ['auto', 'ru', 'en', 'uz'];
+      const cur = item.lang || 'auto';
+      const next = langs[(langs.indexOf(cur) + 1) % langs.length];
+      await col('kbQA').doc(id).update({ lang: next }).catch(() => {});
+      // STATE updates via Firestore listener
     }
 
     function removeTopic(id) {
@@ -11756,11 +11817,12 @@ ${kbSummary}`,
         }
       });
 
-      // Load auto-reply rules and notification settings
+      // Load auto-reply rules, flows and notification settings
       db.doc(`users/${user.uid}/settings/autoReplies`).get().then(snap => {
         STATE.autoReplies = snap.exists ? (snap.data().rules || []) : [];
         renderAutoReplies();
       });
+      loadFlows();
       loadNotifSettings();
 
       // Debounced render helpers — collapse 4 simultaneous listener triggers into 1 render
@@ -12497,6 +12559,160 @@ ${kbSummary}`,
       if (!list) return;
       const rules = STATE.autoReplies || [];
       list.innerHTML = window.AppUI.renderAutoRepliesHtml(rules);
+    }
+
+    // ══ FLOW BUILDER ══════════════════════════════════════════════════════════
+    let _editingFlowIdx = null;
+
+    async function loadFlows() {
+      if (!currentUser) return;
+      const snap = await db.doc(`users/${currentUser.uid}/settings/flows`).get().catch(() => null);
+      STATE.flows = snap && snap.exists ? (snap.data().flows || []) : [];
+    }
+
+    function renderFlowsScreen() {
+      renderFlows();
+    }
+
+    function renderFlows() {
+      const list = document.getElementById('flows-list');
+      if (!list) return;
+      const flows = STATE.flows || [];
+      if (!flows.length) {
+        list.innerHTML = '<div class="empty-state" style="padding:30px;"><div class="empty-icon">⚡</div><div class="empty-sub">Сценариев пока нет. Создайте первый — настройте кнопки для частых вопросов.</div></div>';
+        return;
+      }
+      list.innerHTML = flows.map((f, i) => `
+        <div class="rules-card" style="margin-bottom:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div>
+              <div style="font-weight:600;font-size:0.85rem;">${f.trigger || ''} <span style="font-size:0.7rem;color:var(--text-dim);font-weight:400;">(${f.matchType === 'exact' ? 'точное' : 'содержит'})</span></div>
+              <div style="font-size:0.75rem;color:var(--text-sec);margin-top:3px;">${f.text || ''}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;">${(f.buttons || []).map(b => `<span style="font-size:0.7rem;padding:2px 8px;border-radius:5px;background:var(--bg-3);border:1px solid var(--border);">${b.label}</span>`).join('')}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;">
+              <button class="btn-secondary" style="font-size:0.7rem;padding:4px 10px;" onclick="showAddFlow(${i})">✏️</button>
+              <button class="btn-secondary" style="font-size:0.7rem;padding:4px 10px;border-color:rgba(239,68,68,0.35);" onclick="deleteFlow(${i})">🗑</button>
+            </div>
+          </div>
+        </div>`).join('');
+    }
+
+    function showAddFlow(idx = null) {
+      _editingFlowIdx = idx;
+      const titleEl = document.getElementById('flow-form-title');
+      const form = document.getElementById('flow-form');
+      if (!form) return;
+      if (idx !== null && STATE.flows && STATE.flows[idx]) {
+        const f = STATE.flows[idx];
+        if (titleEl) titleEl.textContent = 'Редактировать сценарий';
+        document.getElementById('flow-trigger').value = f.trigger || '';
+        document.querySelector(`input[name="flow-match"][value="${f.matchType || 'contains'}"]`).checked = true;
+        document.getElementById('flow-text').value = f.text || '';
+        renderFlowButtonsList(f.buttons || []);
+      } else {
+        if (titleEl) titleEl.textContent = 'Новый сценарий';
+        document.getElementById('flow-trigger').value = '';
+        document.querySelector('input[name="flow-match"][value="contains"]').checked = true;
+        document.getElementById('flow-text').value = '';
+        renderFlowButtonsList([{ label: '', reply: '', escalate: false }]);
+      }
+      form.style.display = '';
+    }
+
+    function cancelFlow() {
+      document.getElementById('flow-form').style.display = 'none';
+      _editingFlowIdx = null;
+    }
+
+    function renderFlowButtonsList(buttons) {
+      const wrap = document.getElementById('flow-buttons-list');
+      if (!wrap) return;
+      wrap.innerHTML = buttons.map((b, i) => `
+        <div style="display:flex;gap:8px;align-items:flex-start;" id="flow-btn-row-${i}">
+          <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
+            <input class="form-input" style="margin:0;" placeholder="Текст кнопки" id="flow-btn-label-${i}" value="${(b.label || '').replace(/"/g,'&quot;')}">
+            <textarea class="form-input" style="margin:0;resize:vertical;" rows="2" placeholder="Ответ бота на эту кнопку..." id="flow-btn-reply-${i}" ${b.escalate ? 'disabled' : ''}>${b.escalate ? '' : (b.reply || '')}</textarea>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.75rem;color:var(--text-sec);">
+              <input type="checkbox" id="flow-btn-esc-${i}" ${b.escalate ? 'checked' : ''} onchange="toggleFlowBtnEsc(${i})"> Эскалировать оператору
+            </label>
+          </div>
+          <button onclick="removeFlowButton(${i})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1rem;padding:4px;line-height:1;" title="Удалить">✕</button>
+        </div>`).join('<hr style="border-color:var(--border);margin:4px 0;">');
+    }
+
+    function toggleFlowBtnEsc(i) {
+      const esc = document.getElementById(`flow-btn-esc-${i}`);
+      const reply = document.getElementById(`flow-btn-reply-${i}`);
+      if (reply) { reply.disabled = esc.checked; if (esc.checked) reply.value = ''; }
+    }
+
+    function _collectFlowButtons() {
+      const wrap = document.getElementById('flow-buttons-list');
+      if (!wrap) return [];
+      const rows = wrap.querySelectorAll('[id^="flow-btn-row-"]');
+      return Array.from(rows).map((_, i) => ({
+        id: `btn-${Date.now()}-${i}`,
+        label: document.getElementById(`flow-btn-label-${i}`)?.value?.trim() || '',
+        reply: document.getElementById(`flow-btn-esc-${i}`)?.checked ? '__ESCALATE__' : (document.getElementById(`flow-btn-reply-${i}`)?.value?.trim() || ''),
+        escalate: document.getElementById(`flow-btn-esc-${i}`)?.checked || false,
+      })).filter(b => b.label);
+    }
+
+    function addFlowButton() {
+      const wrap = document.getElementById('flow-buttons-list');
+      if (!wrap) return;
+      const cur = wrap.querySelectorAll('[id^="flow-btn-row-"]').length;
+      const tmp = document.createElement('div');
+      tmp.innerHTML = `
+        <div style="display:flex;gap:8px;align-items:flex-start;" id="flow-btn-row-${cur}">
+          <div style="flex:1;display:flex;flex-direction:column;gap:5px;">
+            <input class="form-input" style="margin:0;" placeholder="Текст кнопки" id="flow-btn-label-${cur}" value="">
+            <textarea class="form-input" style="margin:0;resize:vertical;" rows="2" placeholder="Ответ бота на эту кнопку..." id="flow-btn-reply-${cur}"></textarea>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.75rem;color:var(--text-sec);">
+              <input type="checkbox" id="flow-btn-esc-${cur}" onchange="toggleFlowBtnEsc(${cur})"> Эскалировать оператору
+            </label>
+          </div>
+          <button onclick="removeFlowButton(${cur})" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:1rem;padding:4px;line-height:1;" title="Удалить">✕</button>
+        </div><hr style="border-color:var(--border);margin:4px 0;">`;
+      wrap.appendChild(tmp.firstElementChild);
+      if (tmp.children.length > 0) wrap.appendChild(tmp.lastElementChild);
+    }
+
+    function removeFlowButton(i) {
+      const buttons = _collectFlowButtons();
+      buttons.splice(i, 1);
+      renderFlowButtonsList(buttons);
+    }
+
+    async function saveFlow() {
+      if (!currentUser) return;
+      const trigger = document.getElementById('flow-trigger')?.value?.trim();
+      if (!trigger) { showToast('⚠️ Укажите триггер'); return; }
+      const matchType = document.querySelector('input[name="flow-match"]:checked')?.value || 'contains';
+      const text = document.getElementById('flow-text')?.value?.trim() || 'Выберите вариант:';
+      const buttons = _collectFlowButtons();
+      if (!buttons.length) { showToast('⚠️ Добавьте хотя бы одну кнопку'); return; }
+
+      const flows = [...(STATE.flows || [])];
+      const newFlow = { id: `flow-${Date.now()}`, trigger, matchType, text, buttons, enabled: true };
+      if (_editingFlowIdx !== null) flows[_editingFlowIdx] = { ...flows[_editingFlowIdx], ...newFlow };
+      else flows.push(newFlow);
+
+      await db.doc(`users/${currentUser.uid}/settings/flows`).set({ flows }, { merge: true });
+      STATE.flows = flows;
+      cancelFlow();
+      renderFlows();
+      showToast('✅ Сценарий сохранён');
+    }
+
+    async function deleteFlow(idx) {
+      if (!currentUser) return;
+      const flows = (STATE.flows || []).filter((_, i) => i !== idx);
+      await db.doc(`users/${currentUser.uid}/settings/flows`).set({ flows }, { merge: true });
+      STATE.flows = flows;
+      renderFlows();
+      showToast('🗑 Сценарий удалён');
     }
 
     // ══ NOTIFICATIONS SETTINGS ════════════════════════════════════════════════

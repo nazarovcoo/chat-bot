@@ -87,6 +87,15 @@ function buildPrompt(question, kbItems, rules) {
   return buildSystem(question, kbItems, rules) + `\n\nВопрос: ${question}`;
 }
 
+// ── Language detection from message text ──────────────────────────────────
+function detectLang(text) {
+  const t = (text || '').trim();
+  if (/[ўқғҳ]/.test(t)) return 'uz';
+  if (/\b(va|bu|men|sen|biz|siz|emas|ham|lekin|chunki|nima|qanday|qayer)\b/i.test(t)) return 'uz';
+  if (/[а-яёА-ЯЁ]/.test(t)) return 'ru';
+  return 'en';
+}
+
 // ─── Shared: call AI with conversation history ────────────────────────────────
 // Returns { text, inputTokens, outputTokens }
 async function callAI(provider, model, system, messages, maxTokens = 800) {
@@ -557,6 +566,59 @@ exports.telegramWebhook = onRequest(
       const cbChatId = String(cbq.message?.chat?.id || '');
       const data = cbq.data || '';
 
+      // ── Flow button press ─────────────────────────────────────────────────
+      if (data.startsWith('flow:') && cbChatId) {
+        const parts = data.split(':');
+        const flowId = parts[1]; const btnId = parts[2];
+        const botDoc2 = await db.doc(`users/${uid}/bots/${botId}`).get();
+        const botToken2 = botDoc2.exists ? botDoc2.data().token : null;
+        const flowsDoc = await db.doc(`users/${uid}/settings/flows`).get();
+        const flows = flowsDoc.exists ? (flowsDoc.data().flows || []) : [];
+        const flow = flows.find(f => f.id === flowId);
+        const btn = flow?.buttons?.find(b => b.id === btnId);
+        if (btn && botToken2) {
+          await fetch(`https://api.telegram.org/bot${botToken2}/answerCallbackQuery`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callback_query_id: cbq.id }) });
+          const replyText = btn.reply === '__ESCALATE__' ? 'Соединяю с менеджером...' : btn.reply;
+          await fetch(`https://api.telegram.org/bot${botToken2}/sendMessage`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: cbChatId, text: replyText }) });
+          if (btn.reply === '__ESCALATE__') {
+            await db.doc(`users/${uid}/chats/${cbChatId}`)
+              .set({ mode: 'human', handoffAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+          }
+        }
+        res.status(200).end(); return;
+      }
+
+      // ── Fallback: user wants operator ────────────────────────────────────
+      if (data === 'fallback:escalate' && cbChatId) {
+        const botDoc3 = await db.doc(`users/${uid}/bots/${botId}`).get();
+        const botToken3 = botDoc3.exists ? botDoc3.data().token : null;
+        if (botToken3) {
+          await fetch(`https://api.telegram.org/bot${botToken3}/answerCallbackQuery`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callback_query_id: cbq.id }) });
+          await fetch(`https://api.telegram.org/bot${botToken3}/sendMessage`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: cbChatId, text: 'Передаю вопрос оператору. Он ответит в ближайшее время. ✅' }) });
+        }
+        await db.doc(`users/${uid}/chats/${cbChatId}`)
+          .set({ mode: 'human', handoffAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        await db.doc(`users/${uid}/chatSessions/${cbChatId}`)
+          .set({ fallbackCount: 0 }, { merge: true }).catch(() => {});
+        // Notify owner
+        const notifSnap = await db.doc(`users/${uid}/settings/notifications`).get();
+        const ownerCid = notifSnap.exists ? (notifSnap.data().ownerChatId || '') : '';
+        if (ownerCid && botToken3) {
+          fetch(`https://api.telegram.org/bot${botToken3}/sendMessage`,
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: ownerCid, text: `🆘 Пользователь запросил оператора!\nChat ID: ${cbChatId}` }) }).catch(() => {});
+        }
+        res.status(200).end(); return;
+      }
+
       if (data.startsWith('provider:') && cbChatId) {
         const chosenProvider = data.replace('provider:', '');
         const botDoc = await db.doc(`users/${uid}/bots/${botId}`).get();
@@ -718,7 +780,8 @@ exports.telegramWebhook = onRequest(
 
       // ── Check handoff state (human operator may have taken over) ──────────────
       const chatDocRef = db.doc(`users/${uid}/chats/${chatId}`);
-      const chatDoc = await chatDocRef.get();
+      const sessionDocRef = db.doc(`users/${uid}/chatSessions/${chatId}`);
+      const [chatDoc, sessionDoc] = await Promise.all([chatDocRef.get(), sessionDocRef.get()]);
       const isNewChat = !chatDoc.exists; // Track if this is a brand-new user
       const chatData = chatDoc.exists ? chatDoc.data() : {};
       const chatMode = chatData.mode || 'ai';
@@ -750,7 +813,8 @@ exports.telegramWebhook = onRequest(
       }
 
       // ── KB + settings with 60-second in-memory cache (warm instances) ──────────
-      const _kbCacheKey = `kb:${uid}:${botId || "_"}`;
+      const detectedLang = detectLang(question);
+      const _kbCacheKey = `kb:${uid}:${botId || "_"}:${detectedLang}`;
       const _settCacheKey = `sett:${uid}`;
       let kbItems = _mcGet(_kbCacheKey);
       let _cachedSett = _mcGet(_settCacheKey);
@@ -761,7 +825,7 @@ exports.telegramWebhook = onRequest(
           : db.doc(`users/${uid}/settings/rules`).get();
 
         // Settings and primary KB source run in parallel
-        const [rulesDoc, aiDoc, autoReplyDoc, notifDoc, primaryKbSnap] = await Promise.all([
+        const [rulesDoc, aiDoc, autoReplyDoc, notifDoc, primaryKbSnap, flowsDoc] = await Promise.all([
           rulesPromise,
           db.doc(`users/${uid}/settings/ai`).get(),
           db.doc(`users/${uid}/settings/autoReplies`).get(),
@@ -769,20 +833,29 @@ exports.telegramWebhook = onRequest(
           botId
             ? db.collection(`users/${uid}/bots/${botId}/knowledge_base`).limit(200).get()
             : db.collection(`users/${uid}/kbQA`).where("status", "==", "active").limit(200).get(),
+          db.doc(`users/${uid}/settings/flows`).get(),
         ]);
 
         if (kbItems === null) {
+          const _langFilter = item => !item.lang || item.lang === 'auto' || item.lang === detectedLang;
           if (botId) {
-            kbItems = primaryKbSnap.docs.map(d => ({
-              title: d.data().title || d.data().question || d.data().name || "",
-              content: d.data().content || d.data().answer || d.data().text || ""
-            })).filter(k => k.content.trim().length > 0);
+            kbItems = primaryKbSnap.docs
+              .map(d => ({ ...d.data(), _id: d.id }))
+              .filter(_langFilter)
+              .map(d => ({ title: d.title || d.question || d.name || "", content: d.content || d.answer || d.text || "", _id: d._id }))
+              .filter(k => k.content.trim().length > 0);
           } else if (primaryKbSnap.size > 0) {
-            kbItems = primaryKbSnap.docs.map(d => ({ title: d.data().question || "", content: d.data().answer || "" }));
+            kbItems = primaryKbSnap.docs
+              .map(d => ({ ...d.data(), _id: d.id }))
+              .filter(_langFilter)
+              .map(d => ({ title: d.question || "", content: d.answer || "", _id: d._id }));
           } else {
             // Fallback to legacy kbItems only if kbQA is empty
             const legacySnap = await db.collection(`users/${uid}/kbItems`).limit(200).get();
-            kbItems = legacySnap.docs.map(d => ({ title: d.data().title || "", content: d.data().content || "" }));
+            kbItems = legacySnap.docs
+              .map(d => ({ ...d.data(), _id: d.id }))
+              .filter(_langFilter)
+              .map(d => ({ title: d.title || "", content: d.content || "", _id: d._id }));
           }
           _mcSet(_kbCacheKey, kbItems, 60000);
         }
@@ -793,12 +866,13 @@ exports.telegramWebhook = onRequest(
             aiProviders: aiDoc.exists ? aiDoc.data().providers || {} : {},
             autoRules: autoReplyDoc.exists ? autoReplyDoc.data().rules || [] : [],
             notifData: notifDoc.exists ? notifDoc.data() : {},
+            flows: flowsDoc.exists ? (flowsDoc.data().flows || []) : [],
           };
           _mcSet(_settCacheKey, _cachedSett, 60000);
         }
       }
 
-      var { rules, aiProviders, autoRules: _autoRules, notifData: _notifData } = _cachedSett;
+      var { rules, aiProviders, autoRules: _autoRules, notifData: _notifData, flows: _flows } = _cachedSett;
 
       // ── Auto-reply rules (no AI, saves requests) ──────────────────────────────
       if (_autoRules && _autoRules.length > 0) {
@@ -818,6 +892,28 @@ exports.telegramWebhook = onRequest(
               lastMessage: question.slice(0, 100), lastTs: admin.firestore.FieldValue.serverTimestamp(),
               _ts: admin.firestore.FieldValue.serverTimestamp(), mode: 'ai'
             }, { merge: true }).catch(() => { });
+            res.status(200).end(); return;
+          }
+        }
+      }
+
+      // ── Flow builder (trigger → inline buttons) ───────────────────────────────
+      if (_flows && _flows.length > 0) {
+        const qLow = question.toLowerCase().trim();
+        for (const flow of _flows) {
+          if (!flow.enabled || !flow.trigger || !flow.buttons?.length) continue;
+          const matched = flow.matchType === 'exact'
+            ? qLow === flow.trigger.toLowerCase()
+            : qLow.includes(flow.trigger.toLowerCase());
+          if (matched) {
+            const keyboard = flow.buttons.map(b => ([{ text: b.label, callback_data: `flow:${flow.id}:${b.id}` }]));
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: chatId, text: flow.text || 'Выберите:', reply_markup: { inline_keyboard: keyboard } }),
+            });
+            chatDocRef.set({ chatId, name: chatName, username: chatUsername, botId,
+              lastMessage: question.slice(0, 100), lastTs: admin.firestore.FieldValue.serverTimestamp(),
+              _ts: admin.firestore.FieldValue.serverTimestamp(), mode: 'ai' }, { merge: true }).catch(() => {});
             res.status(200).end(); return;
           }
         }
@@ -848,8 +944,7 @@ exports.telegramWebhook = onRequest(
         provider = enabledProviders[0];
         model = aiProviders[provider].model || "";
       } else {
-        // Multiple enabled — check if user already chose one
-        const sessionDoc = await db.doc(`users/${uid}/chatSessions/${chatId}`).get();
+        // Multiple enabled — check if user already chose one (sessionDoc loaded earlier)
         const savedProvider = sessionDoc.exists ? sessionDoc.data().selectedProvider : null;
 
         if (savedProvider && aiProviders[savedProvider]?.enabled) {
@@ -898,10 +993,12 @@ exports.telegramWebhook = onRequest(
         res.status(200).end(); return;
       }
 
-      // Load chat history for context (last 10 exchanges)
+      // Load chat history for context
       const historyRef = db.doc(`users/${uid}/chatHistory/${chatId}`);
       const historySnap = await historyRef.get();
-      const history = historySnap.exists ? (historySnap.data().messages || []) : [];
+      const historyDoc = historySnap.exists ? historySnap.data() : {};
+      const allMessages = historyDoc.messages || [];
+      const historySummary = historyDoc.summary || '';
 
       // Show "typing..." indicator and keep it alive while AI is thinking
       const sendTyping = () => fetch(
@@ -914,13 +1011,41 @@ exports.telegramWebhook = onRequest(
       sendTyping();
       const typingInterval = setInterval(sendTyping, 4000);
 
-      const messages = [...history.slice(-10), { role: "user", content: question }];
+      // Fallback detection: check if KB has any matching content
+      const kbScores = kbItems.map(i => scoreRelevance(question, i));
+      const maxKbScore = kbScores.length > 0 ? Math.max(...kbScores) : 0;
+      const noKbMatch = maxKbScore === 0 && kbItems.length > 0;
+      const sessionData = sessionDoc.exists ? sessionDoc.data() : {};
+      const fallbackCount = sessionData.fallbackCount || 0;
+
+      // Second consecutive no-match → escalate immediately
+      if (noKbMatch && fallbackCount >= 1) {
+        await chatDocRef.set({ mode: 'human', handoffAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: 'Передаю ваш вопрос оператору. Он ответит в ближайшее время. ✅' }),
+        });
+        if (ownerChatId) {
+          fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: ownerChatId, text: `🆘 Пользователь запросил оператора!\nВопрос: ${question.slice(0, 200)}\nChat ID: ${chatId}` }),
+          }).catch(() => {});
+        }
+        sessionDocRef.set({ fallbackCount: 0 }, { merge: true }).catch(() => {});
+        res.status(200).end(); return;
+      }
+
+      const recentMessages = allMessages.slice(-20);
       const system = buildSystem(question, kbItems, rules);
+      const systemWithMemory = historySummary
+        ? `${system}\n\nКраткое резюме предыдущего диалога:\n${historySummary}`
+        : system;
+      const messages = [...recentMessages, { role: "user", content: question }];
       const resolvedModel = model || (provider === 'openai' ? 'gpt-4o-mini' : provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-haiku-4-5-20251001');
       let aiResult;
       const t0 = Date.now();
       try {
-        aiResult = await callAI(provider, resolvedModel, system, messages);
+        aiResult = await callAI(provider, resolvedModel, systemWithMemory, messages);
       } finally {
         clearInterval(typingInterval);
       }
@@ -941,11 +1066,25 @@ exports.telegramWebhook = onRequest(
           : Promise.resolve()
       );
 
-      // Save updated history (keep last 20 messages = 10 exchanges)
+      // Save updated history (keep last 100 messages)
       const newHistory = [
-        ...messages,
+        ...allMessages,
+        { role: "user", content: question },
         { role: "assistant", content: answer },
-      ].slice(-20);
+      ].slice(-100);
+
+      // Async summary compression: if history > 40 msgs and summary is stale (>1h)
+      if (newHistory.length > 40) {
+        const lastSummaryMs = historyDoc.summaryUpdatedAt?.toMillis?.() || 0;
+        if (Date.now() - lastSummaryMs > 3600000) {
+          const toSummarize = newHistory.slice(0, newHistory.length - 20);
+          callAI('openai', 'gpt-4o-mini',
+            'Сожми историю диалога в 3-5 предложений на языке диалога. Только факты: о чём спрашивал пользователь, что узнал, что выбрал.',
+            toSummarize, 300)
+            .then(r => historyRef.set({ summary: r.text, summaryUpdatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {}))
+            .catch(() => {});
+        }
+      }
 
       // Strip markdown formatting for clean Telegram output
       const tgText = answer
@@ -989,6 +1128,21 @@ exports.telegramWebhook = onRequest(
         ...askIncrements,
         ...statsWrites,
       ]);
+
+      // Fallback chain: после AI-ответа — кнопка оператора если нет KB-матча
+      if (noKbMatch) {
+        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: 'Не нашёл точного ответа в базе знаний. Хотите связаться с оператором?',
+            reply_markup: { inline_keyboard: [[{ text: '📞 Связаться с оператором', callback_data: 'fallback:escalate' }]] }
+          }),
+        }).catch(() => {});
+        sessionDocRef.set({ fallbackCount: fallbackCount + 1, lastFallbackQ: question }, { merge: true }).catch(() => {});
+      } else if (fallbackCount > 0) {
+        sessionDocRef.set({ fallbackCount: 0 }, { merge: true }).catch(() => {});
+      }
 
       // Non-critical: log usage/topics + limit notifications
       const newUsageCount = usageCount + 1;
