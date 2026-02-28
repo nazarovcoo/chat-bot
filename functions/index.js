@@ -27,36 +27,54 @@ function _mcSet(key, val, ttlMs) {
 }
 
 // ─── Shared: score KB item relevance ─────────────────────────────────────────
-function scoreRelevance(question, item) {
+function scoreRelevance(question, item, questionEmbedding = null) {
+  let textScore = 0;
   const q = question.toLowerCase();
-  const text = ((item.title || "") + " " + (item.content || "")).toLowerCase();
+  const text = ((item.title || "") + " " + (item.content || item.answer || "")).toLowerCase();
   const words = q.split(/\s+/).filter((w) => w.length > 2);
-  if (words.length === 0) return 0;
-  let score = 0;
-  for (const w of words) {
-    if (text.includes(w)) score++;
-    // Bonus for title match
-    if ((item.title || "").toLowerCase().includes(w)) score++;
+
+  if (words.length > 0) {
+    let matchCount = 0;
+    for (const w of words) {
+      if (text.includes(w)) matchCount++;
+      // Bonus for title match
+      if ((item.title || item.question || "").toLowerCase().includes(w)) matchCount++;
+    }
+    textScore = matchCount / words.length;
   }
-  return score / words.length;
+
+  let semanticScore = 0;
+  if (questionEmbedding && item.embedding && Array.isArray(item.embedding) && item.embedding.length > 0) {
+    semanticScore = cosineSimilarity(questionEmbedding, item.embedding);
+  }
+
+  // Combine scores: Semantic search is usually more accurate if available
+  // If no semantic score, rely on text score.
+  if (semanticScore > 0) {
+    // 0.3 text, 0.7 semantic as a heuristic
+    return (textScore * 0.3) + (semanticScore * 0.7);
+  }
+  return textScore;
 }
 
 // ─── Shared: build system prompt (without question) ───────────────────────────
-function buildSystem(question, kbItems, rules) {
+function buildSystem(question, kbItems, rules, questionEmbedding = null) {
   const MAX_ITEM_CHARS = 1200;
   const TOP_K = 15;
-  const all = kbItems.filter((i) => i.title && i.content);
+  const all = kbItems.filter((i) => (i.title || i.question) && (i.content || i.answer));
 
   const scored = all
-    .map((i) => ({ item: i, score: scoreRelevance(question, i) }))
+    .map((i) => ({ item: i, score: scoreRelevance(question, i, questionEmbedding) }))
     .sort((a, b) => b.score - a.score);
-  const hasMatch = scored.length > 0 && scored[0].score > 0;
+
+  // We lower the threshold slightly to catch good semantic matches (e.g. > 0.1)
+  const hasMatch = scored.length > 0 && scored[0].score > 0.1;
   const relevant = hasMatch
-    ? scored.filter((s) => s.score > 0).slice(0, TOP_K).map((s) => s.item)
+    ? scored.filter((s) => s.score > 0.1).slice(0, TOP_K).map((s) => s.item)
     : all.slice(0, 10);
 
   const kbText = relevant
-    .map((i) => `Q: ${i.title.slice(0, 200)}\nA: ${i.content.slice(0, MAX_ITEM_CHARS)}`)
+    .map((i) => `Q: ${String(i.title || i.question).slice(0, 200)}\nA: ${String(i.content || i.answer).slice(0, MAX_ITEM_CHARS)}`)
     .join("\n\n");
 
   const core = `Ты — дружелюбный ИИ-ассистент. Общаешься неформально и тепло, как живой человек.
@@ -84,8 +102,8 @@ function buildSystem(question, kbItems, rules) {
 }
 
 // Keep old name as alias for Q&A generation
-function buildPrompt(question, kbItems, rules) {
-  return buildSystem(question, kbItems, rules) + `\n\nВопрос: ${question}`;
+function buildPrompt(question, kbItems, rules, questionEmbedding = null) {
+  return buildSystem(question, kbItems, rules, questionEmbedding) + `\n\nВопрос: ${question}`;
 }
 
 // ── Language detection from message text ──────────────────────────────────
@@ -235,24 +253,100 @@ function semanticKey(question, answer) {
   return crypto.createHash("sha256").update(text).digest("hex");
 }
 
-async function generateQAFromChunk(chunk, provider, model) {
-  const prompt = `Ты — эксперт по созданию баз знаний. Из текста ниже извлеки вопросы и ответы так, как их задали бы реальные клиенты или пользователи.
+// ─── Text normalization (clean PDF/DOCX artifacts before pipeline) ────────────
+function normalizeText(raw) {
+  let text = String(raw || "");
+  // Remove null bytes and non-printable control chars (keep \n \r \t)
+  text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+  // Collapse spaces/tabs (but preserve newlines)
+  text = text.replace(/[^\S\n]+/g, " ");
+  // Collapse 3+ consecutive blank lines to 2
+  text = text.replace(/\n{3,}/g, "\n\n");
+  // Remove common PDF artifacts
+  text = text
+    .replace(/Page \d+ of \d+/gi, "")
+    .replace(/\[\d+\]/g, "")   // reference footnotes like [1]
+    .replace(/_{3,}/g, "")     // underline rulers
+    .replace(/={3,}/g, "")     // equals rulers
+    .replace(/-{4,}/g, "");    // dash rulers (keep "---" as it's markdown)
+  // Deduplicate repeated paragraphs (headers/footers repeat in PDFs)
+  const paragraphs = text.split("\n\n");
+  const seen = new Set();
+  const unique = paragraphs.filter(p => {
+    const key = p.trim().toLowerCase();
+    if (seen.has(key) || key.length < 3) return false;
+    seen.add(key);
+    return true;
+  });
+  return unique.join("\n\n").trim();
+}
 
-ПРАВИЛА:
-1. Генерируй 4-8 пар вопрос-ответ на русском языке.
+// ─── Mode decision: Q&A generation vs raw chunk storage ──────────────────────
+// Q&A mode: structured content with 50–10000 words (headers/bullets detected)
+// Chunk mode: very short, very long, or unstructured plain text
+function decideMode(text) {
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  if (wordCount < 50 || wordCount > 10000) return "chunks";
+  // Detect structural markers: markdown headers, numbered lists, bullet points
+  const hasStructure = /^#{1,3}\s|^\d+\.\s|^[-*•]\s/m.test(text);
+  return hasStructure ? "qa" : "chunks";
+}
+
+// ─── Embeddings & RAG helpers ────────────────────────────────────────────────
+async function getEmbedding(text, provider = "openai") {
+  // Currently, we only support OpenAI for embeddings, as Claude/Gemini have varying embedding APIs.
+  // We default to text-embedding-3-small.
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY not set for embeddings");
+
+  const resp = await fetch("https://api.openai.com/v1/embeddings", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      input: text.trim().slice(0, 8000), // Max input limit safety
+      model: "text-embedding-3-small"
+    })
+  });
+
+  const data = await resp.json();
+  if (!resp.ok) {
+    throw new Error(data?.error?.message || `OpenAI Embeddings API failed (${resp.status})`);
+  }
+  return data.data?.[0]?.embedding || [];
+}
+
+function cosineSimilarity(vecA, vecB) {
+  if (!vecA || !vecB || vecA.length !== vecB.length || vecA.length === 0) return 0;
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+async function generateQAFromChunk(chunk, provider, model) {
+  const prompt = `Ты — эксперт по созданию баз знаний.Из текста ниже извлеки вопросы и ответы так, как их задали бы реальные клиенты или пользователи.
+
+      ПРАВИЛА:
+      1. Генерируй 4 - 8 пар вопрос - ответ на русском языке.
 2. Ответы должны быть ПОЛНЫМИ и ДЕТАЛЬНЫМИ — включай все цифры, примеры, детали, условия, перечисления из текста.
 3. НЕ сокращай и НЕ упрощай ответы — передавай максимум информации из текста.
-4. Вопросы формулируй так, как спросил бы реальный человек (не академически).
+4. Вопросы формулируй так, как спросил бы реальный человек(не академически).
 5. Если в тексте есть примеры, числа, проценты, названия — обязательно включай их в ответ.
 6. Один вопрос = один конкретный аспект темы.
 7. Верни ТОЛЬКО валидный JSON массив без лишнего текста.
 
-Формат: [{"question":"...","answer":"...","topic":"..."}]
+      Формат: [{ "question": "...", "answer": "...", "topic": "..." }]
 
 Текст:
-${chunk}
+      ${chunk}
 
-JSON:`;
+JSON: `;
   try {
     const { text: raw } = await callAI(provider, model, "", [{ role: "user", content: prompt }], 2500);
     const match = raw.match(/\[[\s\S]*\]/);
@@ -462,6 +556,12 @@ exports.processKnowledge = onRequest(
         const batch = db.batch();
         for (const qa of toAdd.slice(i, i + BATCH_SIZE)) {
           const ref = db.collection(`users/${uid}/kbQA`).doc();
+
+          let embedding = [];
+          try {
+            embedding = await getEmbedding(`Question: ${qa.question}\nAnswer: ${qa.answer}`);
+          } catch (e) { /* ignore */ }
+
           batch.set(ref, {
             sourceId,
             question: qa.question || "",
@@ -470,6 +570,7 @@ exports.processKnowledge = onRequest(
             tags: [],
             semanticKey: qa.semanticKey,
             status: "active",
+            embedding: embedding,
             _ts: admin.firestore.FieldValue.serverTimestamp(),
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
           });
@@ -579,12 +680,16 @@ exports.telegramWebhook = onRequest(
         const btn = flow?.buttons?.find(b => b.id === btnId);
         if (btn && botToken2) {
           await fetch(`https://api.telegram.org/bot${botToken2}/answerCallbackQuery`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ callback_query_id: cbq.id }) });
+            {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callback_query_id: cbq.id })
+            });
           const replyText = btn.reply === '__ESCALATE__' ? 'Соединяю с менеджером...' : btn.reply;
           await fetch(`https://api.telegram.org/bot${botToken2}/sendMessage`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: cbChatId, text: replyText }) });
+            {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: cbChatId, text: replyText })
+            });
           if (btn.reply === '__ESCALATE__') {
             await db.doc(`users/${uid}/chats/${cbChatId}`)
               .set({ mode: 'human', handoffAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
@@ -599,23 +704,29 @@ exports.telegramWebhook = onRequest(
         const botToken3 = botDoc3.exists ? botDoc3.data().token : null;
         if (botToken3) {
           await fetch(`https://api.telegram.org/bot${botToken3}/answerCallbackQuery`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ callback_query_id: cbq.id }) });
+            {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ callback_query_id: cbq.id })
+            });
           await fetch(`https://api.telegram.org/bot${botToken3}/sendMessage`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: cbChatId, text: 'Передаю вопрос оператору. Он ответит в ближайшее время. ✅' }) });
+            {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: cbChatId, text: 'Передаю вопрос оператору. Он ответит в ближайшее время. ✅' })
+            });
         }
         await db.doc(`users/${uid}/chats/${cbChatId}`)
           .set({ mode: 'human', handoffAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
         await db.doc(`users/${uid}/chatSessions/${cbChatId}`)
-          .set({ fallbackCount: 0 }, { merge: true }).catch(() => {});
+          .set({ fallbackCount: 0 }, { merge: true }).catch(() => { });
         // Notify owner
         const notifSnap = await db.doc(`users/${uid}/settings/notifications`).get();
         const ownerCid = notifSnap.exists ? (notifSnap.data().ownerChatId || '') : '';
         if (ownerCid && botToken3) {
           fetch(`https://api.telegram.org/bot${botToken3}/sendMessage`,
-            { method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ chat_id: ownerCid, text: `🆘 Пользователь запросил оператора!\nChat ID: ${cbChatId}` }) }).catch(() => {});
+            {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ chat_id: ownerCid, text: `🆘 Пользователь запросил оператора!\nChat ID: ${cbChatId}` })
+            }).catch(() => { });
         }
         res.status(200).end(); return;
       }
@@ -752,7 +863,7 @@ exports.telegramWebhook = onRequest(
       if (!planData) {
         const trialEnds = new admin.firestore.Timestamp(Math.floor(Date.now() / 1000) + 14 * 24 * 3600, 0);
         planData = { type: 'trial', trialEnds, monthlyLimit: 2000 };
-        planDoc.ref.set({ ...planData, createdAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+        planDoc.ref.set({ ...planData, createdAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => { });
       }
       let monthlyLimit = 0;
       if (planData) {
@@ -843,7 +954,7 @@ exports.telegramWebhook = onRequest(
             let botKbItems = primaryKbSnap.docs
               .map(d => ({ ...d.data(), _id: d.id }))
               .filter(_langFilter)
-              .map(d => ({ title: d.title || d.question || d.name || "", content: d.content || d.answer || d.text || "", _id: d._id }))
+              .map(d => ({ title: d.title || d.question || d.name || "", content: d.content || d.answer || d.text || "", embedding: d.embedding || [], _id: d._id }))
               .filter(k => k.content.trim().length > 0);
             // If bot-specific KB is empty, also pull from kbQA (project sources pipeline)
             if (botKbItems.length === 0) {
@@ -852,7 +963,7 @@ exports.telegramWebhook = onRequest(
                 botKbItems = kbQaSnap.docs
                   .map(d => ({ ...d.data(), _id: d.id }))
                   .filter(_langFilter)
-                  .map(d => ({ title: d.question || "", content: d.answer || "", _id: d._id }));
+                  .map(d => ({ title: d.question || "", content: d.answer || "", embedding: d.embedding || [], _id: d._id }));
               }
             }
             kbItems = botKbItems;
@@ -860,14 +971,14 @@ exports.telegramWebhook = onRequest(
             kbItems = primaryKbSnap.docs
               .map(d => ({ ...d.data(), _id: d.id }))
               .filter(_langFilter)
-              .map(d => ({ title: d.question || "", content: d.answer || "", _id: d._id }));
+              .map(d => ({ title: d.question || "", content: d.answer || "", embedding: d.embedding || [], _id: d._id }));
           } else {
             // Fallback to legacy kbItems only if kbQA is empty
             const legacySnap = await db.collection(`users/${uid}/kbItems`).limit(200).get();
             kbItems = legacySnap.docs
               .map(d => ({ ...d.data(), _id: d.id }))
               .filter(_langFilter)
-              .map(d => ({ title: d.title || "", content: d.content || "", _id: d._id }));
+              .map(d => ({ title: d.title || "", content: d.content || "", embedding: d.embedding || [], _id: d._id }));
           }
           _mcSet(_kbCacheKey, kbItems, 60000);
         }
@@ -923,9 +1034,11 @@ exports.telegramWebhook = onRequest(
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ chat_id: chatId, text: flow.text || 'Выберите:', reply_markup: { inline_keyboard: keyboard } }),
             });
-            chatDocRef.set({ chatId, name: chatName, username: chatUsername, botId,
+            chatDocRef.set({
+              chatId, name: chatName, username: chatUsername, botId,
               lastMessage: question.slice(0, 100), lastTs: admin.firestore.FieldValue.serverTimestamp(),
-              _ts: admin.firestore.FieldValue.serverTimestamp(), mode: 'ai' }, { merge: true }).catch(() => {});
+              _ts: admin.firestore.FieldValue.serverTimestamp(), mode: 'ai'
+            }, { merge: true }).catch(() => { });
             res.status(200).end(); return;
           }
         }
@@ -1023,10 +1136,21 @@ exports.telegramWebhook = onRequest(
       sendTyping();
       const typingInterval = setInterval(sendTyping, 4000);
 
+      // Generate embedding for the incoming question to perform RAG semantic search
+      let qEmbedding = null;
+      if (kbItems.length > 0) {
+        try {
+          qEmbedding = await getEmbedding(question);
+        } catch (e) {
+          console.warn("Could not generate question embedding for RAG:", e.message);
+        }
+      }
+
       // Fallback detection: check if KB has any matching content
-      const kbScores = kbItems.map(i => scoreRelevance(question, i));
+      const kbScores = kbItems.map(i => scoreRelevance(question, i, qEmbedding));
       const maxKbScore = kbScores.length > 0 ? Math.max(...kbScores) : 0;
-      const noKbMatch = maxKbScore === 0 && kbItems.length > 0;
+      // Consider it a match if score > 0.1 (lowered threshold since semantic scores are fractional)
+      const noKbMatch = maxKbScore < 0.1 && kbItems.length > 0;
       const sessionData = sessionDoc.exists ? sessionDoc.data() : {};
       const fallbackCount = sessionData.fallbackCount || 0;
 
@@ -1041,14 +1165,15 @@ exports.telegramWebhook = onRequest(
           fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chat_id: ownerChatId, text: `🆘 Пользователь запросил оператора!\nВопрос: ${question.slice(0, 200)}\nChat ID: ${chatId}` }),
-          }).catch(() => {});
+          }).catch(() => { });
         }
-        sessionDocRef.set({ fallbackCount: 0 }, { merge: true }).catch(() => {});
+        sessionDocRef.set({ fallbackCount: 0 }, { merge: true }).catch(() => { });
+        clearInterval(typingInterval);
         res.status(200).end(); return;
       }
 
       const recentMessages = allMessages.slice(-20);
-      const system = buildSystem(question, kbItems, rules);
+      const system = buildSystem(question, kbItems, rules, qEmbedding);
       const systemWithMemory = historySummary
         ? `${system}\n\nКраткое резюме предыдущего диалога:\n${historySummary}`
         : system;
@@ -1068,8 +1193,8 @@ exports.telegramWebhook = onRequest(
 
       // Increment `asked` counter on top matching kbQA items
       const topMatches = kbItems
-        .map((i) => ({ item: i, score: scoreRelevance(question, i) }))
-        .filter((s) => s.score > 0)
+        .map((i) => ({ item: i, score: scoreRelevance(question, i, qEmbedding) }))
+        .filter((s) => s.score > 0.1)
         .sort((a, b) => b.score - a.score)
         .slice(0, 3);
       const askIncrements = topMatches.map((s) =>
@@ -1093,8 +1218,8 @@ exports.telegramWebhook = onRequest(
           callAI('openai', 'gpt-4o-mini',
             'Сожми историю диалога в 3-5 предложений на языке диалога. Только факты: о чём спрашивал пользователь, что узнал, что выбрал.',
             toSummarize, 300)
-            .then(r => historyRef.set({ summary: r.text, summaryUpdatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {}))
-            .catch(() => {});
+            .then(r => historyRef.set({ summary: r.text, summaryUpdatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => { }))
+            .catch(() => { });
         }
       }
 
@@ -1150,10 +1275,10 @@ exports.telegramWebhook = onRequest(
             text: 'Не нашёл точного ответа в базе знаний. Хотите связаться с оператором?',
             reply_markup: { inline_keyboard: [[{ text: '📞 Связаться с оператором', callback_data: 'fallback:escalate' }]] }
           }),
-        }).catch(() => {});
-        sessionDocRef.set({ fallbackCount: fallbackCount + 1, lastFallbackQ: question }, { merge: true }).catch(() => {});
+        }).catch(() => { });
+        sessionDocRef.set({ fallbackCount: fallbackCount + 1, lastFallbackQ: question }, { merge: true }).catch(() => { });
       } else if (fallbackCount > 0) {
-        sessionDocRef.set({ fallbackCount: 0 }, { merge: true }).catch(() => {});
+        sessionDocRef.set({ fallbackCount: 0 }, { merge: true }).catch(() => { });
       }
 
       // Non-critical: log usage/topics + limit notifications
@@ -1875,7 +2000,7 @@ exports.projectsApi = onRequest(
             const hasContent = String(s.contentRef || "").trim().length > 0;
             const effectiveStatus = (s.status === "pending" && hasContent) ? "ready" : (s.status || "pending");
             if (s.status === "pending" && hasContent) {
-              d.ref.update({ status: "ready", updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+              d.ref.update({ status: "ready", updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => { });
             }
             return {
               id: d.id,
@@ -1899,7 +2024,7 @@ exports.projectsApi = onRequest(
               const hasContent = String(s.contentRef || "").trim().length > 0;
               const effectiveStatus = (s.status === "pending" && hasContent) ? "ready" : (s.status || "pending");
               if (s.status === "pending" && hasContent) {
-                d.ref.update({ status: "ready", updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+                d.ref.update({ status: "ready", updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => { });
               }
               return {
                 id: d.id,
@@ -2114,12 +2239,14 @@ exports.projectsApi = onRequest(
         const snap = await ref.get();
         if (!snap.exists) { res.status(404).json({ error: "Source not found" }); return; }
         const s = snap.data() || {};
-        res.json({ ok: true, source: {
-          id: snap.id, projectId: s.projectId, type: s.type, title: s.title,
-          contentRef: s.contentRef, status: s.status, kbQaCount: s.kbQaCount || 0,
-          errorMessage: s.errorMessage || null,
-          createdAt: _asIso(s.createdAt), updatedAt: _asIso(s.updatedAt),
-        }});
+        res.json({
+          ok: true, source: {
+            id: snap.id, projectId: s.projectId, type: s.type, title: s.title,
+            contentRef: s.contentRef, status: s.status, kbQaCount: s.kbQaCount || 0,
+            errorMessage: s.errorMessage || null,
+            createdAt: _asIso(s.createdAt), updatedAt: _asIso(s.updatedAt),
+          }
+        });
         return;
       }
 
@@ -3551,7 +3678,17 @@ exports.processProjectSource = onDocumentWritten(
     const db = admin.firestore();
 
     try {
-      // Determine AI provider from user settings
+      // 1. Normalize text — clean PDF artifacts, dedup paragraphs
+      const cleanText = normalizeText(text);
+      if (cleanText.length < 50) {
+        await afterSnap.ref.update({ status: "ready", kbQaCount: 0, mode: "skip", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        return;
+      }
+
+      // 2. Decide processing mode (Q&A for structured/medium texts, chunks for large/plain)
+      const mode = decideMode(cleanText);
+
+      // 3. Determine AI provider from user settings
       const aiDoc = await db.doc(`users/${uid}/settings/ai`).get();
       const aiProviders = aiDoc.exists ? (aiDoc.data().providers || {}) : {};
       let provider = "openai";
@@ -3567,33 +3704,79 @@ exports.processProjectSource = onDocumentWritten(
         model = aiProviders.claude.model || "claude-haiku-4-5-20251001";
       }
 
-      // Chunk the source text and generate Q&A pairs
-      const chunks = chunkText(text, 1500);
+      const chunks = chunkText(cleanText, 1500);
       if (chunks.length === 0) {
-        await afterSnap.ref.update({ status: "ready", kbQaCount: 0, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        await afterSnap.ref.update({ status: "ready", kbQaCount: 0, mode, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
         return;
       }
 
       const kbRef = db.collection(`users/${uid}/kbQA`);
       let savedCount = 0;
 
-      for (const chunk of chunks) {
-        const pairs = await generateQAFromChunk(chunk, provider, model);
-        for (const pair of pairs) {
-          if (!pair.question || !pair.answer) continue;
-          const key = semanticKey(pair.question, pair.answer);
-          // Deduplicate by semantic key
+      if (mode === "qa") {
+        // ── Q&A mode: LLM generates question-answer pairs from each chunk ─────
+        for (const chunk of chunks) {
+          const pairs = await generateQAFromChunk(chunk, provider, model);
+          await new Promise(resolve => setTimeout(resolve, 100)); // throttle
+
+          for (const pair of pairs) {
+            if (!pair.question || !pair.answer) continue;
+            const key = semanticKey(pair.question, pair.answer);
+            const existing = await kbRef.where("_key", "==", key).limit(1).get();
+            if (!existing.empty) continue;
+
+            let embedding = [];
+            try {
+              embedding = await getEmbedding(`Question: ${pair.question}\nAnswer: ${pair.answer}`);
+            } catch (embErr) {
+              console.warn(`Embedding failed qa sourceId=${sourceId}:`, embErr.message);
+            }
+
+            await kbRef.doc().set({
+              question: String(pair.question).trim(),
+              answer: String(pair.answer).trim(),
+              topic: String(pair.topic || after.title || "").trim(),
+              _key: key,
+              sourceId,
+              projectId: after.projectId || null,
+              status: "active",
+              lang: "auto",
+              type: "qa",
+              embedding,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            savedCount++;
+          }
+        }
+      } else {
+        // ── Chunk mode: store raw chunks directly with embeddings (no LLM) ───
+        // Used for very large, very short, or unstructured plain text.
+        const sourceTitle = after.title || "Документ";
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          const chunkQuestion = `${sourceTitle} (часть ${i + 1} из ${chunks.length})`;
+          const key = semanticKey(chunkQuestion, chunk);
           const existing = await kbRef.where("_key", "==", key).limit(1).get();
           if (!existing.empty) continue;
+
+          let embedding = [];
+          try {
+            embedding = await getEmbedding(chunk);
+          } catch (embErr) {
+            console.warn(`Embedding failed chunk sourceId=${sourceId} i=${i}:`, embErr.message);
+          }
+
           await kbRef.doc().set({
-            question: String(pair.question).trim(),
-            answer: String(pair.answer).trim(),
-            topic: String(pair.topic || after.title || "").trim(),
+            question: chunkQuestion,
+            answer: chunk,
+            topic: sourceTitle,
             _key: key,
-            sourceId: sourceId,
+            sourceId,
             projectId: after.projectId || null,
             status: "active",
             lang: "auto",
+            type: "chunk",
+            embedding,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
           });
           savedCount++;
@@ -3603,10 +3786,11 @@ exports.processProjectSource = onDocumentWritten(
       await afterSnap.ref.update({
         status: "ready",
         kbQaCount: savedCount,
+        mode,
         processedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      console.log(`processProjectSource: uid=${uid} sourceId=${sourceId} saved ${savedCount} kbQA docs`);
+      console.log(`processProjectSource: uid=${uid} sourceId=${sourceId} mode=${mode} saved=${savedCount}`);
     } catch (e) {
       console.error(`processProjectSource error uid=${uid} sourceId=${sourceId}:`, e.message);
       await afterSnap.ref.update({

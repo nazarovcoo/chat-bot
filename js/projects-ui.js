@@ -197,7 +197,7 @@
       body: JSON.stringify(payload || {}),
     });
     var data = {};
-    try { data = await resp.json(); } catch (_) {}
+    try { data = await resp.json(); } catch (_) { }
     return { ok: resp.ok, status: resp.status, data: data || {} };
   }
 
@@ -224,6 +224,12 @@
       createName: root.querySelector("#projects-create-name"),
       createHost: root.querySelector("#projects-create-host"),
       createKB: root.querySelector("#projects-create-kb"),
+      createKBFileWrap: root.querySelector("#projects-create-kb-file-wrap"),
+      createKBTextWrap: root.querySelector("#projects-create-kb-text-wrap"),
+      createKBDropZone: root.querySelector("#projects-create-drop-zone"),
+      createKBDropText: root.querySelector("#projects-create-drop-text"),
+      createKBFileInput: root.querySelector("#projects-create-file-input"),
+      createKBText: root.querySelector("#projects-create-kb-text"),
       // Source modal
       srcModal: root.querySelector("#projects-source-modal"),
       srcClose: root.querySelector("#src-close"),
@@ -276,6 +282,32 @@
       if (!btn) return;
       setTab(btn.getAttribute("data-tab"));
     });
+
+    // Create modal KB events
+    var _createKbFile = null;
+    nodes.createKB.addEventListener("change", function () {
+      var val = nodes.createKB.value;
+      nodes.createKBFileWrap.style.display = val === "file" ? "block" : "none";
+      nodes.createKBTextWrap.style.display = val === "text" ? "block" : "none";
+    });
+    nodes.createKBDropZone.addEventListener("click", function () { nodes.createKBFileInput.click(); });
+    nodes.createKBDropZone.addEventListener("dragover", function (e) { e.preventDefault(); nodes.createKBDropZone.classList.add("drag-over"); });
+    nodes.createKBDropZone.addEventListener("dragleave", function () { nodes.createKBDropZone.classList.remove("drag-over"); });
+    nodes.createKBDropZone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      nodes.createKBDropZone.classList.remove("drag-over");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        _createKbFile = e.dataTransfer.files[0];
+        nodes.createKBDropText.textContent = _createKbFile.name;
+      }
+    });
+    nodes.createKBFileInput.addEventListener("change", function () {
+      if (nodes.createKBFileInput.files && nodes.createKBFileInput.files[0]) {
+        _createKbFile = nodes.createKBFileInput.files[0];
+        nodes.createKBDropText.textContent = _createKbFile.name;
+      }
+    });
+
 
     // Source modal events
     nodes.srcClose.addEventListener("click", closeSourceModal);
@@ -482,8 +514,8 @@
       nodes.srcBack.style.display = view === "main" ? "none" : "";
       nodes.srcTitle.textContent =
         view === "main" ? I18n.t('addSource') :
-        view === "text" ? I18n.t('addManually') :
-        view === "url" ? I18n.t('addByUrl') : I18n.t('uploadFile');
+          view === "text" ? I18n.t('addManually') :
+            view === "url" ? I18n.t('addByUrl') : I18n.t('uploadFile');
     }
 
     async function refreshProjects() {
@@ -925,7 +957,7 @@
             notify("Повторная обработка запущена");
             // Update state to processing locally for immediate feedback
             var sid = retryBtn.getAttribute("data-retry-source");
-            state.sources = state.sources.map(function(s) { return s.id === sid ? Object.assign({}, s, { status: "processing" }) : s; });
+            state.sources = state.sources.map(function (s) { return s.id === sid ? Object.assign({}, s, { status: "processing" }) : s; });
             renderSourcesView();
             startSourcePolling(sid);
           } catch (e) { notify((e.message || "Ошибка"), true); retryBtn.disabled = false; retryBtn.textContent = "↺ Повторить"; }
@@ -945,7 +977,7 @@
 
     // ── Source Preview Modal ───────────────────────────────────────────────────
     function openSourcePreview(sourceId) {
-      var src = state.sources.find(function(s) { return s.id === sourceId; });
+      var src = state.sources.find(function (s) { return s.id === sourceId; });
       if (!src) return;
       var overlay = document.createElement("div");
       overlay.className = "src-preview-modal";
@@ -973,7 +1005,7 @@
       function poll() {
         attempts++;
         if (attempts > maxAttempts) { clearPolling(); return; }
-        ProjectsApi.getSource(sourceId).then(function(data) {
+        ProjectsApi.getSource(sourceId).then(function (data) {
           var s = data && data.source;
           if (!s) { clearPolling(); return; }
           if (s.status === "processing" || s.status === "pending") {
@@ -981,12 +1013,12 @@
           } else {
             // Status changed — update state and re-render
             clearPolling();
-            state.sources = state.sources.map(function(x) { return x.id === sourceId ? Object.assign({}, x, s) : x; });
+            state.sources = state.sources.map(function (x) { return x.id === sourceId ? Object.assign({}, x, s) : x; });
             if (state.tab === "sources") renderSourcesView();
             if (s.status === "ready") notify("Источник \"" + (s.title || sourceId) + "\" готов (" + (s.kbQaCount || 0) + " пар)");
             else if (s.status === "failed") notify("Ошибка обработки источника: " + (s.errorMessage || "неизвестная ошибка"), true);
           }
-        }).catch(function() { clearPolling(); });
+        }).catch(function () { clearPolling(); });
       }
       function clearPolling() { clearTimeout(_srcPollingTimers[sourceId]); delete _srcPollingTimers[sourceId]; }
       _srcPollingTimers[sourceId] = setTimeout(poll, 3000);
@@ -1082,6 +1114,13 @@
       nodes.createName.value = "";
       nodes.createHost.value = "";
       nodes.createKB.value = "skip";
+      nodes.createKBFileWrap.style.display = "none";
+      nodes.createKBTextWrap.style.display = "none";
+      nodes.createKBDropText.textContent = "Выберите или перетащите файл";
+      nodes.createKBFileInput.value = "";
+      nodes.createKBText.value = "";
+      _createKbFile = null;
+
       state.createRequestId = makeRequestId();
       state.createInFlight = false;
       nodes.modalCreate.disabled = false;
@@ -1103,6 +1142,31 @@
       var botHost = nodes.createHost.value.trim();
       if (name.length < 2) { alert(I18n.t('projectName') + "!"); return; }
       if (botHost.length < 3) { alert(I18n.t('botDomain') + "!"); return; }
+
+      var kbMode = nodes.createKB.value;
+      var kbContent = null;
+      var kbTitle = null;
+      var kbType = null; // 'text' or 'file'
+
+      if (kbMode === 'file') {
+        if (!_createKbFile) { alert("Выберите файл для загрузки в базу знаний!"); return; }
+        nodes.modalCreate.textContent = "Извлечение текста...";
+        try {
+          kbContent = await readFileAsText(_createKbFile);
+          kbTitle = _createKbFile.name;
+          kbType = 'file';
+        } catch (e) {
+          alert("Ошибка чтения файла: " + e.message);
+          return;
+        }
+        if (!kbContent || kbContent.length < 10) { alert("Файл пустой или не читается"); return; }
+      } else if (kbMode === 'text') {
+        kbContent = nodes.createKBText.value.trim();
+        if (kbContent.length < 10) { alert("Введите хотя бы 10 символов для базы знаний!"); return; }
+        kbTitle = name + " - База знаний";
+        kbType = 'text';
+      }
+
       if (!state.createRequestId) state.createRequestId = makeRequestId();
       state.createInFlight = true;
       nodes.modalCreate.disabled = true;
@@ -1115,6 +1179,16 @@
           requestId: state.createRequestId,
         });
         state.activeProjectId = created.project.id;
+
+        // Add initial knowledge base if provided
+        if (kbMode === 'file' || kbMode === 'text') {
+          await ProjectsApi.addSource(created.project.id, {
+            type: kbType,
+            title: kbTitle,
+            contentRef: kbContent
+          });
+        }
+
         if (hostLooksLikeToken) {
           try {
             var linked = await connectTelegramToken(botHost, created.project.id, name);
@@ -1128,10 +1202,9 @@
         }
         closeCreateModal();
         await refreshProjects();
-        if (nodes.createKB.value === "add") {
+        if (kbMode === 'file' || kbMode === 'text') {
           state.tab = "sources";
           await renderTab();
-          openSourceModal();
         } else {
           state.tab = "settings";
           await renderTab();
@@ -1170,7 +1243,9 @@
         "<div class='projects-modal-b'><div class='projects-form'>" +
         "<div><label>" + I18n.t('projectName') + "</label><input id='projects-create-name' placeholder='" + I18n.t('projectNamePlaceholder') + "'></div>" +
         "<div><label>" + I18n.t('botDomain') + "</label><input id='projects-create-host' placeholder='" + I18n.t('botDomainPlaceholder') + "'></div>" +
-        "<div><label>База знаний</label><select id='projects-create-kb'><option value='skip'>Пропустить</option><option value='add'>Добавить сейчас</option></select></div>" +
+        "<div><label>База знаний</label><select id='projects-create-kb'><option value='skip'>Пропустить (добавить потом)</option><option value='file'>Загрузить файл (PDF, DOCX, TXT)</option><option value='text'>Ввести текст вручную</option></select></div>" +
+        "<div id='projects-create-kb-file-wrap' style='display:none;'><div class='src-drop-zone' id='projects-create-drop-zone' style='min-height:120px;'><div class='src-drop-icon'><svg width='30' height='30' viewBox='0 0 24 24' fill='none' stroke='#9ca3af' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='12' y1='11' x2='12' y2='17'/><line x1='9' y1='14' x2='15' y2='14'/></svg></div><div class='src-drop-text' id='projects-create-drop-text'>Выберите или перетащите файл</div></div><input type='file' id='projects-create-file-input' style='display:none;' accept='.pdf,.docx,.txt,.md,.csv,.json'></div>" +
+        "<div id='projects-create-kb-text-wrap' style='display:none;'><textarea id='projects-create-kb-text' placeholder='Вставьте сюда информацию о компании, товарах или услугах (от 10 символов)...' rows='5' style='width:100%;'></textarea></div>" +
         "</div></div><div class='projects-modal-f'><button class='projects-btn' id='projects-create-cancel'>Отмена</button>" +
         "<button class='projects-btn primary' id='projects-create-submit'>Создать проект</button></div></div></div>" +
         // Add source modal
