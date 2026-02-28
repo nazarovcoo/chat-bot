@@ -9581,7 +9581,7 @@
       const el = document.getElementById('kb-items');
       el.innerHTML = '';
 
-      const STEP_LABELS = { parse: 'Читаю файл…', chunk: 'Разбиваю на части…', qa_generate: 'Генерирую вопросы и ответы…', dedupe: 'Проверяю дубликаты…', save: 'Сохраняю…', done: 'Готово!' };
+      const STEP_LABELS = { parse: I18n.t('processingFile'), chunk: I18n.t('chunkingFile'), qa_generate: I18n.t('generatingQA'), dedupe: I18n.t('checkingDuplicates'), save: I18n.t('savingData'), done: I18n.t('done') + '!' };
 
       // Active/queued jobs — progress bars
       STATE.kbJobs.filter(j => j.status === 'running' || j.status === 'queued').forEach(job => {
@@ -9589,7 +9589,7 @@
         div.className = 'auto-card';
         div.style.cssText = 'cursor:default;border-color:var(--primary-brd);';
         const prog = job.progress || 0;
-        const label = STEP_LABELS[job.step] || 'Обрабатываю…';
+        const label = STEP_LABELS[job.step] || I18n.t('processingFile');
         const meta = job.meta || {};
         div.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -9633,7 +9633,7 @@
           <span style="font-size:0.8rem;font-weight:700;color:#ef4444;">❌ Ошибка обработки</span>
           <button onclick="fsDel('jobs','${job.id}')" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:12px;">✕</button>
         </div>
-        <div style="font-size:0.72rem;color:var(--text-sec);margin-top:4px;">${esc(job.errorMessage || 'Неизвестная ошибка')}</div>`;
+        <div style="font-size:0.72rem;color:var(--text-sec);margin-top:4px;">${esc(job.errorMessage || I18n.t('unknownError'))}</div>`;
         el.appendChild(div);
       });
 
@@ -9819,7 +9819,7 @@
           let reply;
           if (resp.ok) {
             const data = await resp.json();
-            reply = data.answer || 'Пустой ответ от AI.';
+            reply = data.answer || I18n.t('emptyAnswer');
           } else {
             reply = '⚠️ Ошибка AI. Проверьте настройки провайдера.';
           }
@@ -9917,13 +9917,13 @@
     function renderJobsInline() {
       const el = document.getElementById('kb-jobs-inline');
       if (!el) return;
-      const STEP_LABELS = { parse: 'Читаю файл…', chunk: 'Разбиваю на части…', qa_generate: 'Генерирую вопросы и ответы…', dedupe: 'Проверяю дубликаты…', save: 'Сохраняю…', done: 'Готово!' };
+      const STEP_LABELS = { parse: I18n.t('processingFile'), chunk: I18n.t('chunkingFile'), qa_generate: I18n.t('generatingQA'), dedupe: I18n.t('checkingDuplicates'), save: I18n.t('savingData'), done: I18n.t('done') + '!' };
       const active = STATE.kbJobs.filter(j => j.status === 'running' || j.status === 'queued');
       el.style.display = active.length > 0 ? '' : 'none';
       el.innerHTML = '';
       active.forEach(job => {
         const prog = job.progress || 0;
-        const label = STEP_LABELS[job.step] || 'Обрабатываю…';
+        const label = STEP_LABELS[job.step] || I18n.t('processingFile');
         const div = document.createElement('div');
         div.style.cssText = 'background:var(--surface);border:1px solid var(--primary-brd);border-radius:10px;padding:12px 14px;';
         div.innerHTML = `
@@ -10056,7 +10056,7 @@
       document.getElementById('aiu-total-tokens').textContent = hasAny ? fmtNum(totalTokens) : '—';
       document.getElementById('aiu-token-sub').textContent = hasAny
         ? `↑ ${fmtNum(totalInput)} / ↓ ${fmtNum(totalOutput)}`
-        : 'данные появятся после диалогов';
+        : I18n.t('dataAfterChats');
       document.getElementById('aiu-requests').textContent = hasAny ? fmtNum(requests) : '—';
       document.getElementById('aiu-avg').textContent = avg > 0 ? fmtNum(avg) : '—';
       document.getElementById('aiu-cost').textContent = hasAny ? fmtCost(totalCostUSD) : '—';
@@ -10160,7 +10160,7 @@
       if (events.length === 0) { showToast(I18n.t('noData')); return; }
       const cur = CURRENCIES[STATE.aiCurrency] || CURRENCIES.USD;
       const rows = [
-        ['Дата', 'Чат', 'Канал', 'Провайдер', 'Модель', 'Input токены', 'Output токены', 'Всего токенов', `Стоимость (${cur.label})`, 'Латентность (ms)', 'Статус'],
+        [I18n.t('date'), I18n.t('chats'), I18n.t('channel'), I18n.t('provider'), I18n.t('model'), I18n.t('inputTokens'), I18n.t('outputTokens'), I18n.t('totalTokens'), I18n.t('cost') + ' (' + cur.label + ')', I18n.t('latency'), I18n.t('status')],
         ...events.map(e => {
           const ts = e.createdAt?.seconds ? new Date(e.createdAt.seconds * 1000).toISOString() : '';
           const costUSD = calcCostUSD(e.inputTokens || 0, e.outputTokens || 0, e.model || '');
@@ -10293,7 +10293,7 @@
       const elTg = document.getElementById('cs-tg');
       if (elBot) elBot.textContent = `● Bot: ${activeBotName || '—'}`;
       if (elKb) elKb.textContent = `📚 KB: ${typeof kbCount === 'number' ? kbCount : '—'}`;
-      if (elTg) elTg.textContent = `✈ TG: ${tgConnected ? 'подключён' : '—'}`;
+      if (elTg) elTg.textContent = '✈ TG: ' + (tgConnected ? I18n.t('telegramConnected') : '—');
     }
 
     // ── Drawer open / close ──
@@ -10338,7 +10338,7 @@
 
         const titleEl = document.createElement('div');
         titleEl.className = 'kb-item-title';
-        titleEl.textContent = it.title || it.name || it.url || 'Без названия';
+        titleEl.textContent = it.title || it.name || it.url || I18n.t('noTitle');
 
         const subEl = document.createElement('div');
         subEl.className = 'kb-item-sub';
@@ -10350,7 +10350,7 @@
 
         const btnOpen = document.createElement('button');
         btnOpen.className = 'kb-btn'; btnOpen.type = 'button';
-        btnOpen.textContent = it.type === 'text' ? 'Редактировать' : 'Открыть';
+        btnOpen.textContent = it.type === 'text' ? I18n.t('edit') : I18n.t('open');
         btnOpen.onclick = () => {
           if (it.type === 'text') {
             editKBItemText(botId || it._botId, it._id, it.title || it.name || '', it.content || it.text || '');
@@ -10359,7 +10359,7 @@
             if (link) window.open(link, '_blank', 'noopener,noreferrer');
           }
         }; const btnDel = document.createElement('button');
-        btnDel.className = 'kb-btn kb-btn-delete'; btnDel.type = 'button'; btnDel.textContent = 'Удалить';
+        btnDel.className = 'kb-btn kb-btn-delete'; btnDel.type = 'button'; btnDel.textContent = I18n.t('delete');
         btnDel.onclick = () => deleteKBItem(botId || it._botId, it._id);
 
         actEl.appendChild(btnOpen);
@@ -10659,7 +10659,7 @@
           <div class="chat-list-av">${esc(initial)}</div>
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-              <div class="chat-list-name">${esc(chat.name || 'Пользователь')}</div>
+              <div class="chat-list-name">${esc(chat.name || I18n.t('userName'))}</div>
               <div style="display:flex;align-items:center;gap:4px;">
                 ${isHuman ? '<span style="font-size:9px;background:rgba(34,197,94,0.2);color:var(--green);border-radius:20px;padding:1px 5px;font-weight:700;">ОП</span>' : ''}
                 <div class="chat-list-time">${time}</div>
@@ -10719,7 +10719,7 @@
       const replyArea = document.getElementById('admin-reply-area');
 
       // User card
-      nameEl.textContent = chat.name || 'Пользователь';
+      nameEl.textContent = chat.name || I18n.t('userName');
       const uname = chat.username ? chat.username.replace(/^@/, '') : '';
       usernameEl.textContent = uname ? `@${uname}` : '';
       usernameEl.href = uname ? `https://t.me/${uname}` : '#';
@@ -10877,14 +10877,14 @@
       if (STATE.agentActive) {
         sw?.classList.add('on');
         ovSw?.classList.add('on');
-        if (lbl) { lbl.textContent = 'Активен'; lbl.className = 'toggle-text on'; }
-        if (ovLbl) { ovLbl.textContent = 'Активен'; ovLbl.className = 'toggle-text on'; }
+        if (lbl) { lbl.textContent = I18n.t('active'); lbl.className = 'toggle-text on'; }
+        if (ovLbl) { ovLbl.textContent = I18n.t('active'); ovLbl.className = 'toggle-text on'; }
         if (chatStatus) { chatStatus.textContent = '● онлайн'; chatStatus.style.color = 'var(--green)'; }
       } else {
         sw?.classList.remove('on');
         ovSw?.classList.remove('on');
-        if (lbl) { lbl.textContent = 'Неактивен'; lbl.className = 'toggle-text off'; }
-        if (ovLbl) { ovLbl.textContent = 'Неактивен'; ovLbl.className = 'toggle-text off'; }
+        if (lbl) { lbl.textContent = I18n.t('inactive'); lbl.className = 'toggle-text off'; }
+        if (ovLbl) { ovLbl.textContent = I18n.t('inactive'); ovLbl.className = 'toggle-text off'; }
         if (chatStatus) { chatStatus.textContent = '○ остановлен'; chatStatus.style.color = 'var(--text-dim)'; }
       }
     }
@@ -11296,7 +11296,7 @@ ${kbSummary}`,
       const lbl = document.getElementById(p + '-lbl');
       const fields = document.getElementById(p + '-fields');
       if (sw) { sw.classList.toggle('on', enabled); }
-      if (lbl) { lbl.textContent = enabled ? 'Вкл' : 'Выкл'; lbl.className = 'toggle-text ' + (enabled ? 'on' : 'off'); }
+      if (lbl) { lbl.textContent = enabled ? I18n.t('toggleOn') : I18n.t('toggleOff'); lbl.className = 'toggle-text ' + (enabled ? 'on' : 'off'); }
       if (fields) fields.style.display = enabled ? 'block' : 'none';
     }
 
@@ -11397,7 +11397,7 @@ ${kbSummary}`,
 
       // Status badge
       if (el('plan-status-badge')) {
-        el('plan-status-badge').textContent = active ? 'Активен' : 'Истёк';
+        el('plan-status-badge').textContent = active ? I18n.t('planActive') : I18n.t('planExpired');
         el('plan-status-badge').style.color = active ? 'var(--indigo)' : '#ef4444';
         el('plan-status-badge').style.borderColor = active ? 'var(--primary-brd)' : '#ef444440';
       }

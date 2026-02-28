@@ -305,6 +305,9 @@
       accountConnected: 'Подключаем аккаунт...',
       menu: 'Меню',
       scrollDown: 'Прокрутить вниз',
+      emptyAnswer: 'Пустой ответ от AI.',
+      emptyBotAnswer: 'Пустой ответ. Попробуйте позже.',
+      dataAfterChats: 'данные появятся после диалогов',
     },
     en: {
       ok: 'OK',
@@ -590,6 +593,9 @@
       accountConnected: 'Connecting account...',
       menu: 'Menu',
       scrollDown: 'Scroll down',
+      emptyAnswer: 'Empty AI answer.',
+      emptyBotAnswer: 'Empty answer. Try later.',
+      dataAfterChats: 'data will appear after conversations',
     }
   };
 
