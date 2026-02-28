@@ -39,6 +39,7 @@
       unsubs: [],
       plan: null,
       autoReplies: [],
+      flows: [],
       botPhotos: {},
     };
   }

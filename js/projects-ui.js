@@ -923,9 +923,10 @@
             var linked = await connectTelegramToken(hostInput, state.activeProjectId, root.querySelector("#projects-set-name").value.trim());
             notify("Telegram подключён" + (linked && linked.username ? (": " + linked.username) : ""));
           } catch (e) {
-notify(e.message || I18n.t('error') + " " + I18n.t('connectTelegram'), true);
-      } else {
-        notify(I18n.t('saved'));
+            notify(e.message || I18n.t('error') + " " + I18n.t('connectTelegram'), true);
+          }
+        } else {
+          notify(I18n.t('saved'));
         }
         await refreshProjects();
       });

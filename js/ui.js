@@ -5,6 +5,15 @@
     root.AppUI = factory();
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  function tr(key, fallback) {
+    try {
+      if (typeof I18n !== 'undefined' && I18n && typeof I18n.t === 'function') {
+        return I18n.t(key);
+      }
+    } catch (_) {}
+    return fallback || key;
+  }
+
   function escHtml(v) {
     return String(v == null ? '' : v)
       .replace(/&/g, '&amp;')
@@ -19,21 +28,21 @@
       return (
         '<div class="kap-btns">' +
           '<button class="kap-btn" onclick="showKbAddPanel(\'kb-text\')"><span class="kap-icon">📝</span><span>' + I18n.t('addManually') + '</span></button>' +
-          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-file\')"><span class="kap-icon">📎</span><span>' + I18n.t('uploadFile') + '</span></button>' +
-          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-link\')"><span class="kap-icon">🔗</span><span>' + I18n.t('addByUrl') + '</span></button>' +
+          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-file\')"><span class="kap-icon">📎</span><span>' + tr('uploadFile', 'Загрузить файл') + '</span></button>' +
+          '<button class="kap-btn" onclick="showKbAddPanel(\'kb-link\')"><span class="kap-icon">🔗</span><span>' + tr('addByUrl', 'Добавить ссылку') + '</span></button>' +
         '</div>' +
         '<div class="kap-hint-row">' +
           '<span class="kap-hint">Файл = PDF/DOCX/TXT · Ссылка = сайт · Текст = вставить вручную</span>' +
-          '<button class="kap-help-btn" onclick="showInfoPopover(\'kb_add_flow\')">ℹ️ ' + I18n.t('howItWorks') + '</button>' +
+          '<button class="kap-help-btn" onclick="showInfoPopover(\'kb_add_flow\')">ℹ️ ' + tr('howItWorks', 'Как это работает?') + '</button>' +
         '</div>' +
-        '<span class="kap-back-link" onclick="hideKbAddPanel()">← ' + I18n.t('close') + '</span>'
+        '<span class="kap-back-link" onclick="hideKbAddPanel()">← ' + tr('close', 'Закрыть') + '</span>'
       );
     }
 
     if (step === 'kb-file') {
       return (
-        '<div class="kap-status-bar kap-pending"><span>📎</span><span>' + I18n.t('uploadFile') + ' (PDF, DOCX, TXT)…</span></div>' +
-        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← ' + I18n.t('cancel') + '</span>'
+        '<div class="kap-status-bar kap-pending"><span>📎</span><span>' + tr('uploadFile', 'Загрузить файл') + ' (PDF, DOCX, TXT)…</span></div>' +
+        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← ' + tr('cancel', 'Отмена') + '</span>'
       );
     }
 
@@ -41,19 +50,19 @@
       return (
         '<input type="url" id="kap-link-input" class="kap-url-input" placeholder="https://example.com" oninput="_kbLinkChange()">' +
         '<div class="kap-actions-row">' +
-          '<button class="kap-submit-btn" id="kap-link-submit" onclick="_kbAddLink()" disabled>' + I18n.t('add') + ' →</button>' +
+          '<button class="kap-submit-btn" id="kap-link-submit" onclick="_kbAddLink()" disabled>' + tr('add', 'Добавить') + ' →</button>' +
         '</div>' +
-        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← ' + I18n.t('cancel') + '</span>'
+        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← ' + tr('cancel', 'Отмена') + '</span>'
       );
     }
 
     if (step === 'kb-text') {
       return (
-        '<textarea id="kap-text-input" class="kap-textarea" placeholder="' + I18n.t('sourceTextPlaceholder') + '" rows="4"></textarea>' +
+        '<textarea id="kap-text-input" class="kap-textarea" placeholder="' + tr('sourceTextPlaceholder', 'Вставьте текст базы знаний...') + '" rows="4"></textarea>' +
         '<div class="kap-actions-row">' +
-          '<button class="kap-submit-btn" onclick="_kbAddText()">' + I18n.t('save') + ' →</button>' +
+          '<button class="kap-submit-btn" onclick="_kbAddText()">' + tr('save', 'Сохранить') + ' →</button>' +
         '</div>' +
-        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← ' + I18n.t('cancel') + '</span>'
+        '<span class="kap-back-link" onclick="showKbAddPanel(\'kb-choose\')">← ' + tr('cancel', 'Отмена') + '</span>'
       );
     }
 
@@ -65,13 +74,13 @@
       '<div class="kap-status-bar kap-success"><span>' + escHtml(icon) + '</span><span>' + escHtml(line1) + '</span></div>' +
       '<div class="kap-done-row">' +
         '<button class="kap-ghost-btn" onclick="showKbAddPanel(\'' + escHtml(againStep) + '\')">' + escHtml(againLabel) + '</button>' +
-        '<button class="kap-primary-btn" onclick="hideKbAddPanel()">' + I18n.t('done') + ' ✓</button>' +
+        '<button class="kap-primary-btn" onclick="hideKbAddPanel()">' + tr('done', 'Готово') + ' ✓</button>' +
       '</div>'
     );
   }
 
   function kbUploadingMarkup(filename) {
-    return '<div class="kap-status-bar kap-pending"><span>📎</span><span>' + escHtml(filename) + ' — ' + I18n.t('loading') + '</span></div>';
+    return '<div class="kap-status-bar kap-pending"><span>📎</span><span>' + escHtml(filename) + ' — ' + tr('loading', 'Загрузка...') + '</span></div>';
   }
 
   function setProviderTestStatus(span, text, cssVar) {
@@ -82,13 +91,13 @@
 
   function renderAutoRepliesHtml(rules) {
     if (!rules || !rules.length) {
-      return '<div class="empty-state" style="padding:30px;"><div class="empty-icon">⚡</div><div class="empty-sub">' + I18n.t('noData') + '. ' + I18n.t('addFirstSource') + '.</div></div>';
+      return '<div class="empty-state" style="padding:30px;"><div class="empty-icon">⚡</div><div class="empty-sub">' + tr('noData', 'Нет данных') + '. ' + tr('addFirstSource', 'Добавьте первый источник') + '.</div></div>';
     }
 
     return rules.map(function (r, i) {
-      var matchText = r && r.matchType === 'exact' ? I18n.t('exactMatch') : I18n.t('containsMatch');
+      var matchText = r && r.matchType === 'exact' ? tr('exactMatch', 'точное') : tr('containsMatch', 'содержит');
       var disabledBadge = r && !r.enabled
-        ? '<span style="font-size:0.6rem;background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:1px 6px;color:#ef4444;">' + I18n.t('disable') + '</span>'
+        ? '<span style="font-size:0.6rem;background:#fef2f2;border:1px solid #fecaca;border-radius:5px;padding:1px 6px;color:#ef4444;">' + tr('disable', 'Выкл') + '</span>'
         : '';
       return (
         '<div class="rules-card" style="padding:14px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">' +
@@ -101,7 +110,7 @@
             '<div style="font-size:0.75rem;color:var(--text-sec);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml((r && r.response) || '') + '</div>' +
           '</div>' +
           '<div style="display:flex;gap:6px;flex-shrink:0;">' +
-            '<button class="chat-ctrl-btn" onclick="toggleAutoReply(' + i + ')">' + (r && r.enabled ? I18n.t('disable') : I18n.t('enable')) + '</button>' +
+            '<button class="chat-ctrl-btn" onclick="toggleAutoReply(' + i + ')">' + (r && r.enabled ? tr('disable', 'Выкл') : tr('enable', 'Вкл')) + '</button>' +
             '<button class="chat-ctrl-btn" onclick="showAddAutoReply(' + i + ')">✏️</button>' +
             '<button class="chat-ctrl-btn" style="color:var(--red);" onclick="deleteAutoReply(' + i + ')">🗑️</button>' +
           '</div>' +

@@ -6836,7 +6836,7 @@
               </div>
             </div>
             <div class="chat-foot" style="flex-shrink:0;">
-              <input class="chat-inp" id="ov-chat-input" placeholder="Напишите сообщение..."
+              <input class="chat-inp" id="ov-chat-input" placeholder="...
                 onkeydown="if(event.key==='Enter')sendChat('ov-chat-input','ov-chat-msgs')">
               <button class="send-btn" onclick="sendChat('ov-chat-input','ov-chat-msgs')">➤</button>
             </div>
@@ -7604,7 +7604,7 @@
                 id="starter-note-t">при оплате за год</div>
               <button
                 style="width:100%;padding:9px;border-radius:8px;border:none;background:rgba(255,255,255,0.2);color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;"
-                onclick="showToast('Оплата скоро будет доступна')">Выбрать Starter</button>
+                onclick="showToast(I18n.t('paymentSoon'))">Выбрать Starter</button>
             </div>
             <div style="background:var(--surface2);border:1px solid var(--border);border-top:none;">
               <div class="tariff-feature-row"><span>🤖 Telegram ботов</span><b>1</b></div>
@@ -7634,7 +7634,7 @@
                 id="pro-note-t">при оплате за год</div>
               <button
                 style="width:100%;padding:9px;border-radius:8px;border:none;background:rgba(255,255,255,0.2);color:#fff;font-size:0.78rem;font-weight:700;cursor:pointer;"
-                onclick="showToast('Оплата скоро будет доступна')">Выбрать Pro</button>
+                onclick="showToast(I18n.t('paymentSoon'))">Выбрать Pro</button>
             </div>
             <div style="background:var(--surface2);border:1px solid var(--border);border-top:none;">
               <div class="tariff-feature-row"><span>🤖 Telegram ботов</span><b>3</b></div>
@@ -7665,7 +7665,7 @@
                 id="business-note-t">при оплате за год</div>
               <button
                 style="width:100%;padding:9px;border-radius:8px;border:none;background:#fbbf24;color:#1a1a2e;font-size:0.78rem;font-weight:700;cursor:pointer;"
-                onclick="showToast('Оплата скоро будет доступна')">Выбрать Business</button>
+                onclick="showToast(I18n.t('paymentSoon'))">Выбрать Business</button>
             </div>
             <div style="background:var(--surface2);border:1px solid var(--border);border-top:none;">
               <div class="tariff-feature-row"><span>🤖 Telegram ботов</span><b>10</b></div>
@@ -9317,7 +9317,7 @@
       const token = document.getElementById('bot-token').value.trim();
       const username = document.getElementById('bot-username').value.trim();
       if (!name) { document.getElementById('bot-name').focus(); return; }
-      if (!token) { alert('Введите Telegram Bot API токен'); document.getElementById('bot-token').focus(); return; }
+      if (!token) { alert(I18n.t('invalidToken')); document.getElementById('bot-token').focus(); return; }
       const btn = document.getElementById('add-bot-btn');
       if (btn) { btn.disabled = true; btn.textContent = 'Подключаю...'; }
       try {
@@ -9403,7 +9403,7 @@
     async function saveKb() {
       const title = document.getElementById('kb-title').value.trim();
       const rawText = document.getElementById('kb-content').value.trim();
-      if (!title || !rawText) { alert('Заполните все поля'); return; }
+      if (!title || !rawText) { alert(I18n.t('fillAllFields')); return; }
       const sourceRef = await col('kbSources').add({
         title, rawText, type: 'text', status: 'queued',
         _ts: firebase.firestore.FieldValue.serverTimestamp(),
@@ -9414,7 +9414,7 @@
         _ts: firebase.firestore.FieldValue.serverTimestamp(),
       });
       startKnowledgeProcessing(sourceRef.id, jobRef.id);
-      showToast('⏳ Текст принят — генерирую Q&A…');
+      showToast(I18n.t('qaGenerating'));
       closeKbModal();
     }
 
@@ -9529,7 +9529,7 @@
 
     async function saveEditAnswer() {
       const text = document.getElementById('ea-textarea').value.trim();
-      if (!text) { showToast('⚠️ Введите текст ответа'); return; }
+      if (!text) { showToast('⚠️ ' + I18n.t('enterAnswerText')); return; }
 
       const saveBtn = document.getElementById('ea-save-btn');
       saveBtn.disabled = true;
@@ -9546,7 +9546,7 @@
           });
           // Remove from unanswered
           if (_eaState.id) fsDel('unanswered', _eaState.id);
-          showToast('✅ Ответ добавлен в базу знаний');
+          showToast('✅ ' + I18n.t('answerAdded'));
         } else {
           // Update existing kbQA doc
           let newAnswer;
@@ -9559,7 +9559,7 @@
             answer: newAnswer,
             _ts: firebase.firestore.FieldValue.serverTimestamp(),
           });
-          showToast('✅ Ответ обновлён');
+          showToast('✅ ' + I18n.t('answerUpdated'));
         }
         closeEditAnswer();
       } catch (err) {
@@ -9731,7 +9731,7 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
       await startKnowledgeProcessing(sourceId, jobRef.id);
-      showToast('🚀 Обработка транскрипции запущена!');
+      showToast(I18n.t('transcriptionStarted'));
     }
 
     /* ══ SUGGESTIONS from KB ══ */
@@ -9766,7 +9766,7 @@
       if (!text) return;
 
       if (!STATE.agentActive) {
-        showToast('⚠️ Агент неактивен. Включите его в боковом меню.');
+        showToast('⚠️ ' + I18n.t('agentInactive') + '. ' + I18n.t('turnOnAgent'));
         return;
       }
 
@@ -9853,13 +9853,13 @@
         <div class="bubble">👋 Привет! Я ваш ИИ-агент. Здесь можно проверить как я отвечаю клентам. Напишите любой вопрос.</div>
         <div class="msg-time">${new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })}</div>
       </div>`;
-      showToast('🗑 Диалог очищен');
+      showToast('🗑 ' + I18n.t('dialogCleared'));
     }
 
     function restartAgent() {
       clearChat();
       renderSuggestions();
-      showToast('↺ Агент перезапущен — промпт и база знаний обновлены');
+      showToast('↺ ' + I18n.t('agentRestarted'));
     }
 
     function toggleOvTest() {
@@ -9903,7 +9903,7 @@
 
     function rejectUnans(id) {
       fsDel('unanswered', id);
-      showToast('✕ Вопрос отклонён');
+      showToast('✕ ' + I18n.t('questionRejected'));
     }
 
     function answerUnans(id) {
@@ -10156,7 +10156,7 @@
 
     function exportAiUsageCsv() {
       const events = getAiUsageFiltered();
-      if (events.length === 0) { showToast('Нет данных для экспорта'); return; }
+      if (events.length === 0) { showToast(I18n.t('noData')); return; }
       const cur = CURRENCIES[STATE.aiCurrency] || CURRENCIES.USD;
       const rows = [
         ['Дата', 'Чат', 'Канал', 'Провайдер', 'Модель', 'Input токены', 'Output токены', 'Всего токенов', `Стоимость (${cur.label})`, 'Латентность (ms)', 'Статус'],
@@ -10173,7 +10173,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `ai-usage-${STATE.aiUsagePeriod}d.csv`; a.click();
       URL.revokeObjectURL(url);
-      showToast('✅ CSV экспортирован');
+      showToast('✅ ' + I18n.t('csvExported'));
     }
 
     /* ══ TOPICS ══ */
@@ -10264,7 +10264,7 @@
 
     function editKbItem(id) {
       const item = STATE.kbQA.find(q => q.id === id);
-      if (!item) { showToast('⚠️ Элемент не найден'); return; }
+      if (!item) { showToast('⚠️ ' + I18n.t('itemNotFound')); return; }
       openEditAnswer(id, item.question || '', item.answer || '', 'kb');
     }
 
@@ -10431,7 +10431,7 @@
         if (elKb) elKb.textContent = `📚 KB: ${snap.size}`;
       } catch (e) {
         console.error('[ChatOS][KB] deleteKBItem error', e);
-        showToast('Ошибка удаления');
+        showToast(I18n.t('errorDeleting'));
       }
     }
 
@@ -10465,7 +10465,7 @@
       document.getElementById('edit-kb-save').onclick = async () => {
         const newTitle = document.getElementById('edit-kb-title').value.trim();
         const newContent = document.getElementById('edit-kb-content').value.trim();
-        if (!newTitle || !newContent) return showToast('Заполните поля');
+        if (!newTitle || !newContent) return showToast(I18n.t('fillFields'));
 
         const btn = document.getElementById('edit-kb-save');
         btn.disabled = true;
@@ -10490,7 +10490,7 @@
               });
           } catch (e) { }
 
-          showToast('✅ Обновлено');
+          showToast('✅ ' + I18n.t('updated'));
           overlay.remove();
           loadKBList(botId);
         } catch (e) {
@@ -10594,7 +10594,7 @@
           handoffAt: firebase.firestore.FieldValue.delete(),
         });
         updateHandoffStatus('ai', null);
-        showToast('🤖 ИИ возобновил общение');
+        showToast('🤖 ' + I18n.t('aiResumed'));
       } catch (e) {
         showToast('⚠️ Ошибка: ' + e.message);
       } finally {
@@ -10608,7 +10608,7 @@
       if (!text || !STATE.selectedChatId || !currentUser) return;
 
       const chat = STATE.chats.find(c => c.id === STATE.selectedChatId);
-      if (!chat?.botId) { showToast('⚠️ Не найден бот для этого чата'); return; }
+      if (!chat?.botId) { showToast('⚠️ ' + I18n.t('botNotFound')); return; }
 
       input.value = '';
       input.style.height = '';
@@ -10624,7 +10624,7 @@
           showToast('⚠️ ' + (err.error || 'Ошибка отправки'));
         }
       } catch (e) {
-        showToast('⚠️ Сетевая ошибка');
+        showToast('⚠️ ' + I18n.t('networkError'));
       }
     }
 
@@ -10904,13 +10904,13 @@
           .set({ text }, { merge: true });
       }
       document.getElementById('rules-no-rules-warn').style.display = text ? 'none' : 'flex';
-      showToast('💾 Правила сохранены');
+      showToast('💾 ' + I18n.t('rulesSaved'));
     }
 
     async function autoGenerateRules() {
       const allKb = [...STATE.kbItems, ...STATE.kbQA];
       if (allKb.length === 0) {
-        showToast('⚠️ Сначала добавьте информацию в базу знаний');
+        showToast('⚠️ ' + I18n.t('addKbFirst'));
         return;
       }
 
@@ -10952,7 +10952,7 @@ ${kbSummary}`,
         const data = await resp.json();
         if (data.answer) {
           document.getElementById('rules-ta').value = data.answer;
-          showToast('✨ Системный промпт сгенерирован! Проверьте и сохраните.');
+          showToast('✨ ' + I18n.t('promptGenerated') + ' ' + I18n.t('save') + '!');
         } else {
           showToast('⚠️ Ошибка генерации');
         }
@@ -11118,7 +11118,7 @@ ${kbSummary}`,
         document.getElementById('tr-preview').textContent = data.preview + (data.chars > 500 ? '…' : '');
         document.getElementById('tr-result-wrap').style.display = '';
         document.getElementById('tr-footer-result').style.display = '';
-        showToast('✅ Транскрипция готова!');
+        showToast('✅ ' + I18n.t('transcriptionReady'));
       } catch (e) {
         document.getElementById('tr-loading-wrap').style.display = 'none';
         document.getElementById('tr-input-wrap').style.display = '';
@@ -11142,10 +11142,10 @@ ${kbSummary}`,
         });
         await startKnowledgeProcessing(_transcribeSourceId, jobRef.id);
         closeTranscribeModal();
-        showToast('🚀 Обработка запущена!');
+        showToast('🚀 ' + I18n.t('transcriptionProcessing'));
       } catch (e) {
         btn.disabled = false; btn.textContent = '➕ Добавить в базу знаний';
-        showToast('⚠️ Ошибка запуска обработки');
+        showToast('⚠️ ' + I18n.t('transcriptionError'));
       }
     }
 
@@ -11169,7 +11169,7 @@ ${kbSummary}`,
     function addFiles(files) {
       const allowed = ['.pdf', '.docx', '.txt', '.md', '.csv'];
       for (const f of files) {
-        if (STATE.pendingFiles.length >= 3) { showToast('⚠️ Максимум 3 файла за раз'); break; }
+        if (STATE.pendingFiles.length >= 3) { showToast('⚠️ ' + I18n.t('maxFiles')); break; }
         const ext = '.' + f.name.split('.').pop().toLowerCase();
         if (!allowed.includes(ext)) { showToast(`⚠️ Формат ${ext} не поддерживается. PDF, DOCX, TXT, MD, CSV`); continue; }
         if (!STATE.pendingFiles.find(pf => pf.name === f.name)) STATE.pendingFiles.push(f);
@@ -11225,7 +11225,7 @@ ${kbSummary}`,
     function removeFile(i) { STATE.pendingFiles.splice(i, 1); renderFileList(); }
 
     async function uploadFiles() {
-      if (STATE.pendingFiles.length === 0) { showToast('⚠️ Выберите файлы'); return; }
+      if (STATE.pendingFiles.length === 0) { showToast('⚠️ ' + I18n.t('uploadFile') + '!'); return; }
       for (const f of STATE.pendingFiles) {
         let rawText;
         try {
@@ -11270,7 +11270,7 @@ ${kbSummary}`,
       const uid = currentUser.uid;
       await col('jobs').doc(jobId).set({ status: 'cancelled', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
       if (sourceId) await col('kbSources').doc(sourceId).set({ status: 'cancelled' }, { merge: true });
-      showToast('⛔ Загрузка отменена');
+      showToast('⛔ ' + I18n.t('uploadCancelled'));
     }
 
     /* ══ AI SETTINGS (multi-provider) ══ */
@@ -11328,7 +11328,7 @@ ${kbSummary}`,
       });
       await db.collection('users').doc(currentUser.uid).collection('settings').doc('ai')
         .set({ providers: STATE.aiProviders }, { merge: true });
-      showToast('✅ Настройки сохранены');
+      showToast('✅ ' + I18n.t('settingsSaved'));
       renderLaunchConfig();
     }
 
@@ -11537,12 +11537,12 @@ ${kbSummary}`,
 
     function copyUID() {
       const uid = currentUser?.uid || '';
-      navigator.clipboard.writeText(uid).then(() => showToast('✅ UID скопирован'));
+      navigator.clipboard.writeText(uid).then(() => showToast('✅ ' + I18n.t('uidCopied')));
     }
 
     function copyRunCmd() {
       const cmd = document.getElementById('run-cmd')?.textContent || '';
-      navigator.clipboard.writeText(cmd).then(() => showToast('✅ Команда скопирована'));
+      navigator.clipboard.writeText(cmd).then(() => showToast('✅ ' + I18n.t('commandCopied')));
     }
 
     function copyText(text) {
@@ -11560,7 +11560,7 @@ ${kbSummary}`,
         input.value = text;
         input.focus();
         input.dispatchEvent(new Event('input'));
-        showToast('📋 Вставлено');
+        showToast('📋 ' + I18n.t('pasted'));
       } catch (e) {
         // Fallback: prompt user to paste manually
         input.focus();
@@ -11750,7 +11750,7 @@ ${kbSummary}`,
         const btn = document.getElementById('tg-phone-save-btn');
         const phone = input.value.trim();
         if (phone.length < 9) {
-          showToast('❌ Пожалуйста, введите корректный номер');
+          showToast('❌ ' + I18n.t('tryAgain'));
           input.focus();
           return;
         }
@@ -11767,7 +11767,7 @@ ${kbSummary}`,
           const sv = document.getElementById('s-phone-value');
           if (sv) sv.textContent = phone;
           document.getElementById('modal-phone-verify').classList.remove('open');
-          showToast('✅ Номер подтверждён. Спасибо!');
+          showToast('✅ ' + I18n.t('numberConfirmed') + '!');
         } catch (e) {
           showToast('❌ Ошибка сохранения: ' + e.message);
         } finally {
@@ -12120,19 +12120,19 @@ ${kbSummary}`,
       const newsletter = document.getElementById('s-newsletter')?.checked;
       db.collection('users').doc(currentUser.uid).collection('settings').doc('profile')
         .set({ companyName: name || '', newsletter: !!newsletter }, { merge: true })
-        .then(() => showToast('✅ Настройки сохранены'))
-        .catch(() => showToast('Ошибка сохранения'));
+        .then(() => showToast('✅ ' + I18n.t('saved')))
+        .catch(() => showToast(I18n.t('errorSaving')));
     }
 
     function changePassword() {
       const oldPass = document.getElementById('s-old-pass')?.value;
       const newPass = document.getElementById('s-new-pass')?.value;
-      if (!oldPass) { showToast('Введите старый пароль'); return; }
-      if (!newPass || newPass.length < 6) { showToast('Новый пароль должен быть не менее 6 символов'); return; }
+      if (!oldPass) { showToast(I18n.t('oldPassword') + '!'); return; }
+      if (!newPass || newPass.length < 6) { showToast(I18n.t('passwordLength')); return; }
       const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, oldPass);
       currentUser.reauthenticateWithCredential(credential)
         .then(() => currentUser.updatePassword(newPass))
-        .then(() => { showToast('✅ Пароль изменён'); document.getElementById('s-old-pass').value = ''; document.getElementById('s-new-pass').value = ''; })
+        .then(() => { showToast('✅ ' + I18n.t('save') + '!'); document.getElementById('s-old-pass').value = ''; document.getElementById('s-new-pass').value = ''; })
         .catch(e => showToast('Ошибка: ' + (e.code === 'auth/wrong-password' ? 'Неверный старый пароль' : e.message)));
     }
 
@@ -12182,14 +12182,14 @@ ${kbSummary}`,
       const raw = document.getElementById('card-number-input')?.value.replace(/\s/g, '');
       const expiry = document.getElementById('card-expiry-input')?.value;
       const holder = document.getElementById('card-name-input')?.value?.trim().toUpperCase();
-      if (!raw || raw.length < 13) { showToast('Введите корректный номер карты'); return; }
-      if (!expiry || expiry.length < 5) { showToast('Введите срок действия'); return; }
+      if (!raw || raw.length < 13) { showToast(I18n.t('tryAgain')); return; }
+      if (!expiry || expiry.length < 5) { showToast(I18n.t('expiryDate') + '!'); return; }
       const last4 = raw.slice(-4);
       const type = raw.startsWith('4') ? 'VISA' : raw.startsWith('5') ? 'MASTERCARD' : 'CARD';
       db.collection('users').doc(currentUser.uid).collection('settings').doc('payment')
         .set({ last4, type, holder: holder || '', expiry, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
-        .then(() => { showToast('✅ Карта сохранена'); loadCard(); })
-        .catch(() => showToast('Ошибка сохранения'));
+        .then(() => { showToast('✅ ' + I18n.t('saved')); loadCard(); })
+        .catch(() => showToast(I18n.t('errorSaving')));
     }
 
     function deleteCard() {
@@ -12202,8 +12202,8 @@ ${kbSummary}`,
         onOk: () => {
           db.collection('users').doc(currentUser.uid).collection('settings').doc('payment')
             .delete()
-            .then(() => { showToast('Карта удалена'); loadCard(); })
-            .catch(() => showToast('Ошибка удаления'));
+            .then(() => { showToast(I18n.t('cardDeleted')); loadCard(); })
+            .catch(() => showToast(I18n.t('errorDeleting')));
         },
       });
     }
@@ -12219,7 +12219,7 @@ ${kbSummary}`,
       const code = document.getElementById('s-promo-input')?.value?.trim().toUpperCase();
       const result = document.getElementById('s-promo-result');
       const btn = document.getElementById('s-promo-btn');
-      if (!code) { showToast('Введите промокод'); return; }
+      if (!code) { showToast(I18n.t('promoCode') + '!'); return; }
       if (!currentUser) return;
 
       result.style.color = 'var(--text-dim)'; result.textContent = '⏳ Проверяем код...';
@@ -12469,7 +12469,7 @@ ${kbSummary}`,
         ta.value = RULE_TEMPLATES[key];
         ta.style.height = 'auto';
         ta.style.height = Math.min(ta.scrollHeight, 400) + 'px';
-        showToast('✅ Шаблон применён — не забудьте сохранить');
+        showToast('✅ ' + I18n.t('templateApplied') + ' — ' + I18n.t('save') + '!');
       };
       if (ta.value && ta.value.trim()) {
         showConfirm({
@@ -12515,8 +12515,8 @@ ${kbSummary}`,
       if (!currentUser) return;
       const keyword = document.getElementById('ar-keyword').value.trim();
       const response = document.getElementById('ar-response').value.trim();
-      if (!keyword) { showToast('Введите ключевое слово'); return; }
-      if (!response) { showToast('Введите текст ответа'); return; }
+      if (!keyword) { showToast(I18n.t('keyword') + '!'); return; }
+      if (!response) { showToast(I18n.t('answer') + '!'); return; }
       const matchType = document.querySelector('input[name="ar-match"]:checked')?.value || 'contains';
       const rules = [...(STATE.autoReplies || [])];
       const rule = { keyword, response, matchType, enabled: true };
@@ -12525,7 +12525,7 @@ ${kbSummary}`,
       STATE.autoReplies = rules;
       cancelAutoReply();
       renderAutoReplies();
-      showToast('✅ Правило сохранено');
+      showToast('✅ ' + I18n.t('rulesSaved'));
     }
 
     async function toggleAutoReply(idx) {
@@ -12689,11 +12689,11 @@ ${kbSummary}`,
     async function saveFlow() {
       if (!currentUser) return;
       const trigger = document.getElementById('flow-trigger')?.value?.trim();
-      if (!trigger) { showToast('⚠️ Укажите триггер'); return; }
+      if (!trigger) { showToast('⚠️ ' + I18n.t('keyword') + '!'); return; }
       const matchType = document.querySelector('input[name="flow-match"]:checked')?.value || 'contains';
       const text = document.getElementById('flow-text')?.value?.trim() || 'Выберите вариант:';
       const buttons = _collectFlowButtons();
-      if (!buttons.length) { showToast('⚠️ Добавьте хотя бы одну кнопку'); return; }
+      if (!buttons.length) { showToast('⚠️ ' + I18n.t('add') + ' 1 ' + I18n.t('keyword') + '!'); return; }
 
       const flows = [...(STATE.flows || [])];
       const newFlow = { id: `flow-${Date.now()}`, trigger, matchType, text, buttons, enabled: true };
