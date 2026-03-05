@@ -94,8 +94,17 @@ function buildSystem(question, kbItems, rules, questionEmbedding = null) {
 - Это единственный контакт модератора. Не предлагай email, формы или другие способы связи.
 - Называй его "основной контакт модератора".`;
 
+  const technicalRules = `\nТЕХНИЧЕСКИЕ ПРАВИЛА:
+- Это продолжение диалога — НЕ здоровайся повторно если уже поздоровался.
+- Если ниже есть раздел "База знаний" — ВСЕГДА используй его содержимое. Адаптируй информацию из базы знаний под свой стиль, не копируй дословно.
+- НИКОГДА не говори пользователю "этого нет в базе", "не нашёл в базе", "базада yo'q" и подобные фразы — просто дай ответ.
+- Если информации нет в базе знаний — отвечай из общих знаний без комментариев об отсутствии в базе.
+- Не выдумывай цены и конкретные условия которых нет в базе.
+- Будь краток и по делу.`;
+
+  // If user set custom instructions — they are the main prompt, not an addition
   const system = rules.trim()
-    ? `${core}\n\nДополнительные инструкции:\n${rules.trim()}`
+    ? `${rules.trim()}${technicalRules}`
     : core;
 
   return kbText ? `${system}\n\nБаза знаний:\n${kbText}` : system;
@@ -211,6 +220,23 @@ async function callAI(provider, model, system, messages, maxTokens = 800) {
   }
 }
 
+// ─── Platform billing cost estimation ─────────────────────────────────────────
+function estimateCost(provider, model, inputTokens, outputTokens) {
+  // Prices per 1M tokens (USD, early 2026)
+  const P = {
+    'gpt-4o-mini':            { in: 0.15,  out: 0.60  },
+    'gpt-4o':                 { in: 2.50,  out: 10.00 },
+    'gpt-4-turbo':            { in: 10.00, out: 30.00 },
+    'gpt-3.5-turbo':          { in: 0.50,  out: 1.50  },
+    'gemini-1.5-flash':       { in: 0.075, out: 0.30  },
+    'gemini-1.5-pro':         { in: 3.50,  out: 10.50 },
+    'claude-haiku-4-5-20251001': { in: 0.80, out: 4.00 },
+    'claude-sonnet-4-6':      { in: 3.00,  out: 15.00 },
+  };
+  const p = P[model] || P['gpt-4o-mini'];
+  return (inputTokens * p.in + outputTokens * p.out) / 1_000_000;
+}
+
 // ─── Pipeline helpers ──────────────────────────────────────────────────────────
 function chunkText(text, maxChars = 1500) {
   const paras = text.split(/\n{2,}/);
@@ -251,6 +277,43 @@ function chunkText(text, maxChars = 1500) {
 function semanticKey(question, answer) {
   const text = (question + "|" + answer).toLowerCase().trim().replace(/\s+/g, " ");
   return crypto.createHash("sha256").update(text).digest("hex");
+}
+
+// ─── Telegram bot token encryption helpers ─────────────────────────────────────
+// We encrypt per-bot Telegram tokens at rest using AES-256-GCM with a secret key
+// derived from TG_TOKEN_SECRET. Ciphertext layout: [12b IV][16b TAG][ciphertext].
+const TG_TOKEN_SECRET = process.env.TG_TOKEN_SECRET || "";
+
+function encryptToken(plain) {
+  if (!plain) return "";
+  if (!TG_TOKEN_SECRET) {
+    throw new Error("TG_TOKEN_SECRET not set");
+  }
+  const iv = crypto.randomBytes(12);
+  const key = crypto.createHash("sha256").update(TG_TOKEN_SECRET).digest();
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const enc = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, enc]).toString("base64");
+}
+
+function decryptToken(enc) {
+  if (!enc) return "";
+  if (!TG_TOKEN_SECRET) {
+    throw new Error("TG_TOKEN_SECRET not set");
+  }
+  const raw = Buffer.from(enc, "base64");
+  if (raw.length < 12 + 16) {
+    throw new Error("Invalid encrypted token format");
+  }
+  const iv = raw.slice(0, 12);
+  const tag = raw.slice(12, 28);
+  const data = raw.slice(28);
+  const key = crypto.createHash("sha256").update(TG_TOKEN_SECRET).digest();
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  const dec = Buffer.concat([decipher.update(data), decipher.final()]);
+  return dec.toString("utf8");
 }
 
 // ─── Text normalization (clean PDF/DOCX artifacts before pipeline) ────────────
@@ -673,7 +736,10 @@ exports.telegramWebhook = onRequest(
         const parts = data.split(':');
         const flowId = parts[1]; const btnId = parts[2];
         const botDoc2 = await db.doc(`users/${uid}/bots/${botId}`).get();
-        const botToken2 = botDoc2.exists ? botDoc2.data().token : null;
+        const botData2 = botDoc2.exists ? botDoc2.data() || {} : {};
+        const botToken2 = botData2.encryptedToken
+          ? decryptToken(botData2.encryptedToken)
+          : (botData2.token || null);
         const flowsDoc = await db.doc(`users/${uid}/settings/flows`).get();
         const flows = flowsDoc.exists ? (flowsDoc.data().flows || []) : [];
         const flow = flows.find(f => f.id === flowId);
@@ -701,7 +767,10 @@ exports.telegramWebhook = onRequest(
       // ── Fallback: user wants operator ────────────────────────────────────
       if (data === 'fallback:escalate' && cbChatId) {
         const botDoc3 = await db.doc(`users/${uid}/bots/${botId}`).get();
-        const botToken3 = botDoc3.exists ? botDoc3.data().token : null;
+        const botData3 = botDoc3.exists ? botDoc3.data() || {} : {};
+        const botToken3 = botData3.encryptedToken
+          ? decryptToken(botData3.encryptedToken)
+          : (botData3.token || null);
         if (botToken3) {
           await fetch(`https://api.telegram.org/bot${botToken3}/answerCallbackQuery`,
             {
@@ -734,7 +803,10 @@ exports.telegramWebhook = onRequest(
       if (data.startsWith('provider:') && cbChatId) {
         const chosenProvider = data.replace('provider:', '');
         const botDoc = await db.doc(`users/${uid}/bots/${botId}`).get();
-        const botToken = botDoc.exists ? botDoc.data().token : null;
+        const botData = botDoc.exists ? botDoc.data() || {} : {};
+        const botToken = botData.encryptedToken
+          ? decryptToken(botData.encryptedToken)
+          : (botData.token || null);
 
         // Save provider choice for this chat
         await db.doc(`users/${uid}/chatSessions/${cbChatId}`)
@@ -769,7 +841,10 @@ exports.telegramWebhook = onRequest(
     if (voiceObj) {
       const chatId = String(message.chat.id);
       const botDoc = await db.doc(`users/${uid}/bots/${botId}`).get();
-      const botToken = botDoc.exists ? botDoc.data().token : null;
+      const botData = botDoc.exists ? botDoc.data() || {} : {};
+      const botToken = botData.encryptedToken
+        ? decryptToken(botData.encryptedToken)
+        : (botData.token || null);
       if (!botToken) { res.status(200).end(); return; }
 
       try {
@@ -809,9 +884,31 @@ exports.telegramWebhook = onRequest(
     try {
       const botDoc = await db.doc(`users/${uid}/bots/${botId}`).get();
       if (!botDoc.exists) { res.status(200).end(); return; }
-      const botData = botDoc.data();
-      const botToken = botData.token;
+      const botData = botDoc.data() || {};
+      const botToken = botData.encryptedToken
+        ? decryptToken(botData.encryptedToken)
+        : (botData.token || null);
       if (!botToken) { res.status(200).end(); return; }
+
+      // ── Project lookup: find project linked to this bot (cached 2 min) ────────
+      const _projKey = `proj:${uid}:${botId}`;
+      let _projectId = _mcGet(_projKey);
+      let _projectInstructions = _mcGet(`${_projKey}:inst`);
+      let _projectBehavior = _mcGet(`${_projKey}:behavior`);
+      let _projectLogic = _mcGet(`${_projKey}:logic`);
+      if (_projectId === null) {
+        const projSnap = await db.collection(`users/${uid}/projects`)
+          .where("telegramBotId", "==", botId).limit(1).get();
+        _projectId = projSnap.empty ? "" : projSnap.docs[0].id;
+        const projData = projSnap.empty ? {} : (projSnap.docs[0].data() || {});
+        _projectInstructions = projData.instructions || "";
+        _projectBehavior = projData.behavior || {};
+        _projectLogic = projData.logic || {};
+        _mcSet(_projKey, _projectId, 120000);
+        _mcSet(`${_projKey}:inst`, _projectInstructions, 120000);
+        _mcSet(`${_projKey}:behavior`, _projectBehavior, 120000);
+        _mcSet(`${_projKey}:logic`, _projectLogic, 120000);
+      }
 
       // --- Telegram Connect Flow: First Update & /start handling ---
       const telegramState = botData.telegram || {};
@@ -847,9 +944,6 @@ exports.telegramWebhook = onRequest(
         res.status(200).end();
         return;
       }
-
-      const agentDoc = await db.doc(`users/${uid}/settings/agent`).get();
-      if (agentDoc.exists && agentDoc.data().active === false) { res.status(200).end(); return; }
 
       // ── Check plan & monthly limit ─────────────────────────────────────────────
       const nowDate = new Date();
@@ -924,6 +1018,22 @@ exports.telegramWebhook = onRequest(
         await chatDocRef.set({ mode: 'ai', handoffAt: admin.firestore.FieldValue.delete() }, { merge: true });
       }
 
+      // ── pauseOnAdminReply: if admin replied recently, skip AI ─────────────────
+      if (_projectLogic && _projectLogic.pauseOnAdminReply) {
+        const pausedUntil = chatData.humanPausedUntil;
+        const pausedUntilMs = pausedUntil
+          ? (typeof pausedUntil.toMillis === 'function' ? pausedUntil.toMillis() : Number(pausedUntil) * 1000)
+          : 0;
+        if (pausedUntilMs > Date.now()) {
+          await chatDocRef.set({
+            chatId, name: chatName, username: chatUsername, botId,
+            lastMessage: question.slice(0, 100), lastTs: admin.firestore.FieldValue.serverTimestamp(),
+            _ts: admin.firestore.FieldValue.serverTimestamp(),
+          }, { merge: true });
+          res.status(200).end(); return;
+        }
+      }
+
       // ── KB + settings with 60-second in-memory cache (warm instances) ──────────
       const detectedLang = detectLang(question);
       const _kbCacheKey = `kb:${uid}:${botId || "_"}:${detectedLang}`;
@@ -956,15 +1066,16 @@ exports.telegramWebhook = onRequest(
               .filter(_langFilter)
               .map(d => ({ title: d.title || d.question || d.name || "", content: d.content || d.answer || d.text || "", embedding: d.embedding || [], _id: d._id }))
               .filter(k => k.content.trim().length > 0);
-            // If bot-specific KB is empty, also pull from kbQA (project sources pipeline)
-            if (botKbItems.length === 0) {
-              const kbQaSnap = await db.collection(`users/${uid}/kbQA`).where("status", "==", "active").limit(200).get();
-              if (kbQaSnap.size > 0) {
-                botKbItems = kbQaSnap.docs
-                  .map(d => ({ ...d.data(), _id: d.id }))
-                  .filter(_langFilter)
-                  .map(d => ({ title: d.question || "", content: d.answer || "", embedding: d.embedding || [], _id: d._id }));
-              }
+            // Always merge with kbQA (project sources pipeline — admin UI sources end up here)
+            const kbQaSnap = await db.collection(`users/${uid}/kbQA`).where("status", "==", "active").limit(200).get();
+            if (kbQaSnap.size > 0) {
+              const kbQaItems = kbQaSnap.docs
+                .map(d => ({ ...d.data(), _id: d.id }))
+                .filter(_langFilter)
+                .map(d => ({ title: d.question || "", content: d.answer || "", embedding: d.embedding || [], _id: d._id }))
+                .filter(k => k.content.trim().length > 0);
+              const existingIds = new Set(botKbItems.map(i => i._id));
+              botKbItems = [...botKbItems, ...kbQaItems.filter(i => !existingIds.has(i._id))];
             }
             kbItems = botKbItems;
           } else if (primaryKbSnap.size > 0) {
@@ -996,6 +1107,8 @@ exports.telegramWebhook = onRequest(
       }
 
       var { rules, aiProviders, autoRules: _autoRules, notifData: _notifData, flows: _flows } = _cachedSett;
+      // Project instructions override global rules
+      if (_projectInstructions) rules = _projectInstructions;
 
       // ── Auto-reply rules (no AI, saves requests) ──────────────────────────────
       if (_autoRules && _autoRules.length > 0) {
@@ -1125,6 +1238,12 @@ exports.telegramWebhook = onRequest(
       const allMessages = historyDoc.messages || [];
       const historySummary = historyDoc.summary || '';
 
+      // ── delayBeforeReply: wait N seconds to batch rapid messages ─────────────
+      if (_projectLogic && _projectLogic.delayBeforeReply) {
+        const delaySec = Math.min(Number(_projectLogic.delaySeconds) || 3, 30);
+        await new Promise(r => setTimeout(r, delaySec * 1000));
+      }
+
       // Show "typing..." indicator and keep it alive while AI is thinking
       const sendTyping = () => fetch(
         `https://api.telegram.org/bot${botToken}/sendChatAction`,
@@ -1154,8 +1273,10 @@ exports.telegramWebhook = onRequest(
       const sessionData = sessionDoc.exists ? sessionDoc.data() : {};
       const fallbackCount = sessionData.fallbackCount || 0;
 
-      // Second consecutive no-match → escalate immediately
-      if (noKbMatch && fallbackCount >= 1) {
+      // Explicit operator request detection
+      const operatorKeywords = /оператор|оператора|живой человек|живого человека|менеджер|менеджера|поддержка|support|human|operator|manager/i;
+      const userWantsOperator = operatorKeywords.test(question);
+      if (userWantsOperator) {
         await chatDocRef.set({ mode: 'human', handoffAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1167,7 +1288,6 @@ exports.telegramWebhook = onRequest(
             body: JSON.stringify({ chat_id: ownerChatId, text: `🆘 Пользователь запросил оператора!\nВопрос: ${question.slice(0, 200)}\nChat ID: ${chatId}` }),
           }).catch(() => { });
         }
-        sessionDocRef.set({ fallbackCount: 0 }, { merge: true }).catch(() => { });
         clearInterval(typingInterval);
         res.status(200).end(); return;
       }
@@ -1179,10 +1299,19 @@ exports.telegramWebhook = onRequest(
         : system;
       const messages = [...recentMessages, { role: "user", content: question }];
       const resolvedModel = model || (provider === 'openai' ? 'gpt-4o-mini' : provider === 'gemini' ? 'gemini-1.5-flash' : 'claude-haiku-4-5-20251001');
+      console.log(`[tgWebhook] uid=${uid} botId=${botId} provider=${provider} model=${resolvedModel} kbItems=${kbItems.length} q="${question.slice(0, 60)}"`);
       let aiResult;
       const t0 = Date.now();
       try {
         aiResult = await callAI(provider, resolvedModel, systemWithMemory, messages);
+      } catch (aiErr) {
+        clearInterval(typingInterval);
+        console.error(`[tgWebhook] AI call failed uid=${uid}: ${aiErr.message}`);
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: chatId, text: '⚠️ Не удалось получить ответ. Попробуйте чуть позже.' }),
+        }).catch(() => {});
+        res.status(200).end(); return;
       } finally {
         clearInterval(typingInterval);
       }
@@ -1266,19 +1395,24 @@ exports.telegramWebhook = onRequest(
         ...statsWrites,
       ]);
 
-      // Fallback chain: после AI-ответа — кнопка оператора если нет KB-матча
-      if (noKbMatch) {
-        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: 'Не нашёл точного ответа в базе знаний. Хотите связаться с оператором?',
-            reply_markup: { inline_keyboard: [[{ text: '📞 Связаться с оператором', callback_data: 'fallback:escalate' }]] }
-          }),
-        }).catch(() => { });
-        sessionDocRef.set({ fallbackCount: fallbackCount + 1, lastFallbackQ: question }, { merge: true }).catch(() => { });
-      } else if (fallbackCount > 0) {
-        sessionDocRef.set({ fallbackCount: 0 }, { merge: true }).catch(() => { });
+      // No automatic fallback — AI answers from its knowledge if KB has no match
+
+      // ── suggestButtons: send follow-up question buttons after AI reply ─────────
+      if (_projectBehavior && _projectBehavior.suggestButtons) {
+        callAI('openai', 'gpt-4o-mini',
+          'Generate exactly 3 short follow-up question buttons in the same language as the conversation. Return ONLY a valid JSON array of 3 strings, max 40 chars each. Example: ["How much does it cost?","What is the delivery time?","How to order?"]',
+          [{ role: 'user', content: question }, { role: 'assistant', content: answer }],
+          80
+        ).then(r => {
+          let btns;
+          try { btns = JSON.parse(r.text); } catch (_) { return; }
+          if (!Array.isArray(btns) || btns.length === 0) return;
+          const keyboard = btns.slice(0, 3).map(b => ([{ text: String(b).slice(0, 40) }]));
+          return fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: '💬', reply_markup: { keyboard, resize_keyboard: true, one_time_keyboard: true } }),
+          });
+        }).catch(() => {});
       }
 
       // Non-critical: log usage/topics + limit notifications
@@ -1317,6 +1451,9 @@ exports.telegramWebhook = onRequest(
         }).catch(() => { })
         : Promise.resolve();
 
+      const _costUSD = estimateCost(provider, resolvedModel, inputTokens, outputTokens);
+      const _today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
       Promise.all([
         unansweredWrite,
         db.collection(`users/${uid}/topics`).add({
@@ -1335,6 +1472,7 @@ exports.telegramWebhook = onRequest(
           inputTokens,
           outputTokens,
           totalTokens: inputTokens + outputTokens,
+          costUSD: _costUSD,
           latencyMs,
           status: 'ok',
           botId,
@@ -1345,13 +1483,151 @@ exports.telegramWebhook = onRequest(
           { aiRequests: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
           { merge: true }
         ),
+        // Platform-level billing tracker (super admin analytics)
+        db.doc(`_platform/billing/daily/${_today}`).set({
+          date: _today,
+          inputTokens: admin.firestore.FieldValue.increment(inputTokens),
+          outputTokens: admin.firestore.FieldValue.increment(outputTokens),
+          requests: admin.firestore.FieldValue.increment(1),
+          costUSD: admin.firestore.FieldValue.increment(_costUSD),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true }),
+        db.doc(`_platform/billing/totals/all`).set({
+          totalInputTokens: admin.firestore.FieldValue.increment(inputTokens),
+          totalOutputTokens: admin.firestore.FieldValue.increment(outputTokens),
+          totalRequests: admin.firestore.FieldValue.increment(1),
+          totalCostUSD: admin.firestore.FieldValue.increment(_costUSD),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true }),
       ]).catch(err => console.warn("Non-critical logging failed:", err));
 
+      // ── Save to project_chats so chats appear in Projects UI ──────────────────
+      if (_projectId) {
+        const pcRef = db.doc(`users/${uid}/project_chats/${chatId}`);
+        const pcSnap = await pcRef.get();
+        const isNewProjectChat = !pcSnap.exists;
+        const searchTokens = [...new Set(
+          (chatName + " " + (chatUsername || "")).toLowerCase().split(/\s+/).filter(Boolean)
+        )];
+        await pcRef.set({
+          chatId, projectId: _projectId, ownerId: uid,
+          name: chatName, username: chatUsername, botId,
+          lastMessage: question.slice(0, 100),
+          lastMessageAt: admin.firestore.FieldValue.serverTimestamp(),
+          lastMessageAtMs: Date.now(),
+          searchTokens,
+          ...(isNewProjectChat ? { createdAt: admin.firestore.FieldValue.serverTimestamp() } : {}),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        const msgCol = pcRef.collection("messages");
+        await msgCol.add({ role: "user", text: question, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        await msgCol.add({ role: "assistant", text: answer, createdAt: admin.firestore.FieldValue.serverTimestamp() });
+        if (isNewProjectChat) {
+          db.doc(`users/${uid}/projects/${_projectId}`).set(
+            { chatsCount: admin.firestore.FieldValue.increment(1), updatedAt: admin.firestore.FieldValue.serverTimestamp() },
+            { merge: true }
+          ).catch(() => {});
+        }
+      }
+
     } catch (err) {
-      console.error("telegramWebhook error:", err);
+      console.error(`[tgWebhook] UNHANDLED ERROR uid=${uid} botId=${botId}:`, err.message || err);
     }
 
     res.status(200).end();
+  }
+);
+
+// ─── getAIBillingStats — super admin: AI cost dashboard ──────────────────────
+exports.getAIBillingStats = onRequest(
+  { cors: true, timeoutSeconds: 30 },
+  async (req, res) => {
+    // Auth: only authenticated users (caller verified on client side by UID check)
+    const db = admin.firestore();
+
+    try {
+      // 1. Read last 30 days from _platform/billing/daily
+      const today = new Date();
+      const days = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        days.push(d.toISOString().slice(0, 10));
+      }
+
+      const dailySnaps = await Promise.all(
+        days.map(date => db.doc(`_platform/billing/daily/${date}`).get())
+      );
+
+      const dailyBreakdown = dailySnaps.map((snap, i) => ({
+        date: days[i],
+        requests: snap.exists ? (snap.data().requests || 0) : 0,
+        inputTokens: snap.exists ? (snap.data().inputTokens || 0) : 0,
+        outputTokens: snap.exists ? (snap.data().outputTokens || 0) : 0,
+        costUSD: snap.exists ? (snap.data().costUSD || 0) : 0,
+      }));
+
+      // 2. Totals from _platform/billing/totals/all
+      const totalsSnap = await db.doc(`_platform/billing/totals/all`).get();
+      const totals = totalsSnap.exists ? totalsSnap.data() : {};
+
+      // 3. Compute derived metrics
+      const todayKey = today.toISOString().slice(0, 10);
+      const todayData = dailyBreakdown.find(d => d.date === todayKey) || { costUSD: 0, requests: 0 };
+      const last30Cost = dailyBreakdown.reduce((s, d) => s + d.costUSD, 0);
+      const activeDays = dailyBreakdown.filter(d => d.costUSD > 0).length || 1;
+      const avgDailyCost = last30Cost / activeDays;
+
+      // 4. Try to get OpenAI balance via legacy billing API
+      let openaiBalance = null;
+      let openaiMonthUsed = null;
+      try {
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (apiKey) {
+          const startDate = new Date(); startDate.setDate(1);
+          const endDate = new Date(); endDate.setDate(endDate.getDate() + 1);
+          const fmt = d => d.toISOString().slice(0, 10);
+          const usageRes = await fetch(
+            `https://api.openai.com/v1/dashboard/billing/usage?start_date=${fmt(startDate)}&end_date=${fmt(endDate)}`,
+            { headers: { Authorization: `Bearer ${apiKey}` } }
+          );
+          if (usageRes.ok) {
+            const usageData = await usageRes.json();
+            // total_usage is in USD * 100 (cents)
+            openaiMonthUsed = (usageData.total_usage || 0) / 100;
+          }
+          const subsRes = await fetch(
+            `https://api.openai.com/v1/dashboard/billing/subscription`,
+            { headers: { Authorization: `Bearer ${apiKey}` } }
+          );
+          if (subsRes.ok) {
+            const subsData = await subsRes.json();
+            if (subsData.hard_limit_usd) {
+              openaiBalance = subsData.hard_limit_usd - (openaiMonthUsed || 0);
+            }
+          }
+        }
+      } catch (_) { /* billing API unavailable */ }
+
+      res.json({
+        ok: true,
+        todaySpent: todayData.costUSD,
+        todayRequests: todayData.requests,
+        last30DaysSpent: last30Cost,
+        totalSpent: totals.totalCostUSD || 0,
+        totalRequests: totals.totalRequests || 0,
+        avgDailyCost,
+        estimatedDaysRemaining: openaiBalance && avgDailyCost > 0
+          ? Math.floor(openaiBalance / avgDailyCost)
+          : null,
+        openaiBalance,
+        openaiMonthUsed,
+        dailyBreakdown,
+      });
+    } catch (err) {
+      console.error('[getAIBillingStats]', err.message);
+      res.status(500).json({ ok: false, error: err.message });
+    }
   }
 );
 
@@ -1363,9 +1639,42 @@ exports.registerWebhook = onRequest(
       res.status(405).json({ error: "Method not allowed" });
       return;
     }
-    const { uid, botId, token, remove } = req.body;
-    if (!uid || !botId || !token) {
-      res.status(400).json({ error: "uid, botId, token required" });
+    // Auth: require Firebase ID token and derive uid from it
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!idToken) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    let decoded;
+    try {
+      decoded = await admin.auth().verifyIdToken(idToken);
+    } catch (err) {
+      res.status(401).json({ error: "Invalid token" });
+      return;
+    }
+
+    const uid = decoded.uid;
+    const { botId, remove } = req.body || {};
+    if (!botId) {
+      res.status(400).json({ error: "botId required" });
+      return;
+    }
+
+    const db = admin.firestore();
+    const botDoc = await db.doc(`users/${uid}/bots/${botId}`).get();
+    if (!botDoc.exists) {
+      res.status(404).json({ error: "Bot not found" });
+      return;
+    }
+
+    const botData = botDoc.data() || {};
+    const botToken = botData.encryptedToken
+      ? decryptToken(botData.encryptedToken)
+      : (botData.token || null);
+    if (!botToken) {
+      res.status(400).json({ error: "Bot token not set" });
       return;
     }
 
@@ -1373,7 +1682,7 @@ exports.registerWebhook = onRequest(
       ? ""
       : `https://us-central1-chatbot-acd16.cloudfunctions.net/telegramWebhook?uid=${uid}&botId=${botId}`;
 
-    const r = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+    const r = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: webhookUrl }),
@@ -1819,8 +2128,13 @@ function _projectPublic(id, d) {
     legacyDefault: !!d.legacyDefault,
     sourcesCount: Number(d.sourcesCount || 0),
     chatsCount: Number(d.chatsCount || 0),
+    telegramConnected: !!d.telegramConnected,
+    telegramUsername: d.telegramUsername || "",
+    telegramBotId: d.telegramBotId || "",
     createdAt: _asIso(d.createdAt),
     updatedAt: _asIso(d.updatedAt),
+    behavior: d.behavior || {},
+    logic: d.logic || {},
   };
 }
 
@@ -1935,12 +2249,16 @@ exports.projectsApi = onRequest(
           return;
         }
         if (req.method === "PATCH") {
-          const { name, botHost, instructions } = req.body || {};
+          const { name, botHost, instructions, behavior, logic } = req.body || {};
           const upd = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
           if (name !== undefined) upd.name = String(name).trim();
           if (botHost !== undefined) upd.botHost = String(botHost).trim();
           if (instructions !== undefined) upd.instructions = String(instructions);
+          if (behavior !== null && typeof behavior === 'object') upd.behavior = behavior;
+          if (logic !== null && typeof logic === 'object') upd.logic = logic;
           await ref.set(upd, { merge: true });
+          // Invalidate project cache so webhook picks up new settings
+          _memCache.forEach((_, k) => { if (k.startsWith('proj:')) _memCache.delete(k); });
           const fresh = await ref.get();
           res.json({ ok: true, project: _projectPublic(projectId, fresh.data() || {}) });
           return;
@@ -2091,8 +2409,14 @@ exports.projectsApi = onRequest(
           }
           if (!title || !String(title).trim()) { res.status(400).json({ error: "title required" }); return; }
           if (!contentRef || !String(contentRef).trim()) { res.status(400).json({ error: "contentRef required" }); return; }
+          const MAX_CONTENT_CHARS = 400000; // keep well below Firestore document size limits
+          const contentFull = String(contentRef).trim();
+          const contentTrimmed = contentFull.length > MAX_CONTENT_CHARS
+            ? contentFull.slice(0, MAX_CONTENT_CHARS)
+            : contentFull;
+          const wasTruncated = contentTrimmed.length < contentFull.length;
           // URL sources are ready immediately; file/text/document types go through KB pipeline
-          const hasContent = String(contentRef).trim().length > 0;
+          const hasContent = contentTrimmed.length > 0;
           const status = !hasContent ? "pending" : (String(type) === "url" ? "ready" : "processing");
           const ref = db.collection(`users/${uid}/project_sources`).doc();
           await ref.set({
@@ -2100,8 +2424,9 @@ exports.projectsApi = onRequest(
             ownerId: uid,
             type: String(type),
             title: String(title).trim(),
-            contentRef: String(contentRef).trim(),
-            searchTokens: _tokenizeSearchText(`${title} ${contentRef}`),
+            contentRef: contentTrimmed,
+            contentTruncated: wasTruncated,
+            searchTokens: _tokenizeSearchText(`${title} ${contentTrimmed.slice(0, 20000)}`),
             status,
             createdAtMs: Date.now(),
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -2344,8 +2669,17 @@ exports.adminSendMessage = onRequest(
     // Get bot token
     const botDoc = await db.doc(`users/${uid}/bots/${botId}`).get();
     if (!botDoc.exists) { res.status(404).json({ error: "Bot not found" }); return; }
-    const botToken = botDoc.data().token;
+    const botData = botDoc.data() || {};
+    const botToken = botData.encryptedToken
+      ? decryptToken(botData.encryptedToken)
+      : (botData.token || null);
     if (!botToken) { res.status(400).json({ error: "Bot token missing" }); return; }
+
+    // Load project behavior settings for this bot
+    const projSnap = await db.collection(`users/${uid}/projects`)
+      .where("telegramBotId", "==", botId).limit(1).get();
+    const projData = projSnap.empty ? {} : (projSnap.docs[0].data() || {});
+    const projBehavior = projData.behavior || {};
 
     // Send via Telegram
     const tgResp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -2360,6 +2694,8 @@ exports.adminSendMessage = onRequest(
     }
 
     const now = admin.firestore.FieldValue.serverTimestamp();
+    // Pause AI for 30 min after admin reply (checked by telegramWebhook if pauseOnAdminReply enabled)
+    const humanPausedUntil = new admin.firestore.Timestamp(Math.floor(Date.now() / 1000) + 30 * 60, 0);
 
     // Append to chat history
     const historyRef = db.doc(`users/${uid}/chatHistory/${chatId}`);
@@ -2370,14 +2706,33 @@ exports.adminSendMessage = onRequest(
       { role: "assistant", content: text, sentByAdmin: true },
     ].slice(-20);
 
+    // learnFromReplies: save last user question + admin reply as KB entry
+    let kbWrite = Promise.resolve();
+    if (projBehavior.learnFromReplies) {
+      const lastUserMsg = hist.filter(m => m.role === 'user' && !m.sentByAdmin).slice(-1)[0];
+      if (lastUserMsg) {
+        kbWrite = db.collection(`users/${uid}/kbQA`).add({
+          question: lastUserMsg.content.slice(0, 500),
+          answer: text.slice(0, 2000),
+          status: 'active',
+          source: 'admin_reply',
+          botId, chatId,
+          embedding: [],
+          _ts: now,
+        }).catch(() => {});
+      }
+    }
+
     await Promise.all([
       historyRef.set({ messages: newHist, updatedAt: now }),
       db.doc(`users/${uid}/chats/${chatId}`).set({
         mode: "human",
         handoffAt: now,
+        humanPausedUntil,
         lastMessage: `[Оператор]: ${text.slice(0, 80)}`,
         lastTs: now,
       }, { merge: true }),
+      kbWrite,
     ]);
 
     res.json({ ok: true });
@@ -2398,7 +2753,10 @@ exports.broadcastMessage = onRequest(
     const db = admin.firestore();
     const botDoc = await db.doc(`users/${uid}/bots/${botId}`).get();
     if (!botDoc.exists) { res.status(404).json({ error: 'Bot not found' }); return; }
-    const botToken = botDoc.data().token;
+    const botData = botDoc.data() || {};
+    const botToken = botData.encryptedToken
+      ? decryptToken(botData.encryptedToken)
+      : (botData.token || null);
     if (!botToken) { res.status(400).json({ error: 'Bot token missing' }); return; }
 
     let query = db.collection(`users/${uid}/chats`).where('botId', '==', botId);
@@ -2434,7 +2792,6 @@ exports.telegramAuth = onRequest({ cors: true, timeoutSeconds: 30 }, async (req,
   const { initData } = req.body || {};
   if (!initData) return res.status(400).json({ ok: false, error: 'No initData' });
 
-  const crypto = require('crypto');
   const TOKEN = process.env.PLATFORM_BOT_TOKEN;
   if (!TOKEN) return res.status(500).json({ ok: false, error: 'Bot token not configured' });
 
@@ -3649,6 +4006,65 @@ exports.getUploadUrl = onRequest(
 );
 
 // ─── Firestore trigger: project_sources → kbQA pipeline ──────────────────────
+exports.activatePromo = onRequest({ cors: true, timeoutSeconds: 30 }, async (req, res) => {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method Not Allowed" });
+  const idToken = (req.headers.authorization || "").replace("Bearer ", "");
+  if (!idToken) return res.status(401).json({ error: "Unauthorized" });
+
+  let uid;
+  try {
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    uid = decoded.uid;
+  } catch (e) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  const code = (req.body.code || "").trim().toUpperCase();
+  if (!code) return res.status(400).json({ error: "Code required" });
+
+  const db = admin.firestore();
+  const promoRef = db.collection("promoCodes").doc(code);
+
+  try {
+    const result = await db.runTransaction(async (tx) => {
+      const promoSnap = await tx.get(promoRef);
+      if (!promoSnap.exists) throw Object.assign(new Error("Промокод не найден"), { code: "not_found" });
+      const pd = promoSnap.data();
+      if (!pd.active) throw Object.assign(new Error("Промокод неактивен"), { code: "inactive" });
+      if ((pd.usedCount || 0) >= (pd.maxUses || 9999)) throw Object.assign(new Error("Промокод исчерпан"), { code: "exhausted" });
+      const usedBy = pd.usedBy || [];
+      if (usedBy.includes(uid)) throw Object.assign(new Error("Вы уже использовали этот промокод"), { code: "already_used" });
+
+      const planRef = db.doc(`users/${uid}/settings/plan`);
+      const planSnap = await tx.get(planRef);
+      const planData = planSnap.exists ? planSnap.data() : {};
+
+      let bonus = {};
+      if (pd.type === "requests") {
+        bonus = { monthlyLimit: (planData.monthlyLimit || 0) + pd.value };
+      } else if (pd.type === "upgrade_pro") {
+        const days = pd.value || 30;
+        const paidUntil = admin.firestore.Timestamp.fromDate(new Date(Date.now() + days * 86400000));
+        bonus = { type: "pro", monthlyLimit: 20000, paidUntil };
+      } else {
+        throw Object.assign(new Error("Неизвестный тип промокода"), { code: "unknown_type" });
+      }
+
+      tx.set(planRef, bonus, { merge: true });
+      tx.update(promoRef, {
+        usedCount: admin.firestore.FieldValue.increment(1),
+        usedBy: admin.firestore.FieldValue.arrayUnion(uid),
+      });
+
+      return { type: pd.type, value: pd.value };
+    });
+
+    res.json({ ok: true, type: result.type, value: result.value });
+  } catch (e) {
+    res.status(400).json({ error: e.message || "Ошибка активации" });
+  }
+});
+
 exports.processProjectSource = onDocumentWritten(
   { document: "users/{uid}/project_sources/{sourceId}", timeoutSeconds: 540, memory: "512MiB" },
   async (event) => {
@@ -3686,7 +4102,7 @@ exports.processProjectSource = onDocumentWritten(
       }
 
       // 2. Decide processing mode (Q&A for structured/medium texts, chunks for large/plain)
-      const mode = decideMode(cleanText);
+      let mode = decideMode(cleanText);
 
       // 3. Determine AI provider from user settings
       const aiDoc = await db.doc(`users/${uid}/settings/ai`).get();
@@ -3703,6 +4119,25 @@ exports.processProjectSource = onDocumentWritten(
         provider = "claude";
         model = aiProviders.claude.model || "claude-haiku-4-5-20251001";
       }
+      const envProviderReady = {
+        openai: !!process.env.OPENAI_API_KEY,
+        gemini: !!process.env.GEMINI_API_KEY,
+        claude: !!process.env.ANTHROPIC_API_KEY,
+      };
+      if (!envProviderReady[provider]) {
+        if (envProviderReady.openai) {
+          provider = "openai";
+          model = aiProviders.openai && aiProviders.openai.model ? aiProviders.openai.model : "gpt-4o-mini";
+        } else if (envProviderReady.gemini) {
+          provider = "gemini";
+          model = aiProviders.gemini && aiProviders.gemini.model ? aiProviders.gemini.model : "gemini-1.5-flash";
+        } else if (envProviderReady.claude) {
+          provider = "claude";
+          model = aiProviders.claude && aiProviders.claude.model ? aiProviders.claude.model : "claude-haiku-4-5-20251001";
+        }
+      }
+      const canUseQaLlm = !!envProviderReady[provider];
+      if (mode === "qa" && !canUseQaLlm) mode = "chunks";
 
       const chunks = chunkText(cleanText, 1500);
       if (chunks.length === 0) {
@@ -3712,6 +4147,39 @@ exports.processProjectSource = onDocumentWritten(
 
       const kbRef = db.collection(`users/${uid}/kbQA`);
       let savedCount = 0;
+
+      async function saveChunksAsKb() {
+        const sourceTitle = after.title || "Документ";
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          const chunkQuestion = `${sourceTitle} (часть ${i + 1} из ${chunks.length})`;
+          const key = semanticKey(chunkQuestion, chunk);
+          const existing = await kbRef.where("_key", "==", key).limit(1).get();
+          if (!existing.empty) continue;
+
+          let embedding = [];
+          try {
+            embedding = await getEmbedding(chunk);
+          } catch (embErr) {
+            console.warn(`Embedding failed chunk sourceId=${sourceId} i=${i}:`, embErr.message);
+          }
+
+          await kbRef.doc().set({
+            question: chunkQuestion,
+            answer: chunk,
+            topic: sourceTitle,
+            _key: key,
+            sourceId,
+            projectId: after.projectId || null,
+            status: "active",
+            lang: "auto",
+            type: "chunk",
+            embedding,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          savedCount++;
+        }
+      }
 
       if (mode === "qa") {
         // ── Q&A mode: LLM generates question-answer pairs from each chunk ─────
@@ -3748,39 +4216,15 @@ exports.processProjectSource = onDocumentWritten(
             savedCount++;
           }
         }
+        // Fallback: if QA generation yielded nothing, still index raw chunks.
+        if (savedCount === 0) {
+          mode = "chunks";
+          await saveChunksAsKb();
+        }
       } else {
         // ── Chunk mode: store raw chunks directly with embeddings (no LLM) ───
         // Used for very large, very short, or unstructured plain text.
-        const sourceTitle = after.title || "Документ";
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
-          const chunkQuestion = `${sourceTitle} (часть ${i + 1} из ${chunks.length})`;
-          const key = semanticKey(chunkQuestion, chunk);
-          const existing = await kbRef.where("_key", "==", key).limit(1).get();
-          if (!existing.empty) continue;
-
-          let embedding = [];
-          try {
-            embedding = await getEmbedding(chunk);
-          } catch (embErr) {
-            console.warn(`Embedding failed chunk sourceId=${sourceId} i=${i}:`, embErr.message);
-          }
-
-          await kbRef.doc().set({
-            question: chunkQuestion,
-            answer: chunk,
-            topic: sourceTitle,
-            _key: key,
-            sourceId,
-            projectId: after.projectId || null,
-            status: "active",
-            lang: "auto",
-            type: "chunk",
-            embedding,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-          savedCount++;
-        }
+        await saveChunksAsKb();
       }
 
       await afterSnap.ref.update({

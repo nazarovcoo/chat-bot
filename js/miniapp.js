@@ -14,6 +14,10 @@
     }
   }
 
+  function getWebApp() {
+    try { return window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null; } catch (_) { return null; }
+  }
+
   function nowIso() {
     return new Date().toISOString();
   }
@@ -37,16 +41,46 @@
     } catch (_) {}
   }
 
-  var enabled = !!window.MINIAPP_IOS_FIX;
   var tg = isTelegramMiniApp();
   var ios = isIos();
-  var active = enabled && tg && ios;
 
-  if (!active) return;
+  // ── Apply Telegram theme colors ─────────────────────────────────────────────
+  function applyTmaTheme() {
+    var wa = getWebApp();
+    if (!wa || !wa.themeParams) return;
+    var tp = wa.themeParams;
+    var root = document.documentElement;
+    // Map TMA theme to our CSS vars
+    if (tp.bg_color) root.style.setProperty("--tma-bg", tp.bg_color);
+    if (tp.secondary_bg_color) root.style.setProperty("--tma-bg2", tp.secondary_bg_color);
+    if (tp.text_color) root.style.setProperty("--tma-text", tp.text_color);
+    if (tp.hint_color) root.style.setProperty("--tma-hint", tp.hint_color);
+    if (tp.link_color) root.style.setProperty("--tma-link", tp.link_color);
+    if (tp.button_color) root.style.setProperty("--tma-btn", tp.button_color);
+    if (tp.button_text_color) root.style.setProperty("--tma-btn-text", tp.button_text_color);
+    if (tp.section_bg_color) root.style.setProperty("--tma-section-bg", tp.section_bg_color);
+    if (tp.section_separator_color) root.style.setProperty("--tma-separator", tp.section_separator_color);
+  }
 
+  // ── Expand to full screen ────────────────────────────────────────────────────
+  function expandApp() {
+    var wa = getWebApp();
+    if (!wa) return;
+    try { if (typeof wa.ready === "function") wa.ready(); } catch (_) {}
+    try { if (typeof wa.expand === "function") wa.expand(); } catch (_) {}
+    // Request fullscreen if supported (TMA 7.7+)
+    try { if (typeof wa.requestFullscreen === "function") wa.requestFullscreen(); } catch (_) {}
+    // Disable vertical swipe to close
+    try { if (typeof wa.disableVerticalSwipes === "function") wa.disableVerticalSwipes(); } catch (_) {}
+    // Set header color to match our UI
+    try { if (typeof wa.setHeaderColor === "function") wa.setHeaderColor("#ffffff"); } catch (_) {}
+    try { if (typeof wa.setBackgroundColor === "function") wa.setBackgroundColor("#f9f9fb"); } catch (_) {}
+  }
+
+  // ── Viewport height fix ──────────────────────────────────────────────────────
   function setAppHeight() {
     try {
-      var wa = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+      var wa = getWebApp();
       var h = 0;
       if (wa) {
         h = Number(wa.viewportStableHeight || wa.viewportHeight || 0);
@@ -63,79 +97,63 @@
     _resizeRaf = requestAnimationFrame(setAppHeight);
   }
 
-  function bindTelegramViewportEvents() {
+  // ── Main init ────────────────────────────────────────────────────────────────
+  function init() {
+    if (!tg) return;
+
+    // Always expand in mini app
+    expandApp();
+    applyTmaTheme();
+
+    var wa = getWebApp();
+
+    // Listen for theme changes
     try {
-      var wa = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-      if (!wa) return;
-      if (typeof wa.ready === "function") wa.ready();
-      if (typeof wa.expand === "function") wa.expand();
-      if (typeof wa.onEvent === "function") {
-        wa.onEvent("viewportChanged", function () {
-          scheduleSetAppHeight();
-        });
+      if (wa && typeof wa.onEvent === "function") {
+        wa.onEvent("themeChanged", applyTmaTheme);
+        wa.onEvent("viewportChanged", scheduleSetAppHeight);
       }
     } catch (_) {}
-  }
 
-  function bindKeyboardMetrics() {
-    var lastFocusAt = 0;
-    var beforeFocusHeight = 0;
-    var beforeFocusScroll = 0;
+    // iOS-specific fixes
+    var enabled = !!window.MINIAPP_IOS_FIX;
+    var active = enabled && ios;
 
-    document.addEventListener("focusin", function (e) {
-      var t = e && e.target;
-      if (!t) return;
-      var tag = String(t.tagName || "").toLowerCase();
-      if (tag !== "input" && tag !== "textarea" && tag !== "select") return;
-      lastFocusAt = Date.now();
-      beforeFocusHeight = window.innerHeight;
-      beforeFocusScroll = window.scrollY;
+    if (active) {
+      document.documentElement.classList.add("miniapp-ios-fix");
+      if (document.body) document.body.classList.add("miniapp-ios-fix");
 
-      setTimeout(function () {
-        var afterHeight = window.innerHeight;
-        var afterScroll = window.scrollY;
-        var shifted = Math.abs(afterScroll - beforeFocusScroll) > 8;
-        var keyboardDelta = Math.abs(beforeFocusHeight - afterHeight);
-        if (shifted || keyboardDelta > 80) {
-          logMiniMetric("input_focus_layout_change", {
-            tag: tag,
-            keyboardDelta: keyboardDelta,
-            shifted: shifted,
-            beforeFocusHeight: beforeFocusHeight,
-            afterHeight: afterHeight,
-            beforeFocusScroll: beforeFocusScroll,
-            afterScroll: afterScroll,
-          });
+      setAppHeight();
+
+      window.addEventListener("resize", scheduleSetAppHeight, { passive: true });
+      window.addEventListener("orientationchange", scheduleSetAppHeight, { passive: true });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize", scheduleSetAppHeight, { passive: true });
+        window.visualViewport.addEventListener("scroll", scheduleSetAppHeight, { passive: true });
+      }
+
+      // Keyboard fix: restore scroll after input blur
+      document.addEventListener("focusout", function () {
+        setTimeout(scheduleSetAppHeight, 60);
+      }, true);
+
+      // Prevent bounce scroll on body
+      document.addEventListener("touchmove", function (e) {
+        if (e.target === document.body || e.target === document.documentElement) {
+          e.preventDefault();
         }
-      }, 420);
-    }, true);
+      }, { passive: false });
 
-    document.addEventListener("focusout", function () {
-      if (!lastFocusAt) return;
-      setTimeout(scheduleSetAppHeight, 60);
-    }, true);
-  }
-
-  function init() {
-    document.documentElement.classList.add("miniapp-ios-fix");
-    if (document.body) document.body.classList.add("miniapp-ios-fix");
-
-    bindTelegramViewportEvents();
-    setAppHeight();
-    bindKeyboardMetrics();
-
-    window.addEventListener("resize", scheduleSetAppHeight, { passive: true });
-    window.addEventListener("orientationchange", scheduleSetAppHeight, { passive: true });
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", scheduleSetAppHeight, { passive: true });
-      window.visualViewport.addEventListener("scroll", scheduleSetAppHeight, { passive: true });
+      logMiniMetric("ios_fix_enabled", {
+        viewportHeight: window.innerHeight,
+        tgViewportHeight: wa ? wa.viewportHeight : null,
+        tgStableHeight: wa ? wa.viewportStableHeight : null,
+      });
     }
 
-    logMiniMetric("ios_fix_enabled", {
-      viewportHeight: window.innerHeight,
-      tgViewportHeight: window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.viewportHeight : null,
-      tgStableHeight: window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.viewportStableHeight : null,
-    });
+    // Add TMA body class for CSS targeting
+    document.documentElement.classList.add("in-tma");
+    if (document.body) document.body.classList.add("in-tma");
   }
 
   if (document.readyState === "loading") {

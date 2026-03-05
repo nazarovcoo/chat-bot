@@ -751,6 +751,7 @@
                 <button class="tab-btn" onclick="switchTab('users',this)">👥 Пользователи</button>
                 <button class="tab-btn" onclick="switchTab('promos',this)">🎫 Промокоды</button>
                 <button class="tab-btn" onclick="switchTab('aistats',this);loadAiStatsOnce()">🤖 Статистика ИИ</button>
+                <button class="tab-btn" onclick="switchTab('billing',this);loadBillingStats()">💰 AI Billing</button>
             </div>
 
             <!-- ═══ TAB: DASHBOARD ═══ -->
@@ -984,6 +985,20 @@
 
         </div>
     </div>
+
+            <!-- ═══ TAB: AI BILLING ═══ -->
+            <div class="tab-panel" id="tab-billing">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                    <div style="font-size:18px;font-weight:700">AI Financial Monitor</div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <button id="billing-currency-btn" onclick="toggleBillingCurrency()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">🇺🇸 USD</button>
+                        <button class="tab-btn" onclick="loadBillingStats()" style="font-size:12px">↻ Обновить</button>
+                    </div>
+                </div>
+                <div id="billing-body">
+                    <div style="color:var(--text-dim);padding:40px 0;text-align:center">Нажмите на таб чтобы загрузить данные</div>
+                </div>
+            </div>
 
     <!-- User Detail Modal -->
     <div class="modal-overlay" id="user-modal" onclick="if(event.target===this)closeUserModal()">
@@ -1666,6 +1681,168 @@
             clearTimeout(_toastTimer);
             _toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
         }
+        /* ══ AI BILLING ══ */
+        let _billingLoaded = false;
+        let _billingData = null;
+        let _showUzs = false;
+        let _uzsRate = null;
+
+        async function fetchUzsRate() {
+            if (_uzsRate) return _uzsRate;
+            try {
+                const r = await fetch('https://open.er-api.com/v6/latest/USD');
+                const d = await r.json();
+                _uzsRate = d.rates?.UZS || 12700;
+            } catch (_) { _uzsRate = 12700; }
+            return _uzsRate;
+        }
+
+        async function toggleBillingCurrency() {
+            _showUzs = !_showUzs;
+            const btn = document.getElementById('billing-currency-btn');
+            if (btn) btn.textContent = _showUzs ? '🇺🇿 UZS' : '🇺🇸 USD';
+            if (_showUzs && !_uzsRate) await fetchUzsRate();
+            if (_billingData) renderBillingData(_billingData);
+        }
+
+        async function loadBillingStats() {
+            const body = document.getElementById('billing-body');
+            if (!body) return;
+            body.innerHTML = '<div style="color:var(--text-dim);padding:40px 0;text-align:center">⏳ Загружаем данные…</div>';
+            try {
+                const r = await fetch('https://us-central1-chatbot-acd16.cloudfunctions.net/getAIBillingStats');
+                const d = await r.json();
+                if (!d.ok) throw new Error(d.error || 'API error');
+                _billingData = d;
+                if (_showUzs && !_uzsRate) await fetchUzsRate();
+                renderBillingData(d);
+            } catch (e) {
+                body.innerHTML = `<div style="color:var(--red);padding:20px">Ошибка: ${esc(e.message)}</div>`;
+            }
+        }
+
+        function renderBillingData(d) {
+            const body = document.getElementById('billing-body');
+            if (!body) return;
+            const rate = _uzsRate || 12700;
+            const today = new Date().toISOString().slice(0, 10);
+            const fmtInt = v => Number(v || 0).toLocaleString('ru-RU');
+
+            const fmtMoney = (usd, decimals) => {
+                const val = Number(usd) || 0;
+                if (_showUzs) {
+                    const uzs = val * rate;
+                    return uzs >= 1000000
+                        ? (uzs / 1000000).toFixed(2) + ' млн сум'
+                        : Math.round(uzs).toLocaleString('ru-RU') + ' сум';
+                }
+                return '$' + val.toFixed(decimals ?? 4);
+            };
+
+            const fmtBalance = usd => {
+                if (usd === null || usd === undefined) return null;
+                const val = Number(usd);
+                if (_showUzs) {
+                    const uzs = val * rate;
+                    return uzs >= 1000000
+                        ? (uzs / 1000000).toFixed(1) + ' млн сум'
+                        : Math.round(uzs).toLocaleString('ru-RU') + ' сум';
+                }
+                return '$' + val.toFixed(2);
+            };
+
+            const daysLeft = d.estimatedDaysRemaining;
+            const daysColor = daysLeft !== null && daysLeft < 7 ? 'var(--red)' : daysLeft !== null && daysLeft < 14 ? 'var(--yellow)' : 'var(--text)';
+
+            // ── Spending KPI cards ──
+            const kpiHtml = `<div class="kpi-grid" style="margin-bottom:16px">
+                <div class="kpi-card"><div class="kpi-lbl">Потрачено сегодня</div><div class="kpi-val" style="color:var(--cyan);font-size:1.4rem">${fmtMoney(d.todaySpent)}</div><div class="kpi-sub">${fmtInt(d.todayRequests)} запросов</div></div>
+                <div class="kpi-card"><div class="kpi-lbl">За 30 дней</div><div class="kpi-val" style="color:var(--purple);font-size:1.4rem">${fmtMoney(d.last30DaysSpent)}</div><div class="kpi-sub">Всего: ${fmtMoney(d.totalSpent)}</div></div>
+                <div class="kpi-card"><div class="kpi-lbl">Средний день</div><div class="kpi-val" style="color:var(--blue);font-size:1.4rem">${fmtMoney(d.avgDailyCost)}</div><div class="kpi-sub">${fmtInt(d.totalRequests)} всего запросов</div></div>
+                <div class="kpi-card"><div class="kpi-lbl">Хватит на</div><div class="kpi-val" style="color:${daysColor};font-size:1.4rem">${daysLeft !== null ? daysLeft + ' дн.' : '—'}</div><div class="kpi-sub">${daysLeft !== null && daysLeft < 7 ? '⚠️ Пополните!' : 'При текущем темпе'}</div></div>
+            </div>`;
+
+            // ── Provider balances ──
+            const openaiBalFmt = fmtBalance(d.openaiBalance);
+            const openaiUsedFmt = d.openaiMonthUsed !== null ? fmtMoney(d.openaiMonthUsed, 2) : null;
+            const rateNote = _showUzs ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px">1 USD = ${Math.round(rate).toLocaleString('ru-RU')} сум</div>` : '';
+
+            const providersHtml = `<div style="margin-bottom:16px">
+                <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-sec)">Балансы провайдеров</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+                    <div class="kpi-card" style="border-left:3px solid #10a37f">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                            <div style="width:28px;height:28px;border-radius:6px;background:#10a37f;display:flex;align-items:center;justify-content:center;font-size:14px">🤖</div>
+                            <div style="font-weight:700;font-size:13px">OpenAI</div>
+                        </div>
+                        <div style="font-size:1.4rem;font-weight:800;color:var(--green)">${openaiBalFmt !== null ? openaiBalFmt : '—'}</div>
+                        <div style="font-size:11px;color:var(--text-sec);margin-top:4px">${openaiUsedFmt ? 'Потрачено в месяц: ' + openaiUsedFmt : 'Legacy API (нет лимита)'}</div>
+                        ${rateNote}
+                    </div>
+                    <div class="kpi-card" style="border-left:3px solid #c47328">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                            <div style="width:28px;height:28px;border-radius:6px;background:#c47328;display:flex;align-items:center;justify-content:center;font-size:14px">⚡</div>
+                            <div style="font-weight:700;font-size:13px">Anthropic</div>
+                        </div>
+                        <div style="font-size:1rem;font-weight:600;color:var(--text-sec)">Нет публичного API</div>
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">
+                            <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:var(--blue);text-decoration:none">Проверить в консоли →</a>
+                        </div>
+                    </div>
+                    <div class="kpi-card" style="border-left:3px solid #4285f4">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                            <div style="width:28px;height:28px;border-radius:6px;background:#4285f4;display:flex;align-items:center;justify-content:center;font-size:14px">✨</div>
+                            <div style="font-weight:700;font-size:13px">Gemini</div>
+                        </div>
+                        <div style="font-size:1rem;font-weight:600;color:var(--text-sec)">Нет публичного API</div>
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:4px">
+                            <a href="https://console.cloud.google.com/billing" target="_blank" style="color:var(--blue);text-decoration:none">Проверить в консоли →</a>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+            // ── Bar chart (last 14 days) ──
+            const last14 = (d.dailyBreakdown || []).slice(-14);
+            const maxCost = Math.max(...last14.map(x => x.costUSD)) || 0.001;
+            const barsHtml = last14.map(day => {
+                const pct = Math.round((day.costUSD / maxCost) * 100);
+                const isToday = day.date === today;
+                const color = isToday ? 'var(--green)' : 'var(--blue)';
+                return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+                    <div style="width:100%;background:${color};border-radius:3px 3px 0 0;min-height:2px;height:${Math.max(pct,2)}px" title="${fmtMoney(day.costUSD)} · ${day.requests} req"></div>
+                    <div style="font-size:9px;color:var(--text-dim);white-space:nowrap">${day.date.slice(5)}</div>
+                </div>`;
+            }).join('');
+            const chartHtml = `<div class="kpi-card" style="margin-bottom:16px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <div style="font-size:13px;font-weight:600">Расходы по дням (последние 14)</div>
+                    <div style="font-size:11px;color:var(--text-dim)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--green);margin-right:4px"></span>Сегодня</div>
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:3px;height:80px">${barsHtml}</div>
+            </div>`;
+
+            // ── Table ──
+            const last10 = (d.dailyBreakdown || []).filter(x => x.requests > 0).slice(-10).reverse();
+            const rowsHtml = last10.length === 0
+                ? '<tr><td colspan="4" style="color:var(--text-dim);padding:20px;text-align:center">Данных пока нет. Появятся после первых AI-запросов через бота.</td></tr>'
+                : last10.map(day => {
+                    const isToday = day.date === today;
+                    return `<tr style="${isToday ? 'background:rgba(59,130,246,0.1);font-weight:600' : ''}">
+                        <td>${day.date}${isToday ? ' 🟢' : ''}</td>
+                        <td style="color:var(--yellow)">${fmtMoney(day.costUSD)}</td>
+                        <td>${fmtInt(day.requests)}</td>
+                        <td style="color:var(--text-sec)">${fmtInt(day.inputTokens + day.outputTokens)}</td>
+                    </tr>`;
+                }).join('');
+            const tableHtml = `<div style="overflow-x:auto"><table>
+                <thead><tr><th>Дата</th><th>Стоимость</th><th>Запросов</th><th>Токенов</th></tr></thead>
+                <tbody>${rowsHtml}</tbody>
+            </table></div>`;
+
+            body.innerHTML = kpiHtml + providersHtml + chartHtml + tableHtml;
+        }
+
         /* ══ THEME ══ */
         function toggleSaTheme() {
             const cur = document.documentElement.getAttribute('data-theme');

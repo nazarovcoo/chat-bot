@@ -6,6 +6,48 @@
   --tg-safe-right: env(safe-area-inset-right, 0px);
 }
 
+/* ── Telegram Mini App: full-screen + safe areas ─────────────────────────── */
+html.in-tma {
+  height: var(--app-height);
+  overflow: hidden;
+}
+
+html.in-tma body {
+  height: var(--app-height);
+  overflow: hidden;
+  overscroll-behavior: none;
+  padding-top: var(--tg-safe-top);
+  padding-left: var(--tg-safe-left);
+  padding-right: var(--tg-safe-right);
+}
+
+html.in-tma #projects-ui-root,
+html.in-tma .projects-app {
+  height: calc(var(--app-height) - var(--tg-safe-top));
+  max-height: calc(var(--app-height) - var(--tg-safe-top));
+}
+
+/* Scrollable areas get momentum scrolling */
+html.in-tma .cp-content,
+html.in-tma .projects-list,
+html.in-tma .cp-src-tbody,
+html.in-tma .cp-mob-drawer-body,
+html.in-tma .cp-test-messages {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Bottom nav should respect safe area */
+html.in-tma .cp-mobile-nav {
+  padding-bottom: var(--tg-safe-bottom);
+  height: calc(56px + var(--tg-safe-bottom));
+}
+
+html.in-tma .cp-main {
+  padding-bottom: calc(60px + var(--tg-safe-bottom)) !important;
+}
+
+/* ── iOS-specific height fix ─────────────────────────────────────────────── */
 html.miniapp-ios-fix,
 html.miniapp-ios-fix body {
   height: var(--app-height);
@@ -25,37 +67,46 @@ html.miniapp-ios-fix body {
 }
 
 html.miniapp-ios-fix #projects-ui-root,
-html.miniapp-ios-fix #onboarding-chat-overlay,
 html.miniapp-ios-fix .projects-app {
   height: calc(var(--app-height) - var(--tg-safe-top) - var(--tg-safe-bottom));
   max-height: calc(var(--app-height) - var(--tg-safe-top) - var(--tg-safe-bottom));
 }
 
-html.miniapp-ios-fix .projects-main {
-  min-height: 0;
-}
-
-html.miniapp-ios-fix .projects-content,
-html.miniapp-ios-fix .projects-list,
-html.miniapp-ios-fix .projects-virtual,
-html.miniapp-ios-fix .chat-area,
-html.miniapp-ios-fix .sidebar-scroll,
-html.miniapp-ios-fix .main-content {
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
+/* ── Tap target: prevent iOS double-tap zoom ─────────────────────────────── */
 @media (max-width: 980px) {
-  html.miniapp-ios-fix input,
-  html.miniapp-ios-fix textarea,
-  html.miniapp-ios-fix select,
-  html.miniapp-ios-fix button {
+  html.in-tma input,
+  html.in-tma textarea,
+  html.in-tma select,
+  html.in-tma button {
     font-size: 16px !important;
   }
 
-  html.miniapp-ios-fix input,
-  html.miniapp-ios-fix textarea,
-  html.miniapp-ios-fix select {
+  html.in-tma input,
+  html.in-tma textarea,
+  html.in-tma select {
     transform-origin: left top;
   }
+
+  /* Larger touch targets */
+  html.in-tma .projects-btn,
+  html.in-tma .cp-mobile-nav-item,
+  html.in-tma .cp-mob-proj-item {
+    min-height: 44px;
+  }
+}
+
+/* ── TMA: hide scrollbars on mobile ─────────────────────────────────────── */
+html.in-tma ::-webkit-scrollbar {
+  display: none;
+}
+html.in-tma * {
+  scrollbar-width: none;
+}
+
+/* ── Disable text selection on nav elements ──────────────────────────────── */
+html.in-tma .cp-mobile-nav,
+html.in-tma .cp-mob-drawer-header,
+html.in-tma .cp-mob-drawer-handle-row {
+  user-select: none;
+  -webkit-user-select: none;
 }

@@ -20,6 +20,15 @@
     ],
     "headers": [
       {
+        "source": "/",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
         "source": "/admin.html",
         "headers": [
           {
@@ -116,6 +125,10 @@
       {
         "source": "/api/generate-answer",
         "function": "generateAnswer"
+      },
+      {
+        "source": "/api/activate-promo",
+        "function": "activatePromo"
       },
       {
         "source": "/super-admin",
