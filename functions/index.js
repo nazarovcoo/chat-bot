@@ -1471,8 +1471,12 @@ exports.telegramWebhook = onRequest(
 
       // ── suggestButtons: send follow-up question buttons after AI reply ─────────
       if (_projectBehavior && _projectBehavior.suggestButtons) {
+        const kbTopics = kbItems.slice(0, 20).map(i => i.title || i.question || "").filter(Boolean).join(", ");
+        const suggestSystem = kbTopics
+          ? `Based on the knowledge base topics: ${kbTopics.slice(0, 400)}. Generate exactly 3 short relevant follow-up question buttons in the same language as the conversation. Return ONLY a valid JSON array of 3 strings, max 40 chars each.`
+          : 'Generate exactly 3 short follow-up question buttons in the same language as the conversation. Return ONLY a valid JSON array of 3 strings, max 40 chars each. Example: ["How much does it cost?","What is the delivery time?","How to order?"]';
         callAI('openai', 'gpt-4o-mini',
-          'Generate exactly 3 short follow-up question buttons in the same language as the conversation. Return ONLY a valid JSON array of 3 strings, max 40 chars each. Example: ["How much does it cost?","What is the delivery time?","How to order?"]',
+          suggestSystem,
           [{ role: 'user', content: question }, { role: 'assistant', content: answer }],
           80
         ).then(r => {
