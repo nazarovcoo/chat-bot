@@ -1764,7 +1764,30 @@
     window._cpAddProject = function () {
       var dd = root.querySelector(".proj-switcher-dd");
       if (dd) dd.remove();
-      window.openTelegramConnectModal("new");
+      // Force-open modal directly via DOM (bypasses nodes cache)
+      var bg = document.getElementById("tg-connect-modal");
+      if (bg) {
+        var inp = document.getElementById("tg-connect-token");
+        var err = document.getElementById("tg-connect-error");
+        var btn = document.getElementById("tg-connect-btn");
+        var tn = document.getElementById("tg-tab-new");
+        var te = document.getElementById("tg-tab-existing");
+        var sn = document.getElementById("tg-steps-new");
+        var se = document.getElementById("tg-steps-existing");
+        if (inp) inp.value = "";
+        if (err) err.textContent = "";
+        if (btn) { btn.disabled = false; btn.textContent = "Подключить"; }
+        if (tn) tn.classList.add("active");
+        if (te) te.classList.remove("active");
+        if (sn) sn.style.display = "flex";
+        if (se) se.style.display = "none";
+        bg.style.display = "flex";
+        bg.classList.add("open");
+        _tgMode = "new";
+        setTimeout(function () { if (inp) inp.focus(); }, 100);
+      } else {
+        window.openTelegramConnectModal("new");
+      }
     };
 
     function closeTelegramConnectModal() {
