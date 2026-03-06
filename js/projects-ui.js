@@ -2623,7 +2623,7 @@
       if (!switcherNodes) return;
 
       // Toggle: close if already open
-      var existingDd = root.querySelector(".proj-switcher-dd");
+      var existingDd = document.querySelector(".proj-switcher-dd");
       if (existingDd) { existingDd.remove(); return; }
 
       var dd = document.createElement("div");
@@ -2681,15 +2681,30 @@
       newProjBtn.innerHTML = "<svg style='pointer-events:none' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/></svg> Добавить проект";
       dd.appendChild(newProjBtn);
 
-      // Mount inside root (same stacking context as modal, avoids z-index conflicts)
-      root.appendChild(dd);
+      // Mount into body so position:fixed works relative to viewport
+      document.body.appendChild(dd);
       var rect = switcherNodes.getBoundingClientRect();
-      dd.style.top = (rect.bottom + 6) + "px";
-      dd.style.left = rect.left + "px";
-      var ddWidth = dd.offsetWidth || 220;
-      if (rect.left + ddWidth > window.innerWidth - 8) {
-        dd.style.left = (window.innerWidth - ddWidth - 8) + "px";
+      var ddW = dd.offsetWidth || 220;
+      var ddH = dd.offsetHeight || 300;
+      var spaceBelow = window.innerHeight - rect.bottom - 8;
+      var spaceAbove = rect.top - 8;
+
+      // Flip above anchor if not enough space below
+      if (spaceBelow < ddH && spaceAbove > spaceBelow) {
+        dd.style.top = Math.max(8, rect.top - ddH - 6) + "px";
+      } else {
+        dd.style.top = (rect.bottom + 6) + "px";
       }
+      // Clamp left so it stays within viewport
+      var left = rect.left;
+      if (left + ddW > window.innerWidth - 8) left = window.innerWidth - ddW - 8;
+      if (left < 8) left = 8;
+      dd.style.left = left + "px";
+
+      // Apply max-height so it never overflows viewport
+      var maxH = Math.min(window.innerHeight - 80, 400);
+      dd.style.maxHeight = maxH + "px";
+      dd.style.overflowY = "auto";
 
       // Outside-click closes dropdown
       function _outsideClick(e) {
