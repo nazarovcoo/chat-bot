@@ -122,3 +122,4 @@
 - [ ] Корректная работа чатов, источников и настроек без перезагрузки страницы.
 - [ ] Telegram-бот подключается и начинает обрабатывать сообщения из одного интерфейса.
 - [ ] Legacy-данные и новые проекты работают в единой модели без потерь.
+When making changes to frontend code, always run `firebase deploy --only hosting` to deploy frontend changes to production (createbotaiagent.com)

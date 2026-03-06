@@ -37,8 +37,8 @@
         userAgent: (navigator.userAgent || "").slice(0, 220),
         createdAtIso: nowIso(),
         timestamp: window.firebase.firestore.FieldValue.serverTimestamp(),
-      }).catch(function () {});
-    } catch (_) {}
+      }).catch(function () { });
+    } catch (_) { }
   }
 
   var tg = isTelegramMiniApp();
@@ -62,19 +62,36 @@
     if (tp.section_separator_color) root.style.setProperty("--tma-separator", tp.section_separator_color);
   }
 
+  // ── Apply Safe Area Insets (API 7.7+ / 8.0+) ────────────────────────────────
+  function applySafeAreas() {
+    var wa = getWebApp();
+    if (!wa) return;
+    var root = document.documentElement;
+    // Prefer contentSafeAreaInset (API 8.0+) over safeAreaInset (API 7.7+)
+    var sa = wa.contentSafeAreaInset || wa.safeAreaInset || null;
+    if (sa) {
+      if (typeof sa.top === "number") root.style.setProperty("--tg-safe-top", sa.top + "px");
+      if (typeof sa.bottom === "number") root.style.setProperty("--tg-safe-bottom", sa.bottom + "px");
+      if (typeof sa.left === "number") root.style.setProperty("--tg-safe-left", sa.left + "px");
+      if (typeof sa.right === "number") root.style.setProperty("--tg-safe-right", sa.right + "px");
+    }
+  }
+
+
   // ── Expand to full screen ────────────────────────────────────────────────────
   function expandApp() {
     var wa = getWebApp();
     if (!wa) return;
-    try { if (typeof wa.ready === "function") wa.ready(); } catch (_) {}
-    try { if (typeof wa.expand === "function") wa.expand(); } catch (_) {}
-    // Request fullscreen if supported (TMA 7.7+)
-    try { if (typeof wa.requestFullscreen === "function") wa.requestFullscreen(); } catch (_) {}
+    try { if (typeof wa.ready === "function") wa.ready(); } catch (_) { }
+    try { if (typeof wa.expand === "function") wa.expand(); } catch (_) { }
+    // We intentionally do NOT call requestFullscreen() here, so that the Mini App
+    // is rendered natively BELOW the Telegram "Close" header, preventing overlap.
+    // try { if (typeof wa.requestFullscreen === "function") wa.requestFullscreen(); } catch (_) {}
     // Disable vertical swipe to close
-    try { if (typeof wa.disableVerticalSwipes === "function") wa.disableVerticalSwipes(); } catch (_) {}
+    try { if (typeof wa.disableVerticalSwipes === "function") wa.disableVerticalSwipes(); } catch (_) { }
     // Set header color to match our UI
-    try { if (typeof wa.setHeaderColor === "function") wa.setHeaderColor("#ffffff"); } catch (_) {}
-    try { if (typeof wa.setBackgroundColor === "function") wa.setBackgroundColor("#f9f9fb"); } catch (_) {}
+    try { if (typeof wa.setHeaderColor === "function") wa.setHeaderColor("#ffffff"); } catch (_) { }
+    try { if (typeof wa.setBackgroundColor === "function") wa.setBackgroundColor("#f9f9fb"); } catch (_) { }
   }
 
   // ── Viewport height fix ──────────────────────────────────────────────────────
@@ -88,7 +105,7 @@
       if (!h || !Number.isFinite(h)) h = window.innerHeight || document.documentElement.clientHeight || 0;
       if (!h) return;
       document.documentElement.style.setProperty("--app-height", h + "px");
-    } catch (_) {}
+    } catch (_) { }
   }
 
   var _resizeRaf = 0;
@@ -104,6 +121,7 @@
     // Always expand in mini app
     expandApp();
     applyTmaTheme();
+    applySafeAreas();
 
     var wa = getWebApp();
 
@@ -112,8 +130,10 @@
       if (wa && typeof wa.onEvent === "function") {
         wa.onEvent("themeChanged", applyTmaTheme);
         wa.onEvent("viewportChanged", scheduleSetAppHeight);
+        wa.onEvent("safeAreaChanged", applySafeAreas);
+        wa.onEvent("contentSafeAreaChanged", applySafeAreas);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // iOS-specific fixes
     var enabled = !!window.MINIAPP_IOS_FIX;

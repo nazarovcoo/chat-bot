@@ -2956,7 +2956,7 @@
             "<span class='kb-topic-title'>" + esc(topic.question || "—") + "</span>" +
             "</div>" +
             "</div>" +
-            "<div class='cp-kb-cell cp-kb-chats kb-topic-chats'>" + asked + " чатов <span style='font-size:14px;color:#c4c4cc'>›</span></div>" +
+            "<div class='cp-kb-cell cp-kb-chats kb-topic-chats'>" + asked + " запросов <span style='font-size:14px;color:#c4c4cc'>›</span></div>" +
             "<div class='cp-kb-cell cp-kb-last kb-topic-last'>" + esc(lastLabel) + "</div>" +
             "<div class='cp-kb-cell'>" +
             "<button class='cp-kb-more-btn kb-topic-menu' data-kb-menu='" + esc(topic.id) + "'>" +
@@ -2970,7 +2970,7 @@
           "<div class='cp-kb-table-wrap'>" +
           "<div class='cp-kb-headrow'>" +
           "<div class='cp-kb-headcell kb-head-title'>Тема</div>" +
-          "<div class='cp-kb-headcell kb-head-chats'>Кол-во чатов</div>" +
+          "<div class='cp-kb-headcell kb-head-chats'>Запросов</div>" +
           "<div class='cp-kb-headcell kb-head-last'>Последний ответ</div>" +
           "<div class='cp-kb-headcell kb-head-menu'></div>" +
           "</div>" +

@@ -45,7 +45,7 @@
             body: JSON.stringify(payload)
           };
           if (idToken) opts.headers["Authorization"] = "Bearer " + idToken;
-          fetch("/api/log-client-event", opts).catch(function () {});
+          fetch("/api/log-client-event", opts).catch(function () { });
         }
 
         if (typeof firebase !== "undefined" && firebase.auth && firebase.auth().currentUser) {
@@ -87,8 +87,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
   <!-- PDF.js and Mammoth are loaded on demand to keep first paint faster -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="./css/miniapp.css?v=2026-02-28.1">
-  <script src="./js/miniapp.js?v=2026-02-28.1"></script>
+  <link rel="stylesheet" href="./css/miniapp.css?v=2026-03-06.1">
+  <script src="./js/miniapp.js?v=2026-03-06.1"></script>
   <script src="./js/state.js"></script>
   <script src="./js/api.js"></script>
   <script src="./js/ui.js"></script>
