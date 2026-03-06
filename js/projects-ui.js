@@ -2548,18 +2548,11 @@
           "<span class='proj-check'>✓</span></div>";
       });
 
-      html += "<button class='proj-switcher-new' id='switcher-new-proj'>" + _ic.plus + " Добавить проект</button>";
       dd.innerHTML = html;
 
-      var rect = switcherNodes.getBoundingClientRect();
-      dd.style.top = (rect.bottom + 4) + "px";
-      dd.style.left = rect.left + "px";
-      dd.style.minWidth = Math.max(rect.width, 220) + "px";
-      root.appendChild(dd);
-
-      dd.addEventListener("click", function (e) {
-        var item = e.target.closest(".proj-switcher-item");
-        if (item) {
+      // Project item clicks
+      dd.querySelectorAll(".proj-switcher-item").forEach(function (item) {
+        item.addEventListener("click", function () {
           var pid = item.getAttribute("data-id");
           if (pid !== state.activeProjectId) {
             state.activeProjectId = pid;
@@ -2577,21 +2570,19 @@
             renderTab();
           }
           dd.remove();
-          return;
-        }
-
-        if (e.target.closest("#switcher-new-proj")) {
-          dd.remove();
-          openCreateModal();
-          return;
-        }
-
-        if (e.target.closest("#switcher-tg-connect")) {
-          dd.remove();
-          if (typeof openTelegramConnectModal === 'function') openTelegramConnectModal();
-          return;
-        }
+        });
       });
+
+      // Add project button — direct binding, no event delegation
+      var newProjBtn = document.createElement("button");
+      newProjBtn.className = "proj-switcher-new";
+      newProjBtn.innerHTML = _ic.plus + " Добавить проект";
+      newProjBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        dd.remove();
+        openCreateModal();
+      });
+      dd.appendChild(newProjBtn);
 
       setTimeout(function () {
         document.addEventListener("click", function _h(e) {
