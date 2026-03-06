@@ -1760,20 +1760,28 @@
       }
     };
 
-    // Global hook used by project switcher dropdown button (onclick attribute)
+    // Global hook — called by sidebar + dropdown "Добавить проект" buttons
     window._cpAddProject = function () {
-      var dd = root.querySelector(".proj-switcher-dd");
+      // Close any open project switcher dropdown
+      var dd = document.querySelector(".proj-switcher-dd");
       if (dd) dd.remove();
-      // Force-open modal directly via DOM (bypasses nodes cache)
-      var bg = document.getElementById("tg-connect-modal");
+
+      _tgMode = "new";
+
+      // Try the pre-rendered modal first
+      var bg = nodes.tgModalBg ||
+               document.getElementById("tg-connect-modal") ||
+               root.querySelector(".tg-modal-bg");
+
       if (bg) {
-        var inp = document.getElementById("tg-connect-token");
-        var err = document.getElementById("tg-connect-error");
-        var btn = document.getElementById("tg-connect-btn");
-        var tn = document.getElementById("tg-tab-new");
-        var te = document.getElementById("tg-tab-existing");
-        var sn = document.getElementById("tg-steps-new");
-        var se = document.getElementById("tg-steps-existing");
+        // Reset form state
+        var inp = bg.querySelector("#tg-connect-token");
+        var err = bg.querySelector("#tg-connect-error");
+        var btn = bg.querySelector("#tg-connect-btn");
+        var tn  = bg.querySelector("#tg-tab-new");
+        var te  = bg.querySelector("#tg-tab-existing");
+        var sn  = bg.querySelector("#tg-steps-new");
+        var se  = bg.querySelector("#tg-steps-existing");
         if (inp) inp.value = "";
         if (err) err.textContent = "";
         if (btn) { btn.disabled = false; btn.textContent = "Подключить"; }
@@ -1781,13 +1789,32 @@
         if (te) te.classList.remove("active");
         if (sn) sn.style.display = "flex";
         if (se) se.style.display = "none";
-        bg.style.display = "flex";
+        // Force show — set inline style so no CSS rule can hide it
+        bg.style.cssText = "display:flex!important;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:999999;padding:18px;";
         bg.classList.add("open");
-        _tgMode = "new";
         setTimeout(function () { if (inp) inp.focus(); }, 100);
-      } else {
-        window.openTelegramConnectModal("new");
+        return;
       }
+
+      // Fallback: build a minimal overlay from scratch and append to body
+      var overlay = document.createElement("div");
+      overlay.id = "tg-connect-modal";
+      overlay.style.cssText = "display:flex;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:999999;padding:18px;";
+      overlay.innerHTML =
+        "<div style='background:#fff;border-radius:16px;padding:24px;width:min(480px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.15);'>" +
+        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;'>" +
+        "<h3 style='margin:0;font-size:18px;font-weight:700;'>Подключить Telegram бот</h3>" +
+        "<button onclick=\"document.getElementById('tg-connect-modal').remove()\" style='border:none;background:none;font-size:20px;cursor:pointer;color:#888;'>✕</button>" +
+        "</div>" +
+        "<p style='margin:0 0 12px;font-size:14px;color:#666;'>Откройте @BotFather, создайте бота (/newbot) и вставьте токен:</p>" +
+        "<input id='tg-connect-token' type='text' placeholder='Введите токен' style='width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:8px;box-sizing:border-box;'>" +
+        "<div id='tg-connect-error' style='color:#ef4444;font-size:13px;min-height:18px;margin-bottom:8px;'></div>" +
+        "<button id='tg-connect-btn' style='width:100%;background:#1e5cfb;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;'>Подключить</button>" +
+        "</div>";
+      document.body.appendChild(overlay);
+      overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.remove(); });
+      var inp2 = overlay.querySelector("#tg-connect-token");
+      if (inp2) setTimeout(function () { inp2.focus(); }, 100);
     };
 
     function closeTelegramConnectModal() {
@@ -4182,7 +4209,7 @@
         "Настройки</button>" +
         // Divider + New project + Quick actions
         "<div class='cp-agent-divider'></div>" +
-        "<button type='button' class='cp-agent-quick-btn' id='cp-new-project-btn' style='color:#1e5cfb;font-weight:600;'>" +
+        "<button type='button' class='cp-agent-quick-btn' id='cp-new-project-btn' style='color:#1e5cfb;font-weight:600;' onclick=\"window._cpAddProject&&window._cpAddProject()\">" +
         "<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#1e5cfb' stroke-width='2.2' stroke-linecap='round'><line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/></svg>" +
         "Добавить проект</button>" +
         "<div class='cp-agent-divider'></div>" +
