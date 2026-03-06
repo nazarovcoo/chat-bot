@@ -1013,7 +1013,7 @@
       if (drawerClose) drawerClose.addEventListener("click", closeDrawer);
       if (drawerBg) drawerBg.addEventListener("click", function (e) { if (e.target === drawerBg) closeDrawer(); });
       // New project from drawer
-      if (mobNewProj) mobNewProj.addEventListener("click", function () { closeDrawer(); window.openTelegramConnectModal("new"); });
+      if (mobNewProj) mobNewProj.addEventListener("click", function () { closeDrawer(); handleAddProjectClick("mobile-drawer"); });
 
       syncMobileNav();
     })();
@@ -1026,7 +1026,7 @@
       var quickTextBtn = root.querySelector("#cp-agent-text-btn");
       var quickRulesBtn = root.querySelector("#cp-agent-rules-btn");
       var newProjectBtn = root.querySelector("#cp-new-project-btn");
-      if (newProjectBtn) newProjectBtn.addEventListener("click", function () { window.openTelegramConnectModal("new"); });
+      if (newProjectBtn) newProjectBtn.addEventListener("click", function () { handleAddProjectClick("sidebar-addEventListener"); });
       var _lastQuickActionAt = 0;
       var _lastQuickActionKey = "";
 
@@ -1739,83 +1739,85 @@
 
     var _tgMode = "connect"; // "new" = create project, "connect" = link token to existing project
 
-    window.openTelegramConnectModal = function (mode) {
-      _tgMode = mode || "connect";
-      if (nodes.tgModalBg) nodes.tgModalBg.classList.add("open");
-      if (nodes.tgInputToken) {
-        nodes.tgInputToken.value = "";
-        setTimeout(function () { nodes.tgInputToken.focus(); }, 100);
-      }
-      if (nodes.tgBtnConnect) {
-        nodes.tgBtnConnect.textContent = "Подключить";
-        nodes.tgBtnConnect.disabled = false;
-      }
-      if (nodes.tgErrorMsg) nodes.tgErrorMsg.textContent = "";
-      // Reset tabs to "Новый" for new mode, keep default otherwise
-      if (_tgMode === "new" && nodes.tgTabNew && nodes.tgTabExisting) {
-        nodes.tgTabNew.classList.add("active");
-        nodes.tgTabExisting.classList.remove("active");
-        if (nodes.tgStepsNew) nodes.tgStepsNew.style.display = "flex";
-        if (nodes.tgStepsExisting) nodes.tgStepsExisting.style.display = "none";
-      }
-    };
-
-    // Global hook — called by sidebar + dropdown "Добавить проект" buttons
-    window._cpAddProject = function () {
-      // Close any open project switcher dropdown
+    // ── Single entry point — all "Добавить проект" buttons call this ──────────
+    function handleAddProjectClick(source) {
+      console.log("[ADD_PROJECT] 1 click received, source =", source);
+      console.log("[ADD_PROJECT] 2 handler entered");
       var dd = document.querySelector(".proj-switcher-dd");
       if (dd) dd.remove();
+      _openTelegramModal("new");
+    }
 
-      _tgMode = "new";
+    function _openTelegramModal(mode) {
+      console.log("[ADD_PROJECT] 3 openTelegramConnectModal called", { mode: mode });
+      _tgMode = mode || "connect";
 
-      // Try the pre-rendered modal first
-      var bg = nodes.tgModalBg ||
-               document.getElementById("tg-connect-modal") ||
-               root.querySelector(".tg-modal-bg");
+      var modalBg  = nodes.tgModalBg;
+      var modalEl  = document.getElementById("tg-connect-modal");
+      var modalQs  = root.querySelector(".tg-modal-bg");
+      console.log("[ADD_PROJECT] 4 modal lookup", {
+        nodesRef:       modalBg ? ("found, isConnected=" + modalBg.isConnected) : "null",
+        getElementById: modalEl ? "found" : "null",
+        querySelector:  modalQs ? "found" : "null"
+      });
 
-      if (bg) {
-        // Reset form state
-        var inp = bg.querySelector("#tg-connect-token");
-        var err = bg.querySelector("#tg-connect-error");
-        var btn = bg.querySelector("#tg-connect-btn");
-        var tn  = bg.querySelector("#tg-tab-new");
-        var te  = bg.querySelector("#tg-tab-existing");
-        var sn  = bg.querySelector("#tg-steps-new");
-        var se  = bg.querySelector("#tg-steps-existing");
-        if (inp) inp.value = "";
-        if (err) err.textContent = "";
-        if (btn) { btn.disabled = false; btn.textContent = "Подключить"; }
-        if (tn) tn.classList.add("active");
-        if (te) te.classList.remove("active");
-        if (sn) sn.style.display = "flex";
-        if (se) se.style.display = "none";
-        // Force show — set inline style so no CSS rule can hide it
-        bg.style.cssText = "display:flex!important;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:999999;padding:18px;";
-        bg.classList.add("open");
-        setTimeout(function () { if (inp) inp.focus(); }, 100);
+      var bg = modalBg || modalEl || modalQs;
+      if (!bg) {
+        console.log("[ADD_PROJECT] 4b CRITICAL: no modal element in DOM at all");
         return;
       }
 
-      // Fallback: build a minimal overlay from scratch and append to body
-      var overlay = document.createElement("div");
-      overlay.id = "tg-connect-modal";
-      overlay.style.cssText = "display:flex;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:999999;padding:18px;";
-      overlay.innerHTML =
-        "<div style='background:#fff;border-radius:16px;padding:24px;width:min(480px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.15);'>" +
-        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;'>" +
-        "<h3 style='margin:0;font-size:18px;font-weight:700;'>Подключить Telegram бот</h3>" +
-        "<button onclick=\"document.getElementById('tg-connect-modal').remove()\" style='border:none;background:none;font-size:20px;cursor:pointer;color:#888;'>✕</button>" +
-        "</div>" +
-        "<p style='margin:0 0 12px;font-size:14px;color:#666;'>Откройте @BotFather, создайте бота (/newbot) и вставьте токен:</p>" +
-        "<input id='tg-connect-token' type='text' placeholder='Введите токен' style='width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 12px;font-size:15px;margin-bottom:8px;box-sizing:border-box;'>" +
-        "<div id='tg-connect-error' style='color:#ef4444;font-size:13px;min-height:18px;margin-bottom:8px;'></div>" +
-        "<button id='tg-connect-btn' style='width:100%;background:#1e5cfb;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;'>Подключить</button>" +
-        "</div>";
-      document.body.appendChild(overlay);
-      overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.remove(); });
-      var inp2 = overlay.querySelector("#tg-connect-token");
-      if (inp2) setTimeout(function () { inp2.focus(); }, 100);
-    };
+      var cs = window.getComputedStyle(bg);
+      console.log("[ADD_PROJECT] 5 before open state", {
+        hasOpenClass: bg.classList.contains("open"),
+        display:      cs.display,
+        visibility:   cs.visibility,
+        opacity:      cs.opacity,
+        zIndex:       cs.zIndex,
+        inlineStyle:  bg.getAttribute("style")
+      });
+
+      // Reset form
+      var inp = bg.querySelector("#tg-connect-token");
+      var err = bg.querySelector("#tg-connect-error");
+      var btn = bg.querySelector("#tg-connect-btn");
+      var tn  = bg.querySelector("#tg-tab-new");
+      var te  = bg.querySelector("#tg-tab-existing");
+      var sn  = bg.querySelector("#tg-steps-new");
+      var se  = bg.querySelector("#tg-steps-existing");
+      if (inp) inp.value = "";
+      if (err) err.textContent = "";
+      if (btn) { btn.disabled = false; btn.textContent = "Подключить"; }
+      if (_tgMode === "new" && tn && te) {
+        tn.classList.add("active");
+        te.classList.remove("active");
+        if (sn) sn.style.display = "flex";
+        if (se) se.style.display = "none";
+      }
+
+      bg.classList.add("open");
+      bg.style.display = "flex";
+      bg.style.position = "fixed";
+      bg.style.zIndex = "999999";
+      if (inp) setTimeout(function () { inp.focus(); }, 100);
+
+      var cs2 = window.getComputedStyle(bg);
+      console.log("[ADD_PROJECT] 6 after open state", {
+        hasOpenClass:  bg.classList.contains("open"),
+        display:       cs2.display,
+        visibility:    cs2.visibility,
+        opacity:       cs2.opacity,
+        zIndex:        cs2.zIndex,
+        inlineStyle:   bg.getAttribute("style"),
+        offsetWidth:   bg.offsetWidth,
+        offsetHeight:  bg.offsetHeight
+      });
+    }
+
+    // Public aliases — backward compatible with onclick attributes
+    window.openTelegramConnectModal = function (mode) { _openTelegramModal(mode); };
+    window._cpAddProject = function () { handleAddProjectClick("legacy-_cpAddProject"); };
+    window._cpHandleAddProject = handleAddProjectClick;
 
     function closeTelegramConnectModal() {
       if (nodes.tgModalBg) nodes.tgModalBg.classList.remove("open");
@@ -1917,8 +1919,8 @@
       });
     }
 
-    if (nodes.btnNew) nodes.btnNew.addEventListener("click", function () { window.openTelegramConnectModal("new"); });
-    if (nodes.btnNew2) nodes.btnNew2.addEventListener("click", function () { window.openTelegramConnectModal("new"); });
+    if (nodes.btnNew) nodes.btnNew.addEventListener("click", function () { handleAddProjectClick("btnNew"); });
+    if (nodes.btnNew2) nodes.btnNew2.addEventListener("click", function () { handleAddProjectClick("btnNew2"); });
     if (nodes.modalClose) nodes.modalClose.addEventListener("click", closeCreateModal);
     if (nodes.modalCancel) nodes.modalCancel.addEventListener("click", closeCreateModal);
     if (nodes.modal) nodes.modal.addEventListener("click", function (e) {
@@ -2745,6 +2747,7 @@
     }
 
     function renderHeader() {
+      console.log("[ADD_PROJECT] 7 renderHeader called");
       var p = getActiveProject();
 
       // Wire sidebar header click → openProjectSwitcher
@@ -2865,11 +2868,12 @@
     }
 
     async function renderTab() {
+      console.log("[ADD_PROJECT] 7 renderTab called");
       if (state.tab === "finance") { renderFinanceView(); return; }
       if (!state.activeProjectId) {
         nodes.content.innerHTML = emptyHtml();
         var b = root.querySelector("#projects-new-empty");
-        if (b) b.addEventListener("click", function () { window.openTelegramConnectModal("new"); });
+        if (b) b.addEventListener("click", function () { handleAddProjectClick("empty-state"); });
         return;
       }
       if (state.tab === "analytics") { renderAnalyticsView(); return; }
