@@ -7,7 +7,7 @@
   --tg-safe-right: var(--tg-content-safe-area-inset-right, var(--tg-safe-area-inset-right, env(safe-area-inset-right, 0px)));
 }
 
-/* ── Telegram Mini App: full-screen + safe areas ─────────────────────────── */
+/* ── TMA: full-screen + safe areas ─────────────────────────────────────── */
 html.in-tma {
   height: var(--app-height);
   overflow: hidden;
@@ -28,7 +28,17 @@ html.in-tma .projects-app {
   max-height: calc(var(--app-height) - var(--tg-safe-top));
 }
 
-/* Scrollable areas get momentum scrolling */
+/* ── TMA: hide sidebar, use bottom tab bar ──────────────────────────────── */
+html.in-tma .sidebar {
+  display: none !important;
+}
+
+html.in-tma .main {
+  margin-left: 0 !important;
+  padding-bottom: calc(60px + var(--tg-safe-bottom)) !important;
+}
+
+/* Scrollable areas */
 html.in-tma .cp-content,
 html.in-tma .projects-list,
 html.in-tma .cp-src-tbody,
@@ -38,14 +48,145 @@ html.in-tma .cp-test-messages {
   overscroll-behavior: contain;
 }
 
-/* Bottom nav should respect safe area */
-html.in-tma .cp-mobile-nav {
-  padding-bottom: var(--tg-safe-bottom);
-  height: calc(56px + var(--tg-safe-bottom));
+/* ── Bottom tab bar ─────────────────────────────────────────────────────── */
+.tma-tab-bar {
+  display: none;
 }
 
-html.in-tma .cp-main {
-  padding-bottom: calc(60px + var(--tg-safe-bottom)) !important;
+html.in-tma .tma-tab-bar {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(56px + var(--tg-safe-bottom));
+  background: var(--tma-bg, #ffffff);
+  border-top: 1px solid var(--tma-separator, rgba(0, 0, 0, 0.10));
+  z-index: 500;
+  padding-bottom: var(--tg-safe-bottom);
+}
+
+.tma-tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 6px 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--tma-hint, #8e8e93);
+  transition: color 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tma-tab-item.active {
+  color: var(--tma-btn, #3e7bfa);
+}
+
+.tma-tab-item svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.tma-tab-item.active svg {
+  transform: scale(1.1);
+}
+
+/* ── Screen slide transitions ───────────────────────────────────────────── */
+html.in-tma .screen {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+html.in-tma .screen.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Skeleton loading ───────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #f0f2f5 25%, #e4e7eb 50%, #f0f2f5 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  border-radius: 8px;
+  display: block;
+}
+
+@keyframes skeleton-pulse {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Pull-to-refresh indicator ──────────────────────────────────────────── */
+.tma-ptr {
+  display: none;
+  position: fixed;
+  top: var(--tg-safe-top);
+  left: 50%;
+  transform: translateX(-50%) translateY(-60px);
+  background: var(--tma-bg, #ffffff);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  opacity: 0;
+  color: var(--tma-btn, #3e7bfa);
+}
+
+html.in-tma .tma-ptr {
+  display: flex;
+}
+
+.tma-ptr.ptr-visible {
+  transform: translateX(-50%) translateY(12px);
+}
+
+.tma-ptr.ptr-loading svg {
+  animation: ptr-spin 0.7s linear infinite;
+}
+
+@keyframes ptr-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Dark theme ─────────────────────────────────────────────────────────── */
+html.in-tma.tma-dark {
+  color-scheme: dark;
+}
+
+html.in-tma.tma-dark body {
+  background: var(--tma-bg, #1c1c1e);
+  color: var(--tma-text, #f2f2f7);
+}
+
+html.in-tma.tma-dark .topbar,
+html.in-tma.tma-dark .screen,
+html.in-tma.tma-dark .card,
+html.in-tma.tma-dark .modal-box,
+html.in-tma.tma-dark .modal-content {
+  background: var(--tma-bg2, #2c2c2e);
+  border-color: var(--tma-separator, rgba(255, 255, 255, 0.10));
+}
+
+html.in-tma.tma-dark .skeleton {
+  background: linear-gradient(90deg, #2c2c2e 25%, #3a3a3c 50%, #2c2c2e 75%);
+  background-size: 200% 100%;
+}
+
+html.in-tma.tma-dark .tma-ptr {
+  background: var(--tma-bg2, #2c2c2e);
 }
 
 /* ── iOS-specific height fix ─────────────────────────────────────────────── */
@@ -88,7 +229,6 @@ html.miniapp-ios-fix .projects-app {
     transform-origin: left top;
   }
 
-  /* Larger touch targets */
   html.in-tma .projects-btn,
   html.in-tma .cp-mobile-nav-item,
   html.in-tma .cp-mob-proj-item {
@@ -96,16 +236,17 @@ html.miniapp-ios-fix .projects-app {
   }
 }
 
-/* ── TMA: hide scrollbars on mobile ─────────────────────────────────────── */
+/* ── TMA: hide scrollbars ────────────────────────────────────────────────── */
 html.in-tma ::-webkit-scrollbar {
   display: none;
 }
+
 html.in-tma * {
   scrollbar-width: none;
 }
 
-/* ── Disable text selection on nav elements ──────────────────────────────── */
-html.in-tma .cp-mobile-nav,
+/* ── Disable text selection on nav ─────────────────────────────────────── */
+html.in-tma .tma-tab-bar,
 html.in-tma .cp-mob-drawer-header,
 html.in-tma .cp-mob-drawer-handle-row {
   user-select: none;

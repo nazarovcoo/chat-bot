@@ -1469,18 +1469,7 @@ exports.telegramWebhook = onRequest(
 
       // No automatic fallback — AI answers from its knowledge if KB has no match
 
-      // ── suggestButtons: send follow-up question buttons from KB (no API call) ────
-      if (_projectBehavior && _projectBehavior.suggestButtons) {
-        const kbTitles = kbItems.map(i => i.title || i.question || "").filter(t => t.length > 3 && t.length <= 40);
-        if (kbTitles.length >= 3) {
-          const shuffled = kbTitles.sort(() => Math.random() - 0.5).slice(0, 3);
-          const keyboard = shuffled.map(b => ([{ text: b }]));
-          fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: chatId, text: '💬', reply_markup: { keyboard, resize_keyboard: true, one_time_keyboard: true } }),
-          }).catch(() => {});
-        }
-      }
+      // suggestButtons disabled — bot responds with text only
 
       // Non-critical: log usage/topics + limit notifications
       const newUsageCount = usageCount + 1;
