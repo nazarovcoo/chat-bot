@@ -2651,13 +2651,18 @@
       newProjBtn.innerHTML = "<svg style='pointer-events:none' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/></svg> Добавить проект";
       newProjBtn.addEventListener("click", function (e) {
         e.stopPropagation();
+        e.preventDefault();
         _closeDd();
-        // Defer slightly so dropdown removal finishes before modal mounts
-        setTimeout(function () {
-          if (window.openTelegramConnectModal) {
+        // Use requestAnimationFrame to ensure dropdown DOM is removed first,
+        // then open the modal via the same sidebar button click (known-working path)
+        requestAnimationFrame(function () {
+          var sidebarAddBtn = root.querySelector("#cp-new-project-btn");
+          if (sidebarAddBtn) {
+            sidebarAddBtn.click();
+          } else if (window.openTelegramConnectModal) {
             window.openTelegramConnectModal("new");
           }
-        }, 0);
+        });
       });
       dd.appendChild(newProjBtn);
 
