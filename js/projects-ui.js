@@ -2592,13 +2592,25 @@
       var switcherNodes = anchorEl || root.querySelector(".cp-topbar-left");
       if (!switcherNodes) return;
 
-      // Remove existing dropdown if any
+      // Toggle: close if already open
       var existingDd = document.querySelector(".proj-switcher-dd");
       if (existingDd) { existingDd.remove(); return; }
 
       var dd = document.createElement("div");
       dd.className = "proj-switcher-dd";
 
+      // Track whether we've already handled close to avoid double-calls
+      var _closed = false;
+      function _closeDd() {
+        if (_closed) return;
+        _closed = true;
+        if (dd.parentNode) dd.remove();
+        var arrow = root.querySelector("#cp-desk-sw-arrow");
+        if (arrow) arrow.classList.remove("open");
+        document.removeEventListener("click", _outsideClick);
+      }
+
+      // Project list
       var html = "";
       state.projects.forEach(function (p) {
         var isActive = p.id === state.activeProjectId;
@@ -2607,13 +2619,12 @@
           "<span class='project-name'>" + esc(p.name) + "</span>" +
           "<span class='proj-check'>✓</span></div>";
       });
-
       dd.innerHTML = html;
 
-      // Project item clicks
       dd.querySelectorAll(".proj-switcher-item").forEach(function (item) {
         item.addEventListener("click", function () {
           var pid = item.getAttribute("data-id");
+          _closeDd();
           if (pid !== state.activeProjectId) {
             state.activeProjectId = pid;
             _lsSet("cp_proj", pid);
@@ -2629,46 +2640,45 @@
             renderSidebar();
             renderTab();
           }
-          dd.remove();
         });
       });
 
-      // Add project button — direct binding, no event delegation
+      // "+ Добавить проект" button
       var newProjBtn = document.createElement("button");
+      newProjBtn.type = "button";
       newProjBtn.className = "proj-switcher-new";
-      newProjBtn.innerHTML = _ic.plus + " Добавить проект";
+      // pointer-events:none on SVG so clicks always land on the button element
+      newProjBtn.innerHTML = "<svg style='pointer-events:none' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/></svg> Добавить проект";
       newProjBtn.addEventListener("click", function (e) {
         e.stopPropagation();
-        dd.remove();
-        window.openTelegramConnectModal("new");
+        _closeDd();
+        // Defer slightly so dropdown removal finishes before modal mounts
+        setTimeout(function () {
+          if (window.openTelegramConnectModal) {
+            window.openTelegramConnectModal("new");
+          }
+        }, 0);
       });
       dd.appendChild(newProjBtn);
 
-      // Position and mount dropdown below anchor
+      // Mount and position below anchor
       document.body.appendChild(dd);
       var rect = switcherNodes.getBoundingClientRect();
       dd.style.top = (rect.bottom + 6) + "px";
       dd.style.left = rect.left + "px";
-      // Keep within viewport right edge
       var ddWidth = dd.offsetWidth || 220;
       if (rect.left + ddWidth > window.innerWidth - 8) {
         dd.style.left = (window.innerWidth - ddWidth - 8) + "px";
       }
 
-      function _closeDd() {
-        dd.remove();
-        // Reset any arrow chevron
-        var arrow = root.querySelector("#cp-desk-sw-arrow");
-        if (arrow) arrow.classList.remove("open");
-        document.removeEventListener("click", _h);
-      }
-      function _h(e) {
+      // Outside-click closes dropdown (delayed so opening click doesn't trigger it)
+      function _outsideClick(e) {
         if (!dd.contains(e.target) && !switcherNodes.contains(e.target)) {
           _closeDd();
         }
       }
       setTimeout(function () {
-        document.addEventListener("click", _h);
+        document.addEventListener("click", _outsideClick);
       }, 0);
     }
 
