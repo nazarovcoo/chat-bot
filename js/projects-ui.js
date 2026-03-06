@@ -2582,11 +2582,7 @@
 
         if (e.target.closest("#switcher-new-proj")) {
           dd.remove();
-          if (window.startCreateWizard) {
-            window.startCreateWizard();
-          } else if (typeof openCreateModal === 'function') {
-            openCreateModal();
-          }
+          openCreateModal();
           return;
         }
 
