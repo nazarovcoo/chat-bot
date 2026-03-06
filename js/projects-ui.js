@@ -1771,12 +1771,14 @@
 
     if (nodes.tgTabNew && nodes.tgTabExisting) {
       nodes.tgTabNew.addEventListener("click", function () {
+        _tgMode = "new";
         nodes.tgTabNew.classList.add("active");
         nodes.tgTabExisting.classList.remove("active");
         if (nodes.tgStepsNew) nodes.tgStepsNew.style.display = "flex";
         if (nodes.tgStepsExisting) nodes.tgStepsExisting.style.display = "none";
       });
       nodes.tgTabExisting.addEventListener("click", function () {
+        _tgMode = "connect";
         nodes.tgTabExisting.classList.add("active");
         nodes.tgTabNew.classList.remove("active");
         if (nodes.tgStepsExisting) nodes.tgStepsExisting.style.display = "flex";
@@ -2642,13 +2644,31 @@
       });
       dd.appendChild(newProjBtn);
 
+      // Position and mount dropdown below anchor
+      document.body.appendChild(dd);
+      var rect = switcherNodes.getBoundingClientRect();
+      dd.style.top = (rect.bottom + 6) + "px";
+      dd.style.left = rect.left + "px";
+      // Keep within viewport right edge
+      var ddWidth = dd.offsetWidth || 220;
+      if (rect.left + ddWidth > window.innerWidth - 8) {
+        dd.style.left = (window.innerWidth - ddWidth - 8) + "px";
+      }
+
+      function _closeDd() {
+        dd.remove();
+        // Reset any arrow chevron
+        var arrow = root.querySelector("#cp-desk-sw-arrow");
+        if (arrow) arrow.classList.remove("open");
+        document.removeEventListener("click", _h);
+      }
+      function _h(e) {
+        if (!dd.contains(e.target) && !switcherNodes.contains(e.target)) {
+          _closeDd();
+        }
+      }
       setTimeout(function () {
-        document.addEventListener("click", function _h(e) {
-          if (!dd.contains(e.target) && !switcherNodes.contains(e.target)) {
-            dd.remove();
-            document.removeEventListener("click", _h);
-          }
-        });
+        document.addEventListener("click", _h);
       }, 0);
     }
 
