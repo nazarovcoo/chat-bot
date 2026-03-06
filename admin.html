@@ -8,7 +8,7 @@
   <title>BotPanel — Создайте AI-бота для Telegram за 5 минут</title>
 
   <script>
-    window.BUILD_VERSION = "2026-03-06.14";
+    window.BUILD_VERSION = "2026-03-06.15";
     window.FORCE_PROJECTS_MAIN = true;
     (function initMiniAppIosFixFlag() {
       try {
@@ -15972,8 +15972,8 @@ ${kbSummary}`,
 
         (async () => {
           try {
-            await loadScript('/js/projects-api.js?v=2026-03-06.14');
-            await loadScript('/js/projects-ui.js?v=2026-03-06.14');
+            await loadScript('/js/projects-api.js?v=2026-03-06.15');
+            await loadScript('/js/projects-ui.js?v=2026-03-06.15');
             if (!window.ProjectsUI) throw new Error('Projects UI module not loaded');
             // In Telegram Mini App auth can lag; wait for user token before mounting API-driven UI.
             await waitForProjectsAuth(12000);

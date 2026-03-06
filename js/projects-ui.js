@@ -1740,42 +1740,19 @@
     var _tgMode = "connect"; // "new" = create project, "connect" = link token to existing project
 
     // ── Single entry point — all "Добавить проект" buttons call this ──────────
-    function handleAddProjectClick(source) {
-      console.log("[ADD_PROJECT] 1 click received, source =", source);
-      console.log("[ADD_PROJECT] 2 handler entered");
+    function handleAddProjectClick() {
       var dd = document.querySelector(".proj-switcher-dd");
       if (dd) dd.remove();
       _openTelegramModal("new");
     }
 
     function _openTelegramModal(mode) {
-      console.log("[ADD_PROJECT] 3 openTelegramConnectModal called", { mode: mode });
       _tgMode = mode || "connect";
 
-      var modalBg  = nodes.tgModalBg;
-      var modalEl  = document.getElementById("tg-connect-modal");
-      var modalQs  = root.querySelector(".tg-modal-bg");
-      console.log("[ADD_PROJECT] 4 modal lookup", {
-        nodesRef:       modalBg ? ("found, isConnected=" + modalBg.isConnected) : "null",
-        getElementById: modalEl ? "found" : "null",
-        querySelector:  modalQs ? "found" : "null"
-      });
-
-      var bg = modalBg || modalEl || modalQs;
-      if (!bg) {
-        console.log("[ADD_PROJECT] 4b CRITICAL: no modal element in DOM at all");
-        return;
-      }
-
-      var cs = window.getComputedStyle(bg);
-      console.log("[ADD_PROJECT] 5 before open state", {
-        hasOpenClass: bg.classList.contains("open"),
-        display:      cs.display,
-        visibility:   cs.visibility,
-        opacity:      cs.opacity,
-        zIndex:       cs.zIndex,
-        inlineStyle:  bg.getAttribute("style")
-      });
+      var bg = nodes.tgModalBg ||
+               document.getElementById("tg-connect-modal") ||
+               root.querySelector(".tg-modal-bg");
+      if (!bg) return;
 
       // Reset form
       var inp = bg.querySelector("#tg-connect-token");
@@ -1788,43 +1765,33 @@
       if (inp) inp.value = "";
       if (err) err.textContent = "";
       if (btn) { btn.disabled = false; btn.textContent = "Подключить"; }
-      if (_tgMode === "new" && tn && te) {
-        tn.classList.add("active");
-        te.classList.remove("active");
-        if (sn) sn.style.display = "flex";
-        if (se) se.style.display = "none";
-      }
+      // Always reset tabs to match requested mode
+      if (tn) tn.className = _tgMode === "new" ? "tg-tab active" : "tg-tab";
+      if (te) te.className = _tgMode === "new" ? "tg-tab" : "tg-tab active";
+      if (sn) sn.style.display = _tgMode === "new" ? "flex" : "none";
+      if (se) se.style.display = _tgMode === "new" ? "none" : "flex";
 
       // Move to document.body to escape #projects-ui-root stacking context
-      // (Telegram WebView creates its own stacking context that clips children
-      //  of position:fixed ancestors with finite z-index like #projects-ui-root)
+      // (Telegram WebView clips position:fixed children of z-indexed ancestors)
       if (bg.parentNode !== document.body) {
         document.body.appendChild(bg);
       }
       bg.classList.add("open");
       bg.style.cssText = "display:flex;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:2147483647;padding:18px;box-sizing:border-box;";
       if (inp) setTimeout(function () { inp.focus(); }, 100);
-
-      var cs2 = window.getComputedStyle(bg);
-      console.log("[ADD_PROJECT] 6 after open state", {
-        hasOpenClass:  bg.classList.contains("open"),
-        display:       cs2.display,
-        visibility:    cs2.visibility,
-        opacity:       cs2.opacity,
-        zIndex:        cs2.zIndex,
-        inlineStyle:   bg.getAttribute("style"),
-        offsetWidth:   bg.offsetWidth,
-        offsetHeight:  bg.offsetHeight
-      });
     }
 
     // Public aliases — backward compatible with onclick attributes
     window.openTelegramConnectModal = function (mode) { _openTelegramModal(mode); };
-    window._cpAddProject = function () { handleAddProjectClick("legacy-_cpAddProject"); };
+    window._cpAddProject = function () { handleAddProjectClick(); };
     window._cpHandleAddProject = handleAddProjectClick;
 
     function closeTelegramConnectModal() {
-      if (nodes.tgModalBg) nodes.tgModalBg.classList.remove("open");
+      var bg = nodes.tgModalBg || document.getElementById("tg-connect-modal");
+      if (bg) {
+        bg.classList.remove("open");
+        bg.style.display = "none";
+      }
     }
 
     if (nodes.tgModalClose) nodes.tgModalClose.addEventListener("click", closeTelegramConnectModal);
@@ -2751,7 +2718,6 @@
     }
 
     function renderHeader() {
-      console.log("[ADD_PROJECT] 7 renderHeader called");
       var p = getActiveProject();
 
       // Wire sidebar header click → openProjectSwitcher
@@ -2872,7 +2838,6 @@
     }
 
     async function renderTab() {
-      console.log("[ADD_PROJECT] 7 renderTab called");
       if (state.tab === "finance") { renderFinanceView(); return; }
       if (!state.activeProjectId) {
         nodes.content.innerHTML = emptyHtml();
