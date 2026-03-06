@@ -196,10 +196,10 @@
       // ── Source / create modals ─────────────────────────────────────────────
       ".projects-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:100001;padding:18px}",
       ".projects-modal-bg.open{display:flex}",
-      ".projects-modal{width:min(640px,100%);border:1px solid #e5e5ea;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.12)}",
-      ".projects-modal-h{padding:16px;border-bottom:1px solid #e5e5ea;display:flex;justify-content:space-between;align-items:center}",
-      ".projects-modal-b{padding:16px}",
-      ".projects-modal-f{padding:12px 16px;border-top:1px solid #e5e5ea;background:#f9f9fb;display:flex;justify-content:flex-end;gap:8px}",
+      ".projects-modal{width:min(640px,100%);border:1px solid #e5e5ea;border-radius:16px;background:#fff;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.12);display:flex;flex-direction:column;max-height:92dvh}",
+      ".projects-modal-h{padding:16px;border-bottom:1px solid #e5e5ea;display:flex;justify-content:space-between;align-items:center;flex-shrink:0}",
+      ".projects-modal-b{padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1}",
+      ".projects-modal-f{padding:12px 16px;border-top:1px solid #e5e5ea;background:#f9f9fb;display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}",
       ".src-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:100001;padding:18px}",
       ".src-modal-bg.open{display:flex}",
       ".src-modal{width:min(560px,100%);border:1px solid #e5e5ea;border-radius:20px;background:#fff;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.16);display:flex;flex-direction:column;max-height:82dvh}",
@@ -3910,7 +3910,10 @@
       state.createInFlight = false;
       nodes.modalCreate.disabled = false;
       nodes.modalCreate.textContent = I18n.t('createProject');
-      nodes.createName.focus();
+      // Skip auto-focus in Telegram Mini App to prevent keyboard from shifting the modal
+      if (!document.documentElement.classList.contains("in-tma")) {
+        nodes.createName.focus();
+      }
     }
 
     function closeCreateModal() {
