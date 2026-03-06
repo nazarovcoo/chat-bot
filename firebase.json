@@ -139,6 +139,10 @@
         "destination": "/super-admin.html"
       },
       {
+        "source": "/mobile",
+        "destination": "/mobile.html"
+      },
+      {
         "source": "/",
         "destination": "/admin.html"
       },
