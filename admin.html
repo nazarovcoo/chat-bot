@@ -15972,8 +15972,8 @@ ${kbSummary}`,
 
         (async () => {
           try {
-            await loadScript('/js/projects-api.js?v=2026-03-06.4');
-            await loadScript('/js/projects-ui.js?v=2026-03-06.4');
+            await loadScript('/js/projects-api.js?v=2026-03-06.5');
+            await loadScript('/js/projects-ui.js?v=2026-03-06.5');
             if (!window.ProjectsUI) throw new Error('Projects UI module not loaded');
             // In Telegram Mini App auth can lag; wait for user token before mounting API-driven UI.
             await waitForProjectsAuth(12000);

@@ -900,6 +900,7 @@
       tgStepsExisting: root.querySelector("#tg-steps-existing"),
       tgInputToken: root.querySelector("#tg-connect-token"),
       tgBtnConnect: root.querySelector("#tg-connect-btn"),
+      tgErrorMsg: root.querySelector("#tg-connect-error"),
       srcClose: root.querySelector("#src-close"),
       srcBack: root.querySelector("#src-back"),
       srcTitle: root.querySelector("#src-title"),
@@ -1012,7 +1013,7 @@
       if (drawerClose) drawerClose.addEventListener("click", closeDrawer);
       if (drawerBg) drawerBg.addEventListener("click", function (e) { if (e.target === drawerBg) closeDrawer(); });
       // New project from drawer
-      if (mobNewProj) mobNewProj.addEventListener("click", function () { closeDrawer(); openCreateModal(); });
+      if (mobNewProj) mobNewProj.addEventListener("click", function () { closeDrawer(); window.openTelegramConnectModal("new"); });
 
       syncMobileNav();
     })();
@@ -1025,7 +1026,7 @@
       var quickTextBtn = root.querySelector("#cp-agent-text-btn");
       var quickRulesBtn = root.querySelector("#cp-agent-rules-btn");
       var newProjectBtn = root.querySelector("#cp-new-project-btn");
-      if (newProjectBtn) newProjectBtn.addEventListener("click", openCreateModal);
+      if (newProjectBtn) newProjectBtn.addEventListener("click", function () { window.openTelegramConnectModal("new"); });
       var _lastQuickActionAt = 0;
       var _lastQuickActionKey = "";
 
@@ -1736,7 +1737,10 @@
       });
     }
 
-    window.openTelegramConnectModal = function () {
+    var _tgMode = "connect"; // "new" = create project, "connect" = link token to existing project
+
+    window.openTelegramConnectModal = function (mode) {
+      _tgMode = mode || "connect";
       if (nodes.tgModalBg) nodes.tgModalBg.classList.add("open");
       if (nodes.tgInputToken) {
         nodes.tgInputToken.value = "";
@@ -1745,6 +1749,14 @@
       if (nodes.tgBtnConnect) {
         nodes.tgBtnConnect.textContent = "Подключить";
         nodes.tgBtnConnect.disabled = false;
+      }
+      if (nodes.tgErrorMsg) nodes.tgErrorMsg.textContent = "";
+      // Reset tabs to "Новый" for new mode, keep default otherwise
+      if (_tgMode === "new" && nodes.tgTabNew && nodes.tgTabExisting) {
+        nodes.tgTabNew.classList.add("active");
+        nodes.tgTabExisting.classList.remove("active");
+        if (nodes.tgStepsNew) nodes.tgStepsNew.style.display = "flex";
+        if (nodes.tgStepsExisting) nodes.tgStepsExisting.style.display = "none";
       }
     };
 
@@ -1772,38 +1784,82 @@
       });
     }
 
+    if (nodes.tgInputToken) {
+      nodes.tgInputToken.addEventListener("input", function () {
+        if (nodes.tgErrorMsg) nodes.tgErrorMsg.textContent = "";
+        if (nodes.tgBtnConnect) nodes.tgBtnConnect.disabled = !nodes.tgInputToken.value.trim();
+      });
+    }
+
     if (nodes.tgBtnConnect) {
       nodes.tgBtnConnect.addEventListener("click", async function () {
         var token = (nodes.tgInputToken.value || "").trim();
         if (!token) {
-          alert("Пожалуйста, введите токен.");
+          if (nodes.tgErrorMsg) nodes.tgErrorMsg.textContent = "Пожалуйста, введите токен.";
           nodes.tgInputToken.focus();
           return;
         }
 
-        var p = getActiveProject();
-        if (!p) return;
-
         nodes.tgBtnConnect.disabled = true;
         nodes.tgBtnConnect.textContent = "Подключение...";
+        if (nodes.tgErrorMsg) nodes.tgErrorMsg.textContent = "";
 
         try {
-          var res = await ProjectsApi.updateProject(p.id, {
-            telegramBotToken: token
-          });
-          closeTelegramConnectModal();
-          alert("Бот успешно подключён!");
-          await refreshProjects();
+          if (_tgMode === "new") {
+            // Step 1: validate token and get bot info
+            nodes.tgBtnConnect.textContent = "Проверяем токен...";
+            var verify = await postJSON("/api/verify-telegram-token", { token: token });
+            if (!verify.ok || !verify.data || !verify.data.ok) {
+              throw new Error((verify.data && (verify.data.error || verify.data.description)) || I18n.t('invalidToken'));
+            }
+            var tg = verify.data.result || {};
+            var usernameClean = String(tg.username || "").replace(/^@/, "");
+            var username = usernameClean ? ("@" + usernameClean) : "@pending";
+            var botName = tg.first_name || usernameClean || "Мой бот";
+
+            // Step 2: create project
+            nodes.tgBtnConnect.textContent = "Создаём проект...";
+            var created = await ProjectsApi.createProject({
+              name: botName,
+              botHost: username,
+              requestId: makeRequestId(),
+            });
+
+            // Step 3: connect token (registers webhook, saves bot to Firestore)
+            nodes.tgBtnConnect.textContent = "Подключаем бота...";
+            await connectTelegramToken(token, created.project.id, botName);
+
+            // Step 4: switch to new project
+            state.activeProjectId = created.project.id;
+            _lsSet("cp_proj", created.project.id);
+            closeTelegramConnectModal();
+            notify("Бот @" + usernameClean + " подключён!");
+            await refreshProjects();
+            state.tab = "analytics";
+            renderHeader();
+            renderSidebar();
+            await renderTab();
+          } else {
+            // Connect token to existing active project
+            var p = getActiveProject();
+            if (!p) { throw new Error("Нет активного проекта"); }
+            nodes.tgBtnConnect.textContent = "Подключаем...";
+            await connectTelegramToken(token, p.id, p.name);
+            closeTelegramConnectModal();
+            notify("Telegram бот подключён!");
+            await refreshProjects();
+            renderHeader();
+          }
         } catch (e) {
-          alert("Ошибка подключения: " + (e.message || e));
+          if (nodes.tgErrorMsg) nodes.tgErrorMsg.textContent = e.message || "Ошибка подключения. Проверьте токен.";
           nodes.tgBtnConnect.disabled = false;
           nodes.tgBtnConnect.textContent = "Подключить";
         }
       });
     }
 
-    if (nodes.btnNew) nodes.btnNew.addEventListener("click", openCreateModal);
-    if (nodes.btnNew2) nodes.btnNew2.addEventListener("click", openCreateModal);
+    if (nodes.btnNew) nodes.btnNew.addEventListener("click", function () { window.openTelegramConnectModal("new"); });
+    if (nodes.btnNew2) nodes.btnNew2.addEventListener("click", function () { window.openTelegramConnectModal("new"); });
     if (nodes.modalClose) nodes.modalClose.addEventListener("click", closeCreateModal);
     if (nodes.modalCancel) nodes.modalCancel.addEventListener("click", closeCreateModal);
     if (nodes.modal) nodes.modal.addEventListener("click", function (e) {
@@ -2582,7 +2638,7 @@
       newProjBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         dd.remove();
-        openCreateModal();
+        window.openTelegramConnectModal("new");
       });
       dd.appendChild(newProjBtn);
 
@@ -2721,7 +2777,7 @@
       if (!state.activeProjectId) {
         nodes.content.innerHTML = emptyHtml();
         var b = root.querySelector("#projects-new-empty");
-        if (b) b.addEventListener("click", openCreateModal);
+        if (b) b.addEventListener("click", function () { window.openTelegramConnectModal("new"); });
         return;
       }
       if (state.tab === "analytics") { renderAnalyticsView(); return; }
@@ -4243,6 +4299,7 @@
         "<div class='tg-step'><div class='tg-step-num'>3</div><div class='tg-step-text'>Скопируйте API токен и вставьте сюда</div></div>" +
         "</div>" +
         "<div class='tg-input-wrap'><input type='text' id='tg-connect-token' class='tg-input' placeholder='Введите токен'></div>" +
+        "<div id='tg-connect-error' style='color:#ef4444;font-size:13px;min-height:18px;margin:4px 0 8px;'></div>" +
         "<button class='tg-btn' id='tg-connect-btn'>Подключить</button>" +
         "</div>" + // b
         "</div>" + // modal
