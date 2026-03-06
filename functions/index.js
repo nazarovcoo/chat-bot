@@ -1469,26 +1469,17 @@ exports.telegramWebhook = onRequest(
 
       // No automatic fallback — AI answers from its knowledge if KB has no match
 
-      // ── suggestButtons: send follow-up question buttons after AI reply ─────────
+      // ── suggestButtons: send follow-up question buttons from KB (no API call) ────
       if (_projectBehavior && _projectBehavior.suggestButtons) {
-        const kbTopics = kbItems.slice(0, 20).map(i => i.title || i.question || "").filter(Boolean).join(", ");
-        const suggestSystem = kbTopics
-          ? `Based on the knowledge base topics: ${kbTopics.slice(0, 400)}. Generate exactly 3 short relevant follow-up question buttons in the same language as the conversation. Return ONLY a valid JSON array of 3 strings, max 40 chars each.`
-          : 'Generate exactly 3 short follow-up question buttons in the same language as the conversation. Return ONLY a valid JSON array of 3 strings, max 40 chars each. Example: ["How much does it cost?","What is the delivery time?","How to order?"]';
-        callAI('openai', 'gpt-4o-mini',
-          suggestSystem,
-          [{ role: 'user', content: question }, { role: 'assistant', content: answer }],
-          80
-        ).then(r => {
-          let btns;
-          try { btns = JSON.parse(r.text); } catch (_) { return; }
-          if (!Array.isArray(btns) || btns.length === 0) return;
-          const keyboard = btns.slice(0, 3).map(b => ([{ text: String(b).slice(0, 40) }]));
-          return fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        const kbTitles = kbItems.map(i => i.title || i.question || "").filter(t => t.length > 3 && t.length <= 40);
+        if (kbTitles.length >= 3) {
+          const shuffled = kbTitles.sort(() => Math.random() - 0.5).slice(0, 3);
+          const keyboard = shuffled.map(b => ([{ text: b }]));
+          fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chat_id: chatId, text: '💬', reply_markup: { keyboard, resize_keyboard: true, one_time_keyboard: true } }),
-          });
-        }).catch(() => {});
+          }).catch(() => {});
+        }
       }
 
       // Non-critical: log usage/topics + limit notifications
