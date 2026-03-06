@@ -87,8 +87,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
   <!-- PDF.js and Mammoth are loaded on demand to keep first paint faster -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="./css/miniapp.css?v=2026-03-06.2">
-  <script src="./js/miniapp.js?v=2026-03-06.2"></script>
+  <link rel="stylesheet" href="./css/miniapp.css?v=2026-03-06.3">
+  <script src="./js/miniapp.js?v=2026-03-06.3"></script>
   <script src="./js/state.js"></script>
   <script src="./js/api.js"></script>
   <script src="./js/ui.js"></script>
@@ -9324,8 +9324,10 @@
           addBtn.className = 'proj-dd-item proj-dd-add';
           addBtn.innerHTML = '<span>＋</span> <span>Добавить проект</span>';
           addBtn.onclick = () => {
-            // Logic to show add project modal
-            alert('Скоро: Создание проекта');
+            closeAllDropdowns();
+            if (window.__projectsUiMounted?.openCreateModal) {
+              window.__projectsUiMounted.openCreateModal();
+            }
           };
           dd.appendChild(addBtn);
         } catch (e) {
@@ -15970,8 +15972,8 @@ ${kbSummary}`,
 
         (async () => {
           try {
-            await loadScript('/js/projects-api.js');
-            await loadScript('/js/projects-ui.js');
+            await loadScript('/js/projects-api.js?v=2026-03-06.3');
+            await loadScript('/js/projects-ui.js?v=2026-03-06.3');
             if (!window.ProjectsUI) throw new Error('Projects UI module not loaded');
             // In Telegram Mini App auth can lag; wait for user token before mounting API-driven UI.
             await waitForProjectsAuth(12000);

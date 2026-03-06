@@ -33,6 +33,14 @@ html.in-tma .sidebar {
   display: none !important;
 }
 
+html.in-tma .mob-menu-btn {
+  display: none !important;
+}
+
+html.in-tma .step-tabs {
+  display: none !important;
+}
+
 html.in-tma .main {
   margin-left: 0 !important;
   padding-bottom: calc(60px + var(--tg-safe-bottom)) !important;

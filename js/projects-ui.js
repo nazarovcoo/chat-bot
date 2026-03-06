@@ -4749,6 +4749,7 @@
     return {
       refresh: refreshProjects,
       setTab: setTab,
+      openCreateModal: openCreateModal,
     };
   }
 
