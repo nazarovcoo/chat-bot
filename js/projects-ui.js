@@ -1760,6 +1760,13 @@
       }
     };
 
+    // Global hook used by project switcher dropdown button (onclick attribute)
+    window._cpAddProject = function () {
+      var dd = root.querySelector(".proj-switcher-dd");
+      if (dd) dd.remove();
+      window.openTelegramConnectModal("new");
+    };
+
     function closeTelegramConnectModal() {
       if (nodes.tgModalBg) nodes.tgModalBg.classList.remove("open");
     }
@@ -2643,39 +2650,12 @@
         });
       });
 
-      // "+ Добавить проект" button
+      // "+ Добавить проект" button — uses global onclick to avoid closure issues
       var newProjBtn = document.createElement("button");
       newProjBtn.type = "button";
       newProjBtn.className = "proj-switcher-new";
+      newProjBtn.setAttribute("onclick", "event.stopPropagation();window._cpAddProject&&window._cpAddProject();");
       newProjBtn.innerHTML = "<svg style='pointer-events:none' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/></svg> Добавить проект";
-      newProjBtn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        e.preventDefault();
-        _closeDd();
-        // Open modal directly — dropdown is inside root so nodes are accessible
-        var tgBg = root.querySelector("#tg-connect-modal");
-        if (tgBg) {
-          var tokenInput = root.querySelector("#tg-connect-token");
-          var errorDiv = root.querySelector("#tg-connect-error");
-          var connectBtn = root.querySelector("#tg-connect-btn");
-          var tabNew = root.querySelector("#tg-tab-new");
-          var tabExisting = root.querySelector("#tg-tab-existing");
-          var stepsNew = root.querySelector("#tg-steps-new");
-          var stepsExisting = root.querySelector("#tg-steps-existing");
-          if (tokenInput) tokenInput.value = "";
-          if (errorDiv) errorDiv.textContent = "";
-          if (connectBtn) { connectBtn.disabled = false; connectBtn.textContent = "Подключить"; }
-          if (tabNew) tabNew.classList.add("active");
-          if (tabExisting) tabExisting.classList.remove("active");
-          if (stepsNew) stepsNew.style.display = "flex";
-          if (stepsExisting) stepsExisting.style.display = "none";
-          tgBg.classList.add("open");
-          if (typeof _tgMode !== "undefined") { try { _tgMode = "new"; } catch(_) {} }
-          setTimeout(function () { if (tokenInput) tokenInput.focus(); }, 100);
-        } else if (window.openTelegramConnectModal) {
-          window.openTelegramConnectModal("new");
-        }
-      });
       dd.appendChild(newProjBtn);
 
       // Mount inside root (same stacking context as modal, avoids z-index conflicts)
