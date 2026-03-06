@@ -2593,7 +2593,7 @@
       if (!switcherNodes) return;
 
       // Toggle: close if already open
-      var existingDd = document.querySelector(".proj-switcher-dd");
+      var existingDd = root.querySelector(".proj-switcher-dd");
       if (existingDd) { existingDd.remove(); return; }
 
       var dd = document.createElement("div");
@@ -2647,27 +2647,39 @@
       var newProjBtn = document.createElement("button");
       newProjBtn.type = "button";
       newProjBtn.className = "proj-switcher-new";
-      // pointer-events:none on SVG so clicks always land on the button element
       newProjBtn.innerHTML = "<svg style='pointer-events:none' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'><line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/></svg> Добавить проект";
       newProjBtn.addEventListener("click", function (e) {
         e.stopPropagation();
         e.preventDefault();
         _closeDd();
-        // Use requestAnimationFrame to ensure dropdown DOM is removed first,
-        // then open the modal via the same sidebar button click (known-working path)
-        requestAnimationFrame(function () {
-          var sidebarAddBtn = root.querySelector("#cp-new-project-btn");
-          if (sidebarAddBtn) {
-            sidebarAddBtn.click();
-          } else if (window.openTelegramConnectModal) {
-            window.openTelegramConnectModal("new");
-          }
-        });
+        // Open modal directly — dropdown is inside root so nodes are accessible
+        var tgBg = root.querySelector("#tg-connect-modal");
+        if (tgBg) {
+          var tokenInput = root.querySelector("#tg-connect-token");
+          var errorDiv = root.querySelector("#tg-connect-error");
+          var connectBtn = root.querySelector("#tg-connect-btn");
+          var tabNew = root.querySelector("#tg-tab-new");
+          var tabExisting = root.querySelector("#tg-tab-existing");
+          var stepsNew = root.querySelector("#tg-steps-new");
+          var stepsExisting = root.querySelector("#tg-steps-existing");
+          if (tokenInput) tokenInput.value = "";
+          if (errorDiv) errorDiv.textContent = "";
+          if (connectBtn) { connectBtn.disabled = false; connectBtn.textContent = "Подключить"; }
+          if (tabNew) tabNew.classList.add("active");
+          if (tabExisting) tabExisting.classList.remove("active");
+          if (stepsNew) stepsNew.style.display = "flex";
+          if (stepsExisting) stepsExisting.style.display = "none";
+          tgBg.classList.add("open");
+          if (typeof _tgMode !== "undefined") { try { _tgMode = "new"; } catch(_) {} }
+          setTimeout(function () { if (tokenInput) tokenInput.focus(); }, 100);
+        } else if (window.openTelegramConnectModal) {
+          window.openTelegramConnectModal("new");
+        }
       });
       dd.appendChild(newProjBtn);
 
-      // Mount and position below anchor
-      document.body.appendChild(dd);
+      // Mount inside root (same stacking context as modal, avoids z-index conflicts)
+      root.appendChild(dd);
       var rect = switcherNodes.getBoundingClientRect();
       dd.style.top = (rect.bottom + 6) + "px";
       dd.style.left = rect.left + "px";
@@ -2676,7 +2688,7 @@
         dd.style.left = (window.innerWidth - ddWidth - 8) + "px";
       }
 
-      // Outside-click closes dropdown (delayed so opening click doesn't trigger it)
+      // Outside-click closes dropdown
       function _outsideClick(e) {
         if (!dd.contains(e.target) && !switcherNodes.contains(e.target)) {
           _closeDd();
