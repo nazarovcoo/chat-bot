@@ -1795,10 +1795,14 @@
         if (se) se.style.display = "none";
       }
 
+      // Move to document.body to escape #projects-ui-root stacking context
+      // (Telegram WebView creates its own stacking context that clips children
+      //  of position:fixed ancestors with finite z-index like #projects-ui-root)
+      if (bg.parentNode !== document.body) {
+        document.body.appendChild(bg);
+      }
       bg.classList.add("open");
-      bg.style.display = "flex";
-      bg.style.position = "fixed";
-      bg.style.zIndex = "999999";
+      bg.style.cssText = "display:flex;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:2147483647;padding:18px;box-sizing:border-box;";
       if (inp) setTimeout(function () { inp.focus(); }, 100);
 
       var cs2 = window.getComputedStyle(bg);
