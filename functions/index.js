@@ -316,6 +316,22 @@ function decryptToken(enc) {
   return dec.toString("utf8");
 }
 
+// ─── Admin audit log (super-admin actions) ──────────────────────────────────────
+async function writeAdminAuditLog(db, { performedByUid, action, targetUid = null, targetProjectId = null, payloadSummary = "" }) {
+  try {
+    await db.collection("adminAuditLogs").add({
+      performedByUid: performedByUid || "",
+      action: action || "",
+      targetUid: targetUid || null,
+      targetProjectId: targetProjectId || null,
+      payloadSummary: String(payloadSummary || "").slice(0, 500),
+      ts: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    console.error("writeAdminAuditLog failed:", e.message);
+  }
+}
+
 // ─── Text normalization (clean PDF/DOCX artifacts before pipeline) ────────────
 function normalizeText(raw) {
   let text = String(raw || "");
@@ -469,8 +485,7 @@ exports.verifyProviderKey = onRequest(
           headers: { Authorization: `Bearer ${key}` },
         });
         if (!r.ok) {
-          const data = await r.json().catch(() => ({}));
-          res.status(401).json({ ok: false, error: data?.error?.message || "Invalid OpenAI key" });
+          res.status(401).json({ ok: false, error: "Invalid API key" });
           return;
         }
         res.json({ ok: true });
@@ -480,8 +495,7 @@ exports.verifyProviderKey = onRequest(
       if (provider === "gemini") {
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
         if (!r.ok) {
-          const data = await r.json().catch(() => ({}));
-          res.status(401).json({ ok: false, error: data?.error?.message || "Invalid Gemini key" });
+          res.status(401).json({ ok: false, error: "Invalid API key" });
           return;
         }
         res.json({ ok: true });
@@ -495,7 +509,7 @@ exports.verifyProviderKey = onRequest(
 
       res.status(400).json({ ok: false, error: "Unsupported provider" });
     } catch (err) {
-      res.status(500).json({ ok: false, error: err.message || "Verification failed" });
+      res.status(500).json({ ok: false, error: "Verification failed" });
     }
   }
 );
@@ -519,12 +533,70 @@ exports.verifyTelegramToken = onRequest(
       const r = await fetch(`https://api.telegram.org/bot${token}/getMe`);
       const data = await r.json().catch(() => ({}));
       if (!r.ok || !data?.ok) {
-        res.status(401).json({ ok: false, error: data?.description || "Invalid Telegram token" });
+        res.status(401).json({ ok: false, error: "Invalid Telegram token" });
         return;
       }
       res.json({ ok: true, result: data.result });
     } catch (err) {
-      res.status(500).json({ ok: false, error: err.message || "Telegram verification failed" });
+      res.status(500).json({ ok: false, error: "Telegram verification failed" });
+    }
+  }
+);
+
+// ─── logClientEvent — централизованный приём клиентских ошибок/метрик ─────────
+exports.logClientEvent = onRequest(
+  { cors: true, timeoutSeconds: 15 },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    let uid = null;
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (idToken) {
+      try {
+        const decoded = await admin.auth().verifyIdToken(idToken);
+        uid = decoded.uid;
+      } catch (_) { /* optional auth */ }
+    }
+
+    const body = req.body || {};
+    const userId = body.userId || uid || null;
+    const level = String(body.level || "error").slice(0, 20);
+    const event_type = String(body.event_type || "client_error").slice(0, 80);
+    const message = String(body.message || "").slice(0, 2000);
+    const stack = body.stack != null ? String(body.stack).slice(0, 3000) : null;
+    const projectId = body.projectId != null ? String(body.projectId).slice(0, 128) : null;
+    const extra = body.extra != null && typeof body.extra === "object"
+      ? JSON.stringify(body.extra).slice(0, 1000)
+      : null;
+
+    const db = admin.firestore();
+    const doc = {
+      level,
+      event_type,
+      message,
+      stack,
+      userId,
+      projectId,
+      extra,
+      url: body.url != null ? String(body.url).slice(0, 512) : null,
+      buildVersion: body.buildVersion != null ? String(body.buildVersion).slice(0, 32) : null,
+      ts: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    try {
+      if (userId) {
+        await db.collection(`users/${userId}/client_events`).add(doc);
+      } else {
+        await db.collection("public_client_events").add(doc);
+      }
+      res.status(200).json({ ok: true });
+    } catch (err) {
+      console.error("logClientEvent error:", err.message);
+      res.status(500).json({ error: "Log failed" });
     }
   }
 );
@@ -2688,8 +2760,7 @@ exports.adminSendMessage = onRequest(
       body: JSON.stringify({ chat_id: chatId, text }),
     });
     if (!tgResp.ok) {
-      const err = await tgResp.json().catch(() => ({}));
-      res.status(500).json({ error: "Telegram error: " + (err.description || "unknown") });
+      res.status(500).json({ error: "Telegram error" });
       return;
     }
 
@@ -2928,8 +2999,24 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 exports.listAllUsers = onRequest(
   { cors: true, timeoutSeconds: 60, memory: "512MiB" },
   async (req, res) => {
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!idToken) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+    let callerUid;
+    try {
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      callerUid = decoded.uid;
+    } catch (_) {
+      res.status(401).json({ error: "Invalid token" });
+      return;
+    }
+
     try {
       if (adminUsersCache && Date.now() - adminUsersCacheTime < CACHE_TTL) {
+        await writeAdminAuditLog(admin.firestore(), { performedByUid: callerUid, action: "list_all_users", payloadSummary: "cached" });
         return res.json({ users: adminUsersCache, total: adminUsersCache.length, cached: true });
       }
 
@@ -3032,10 +3119,11 @@ exports.listAllUsers = onRequest(
 
       adminUsersCache = users;
       adminUsersCacheTime = Date.now();
+      await writeAdminAuditLog(db, { performedByUid: callerUid, action: "list_all_users", payloadSummary: "total=" + users.length });
       res.json({ users, total: users.length, cached: false });
     } catch (err) {
       console.error("getAdminUsers error:", err);
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: "Server error" });
     }
   }
 );
@@ -4058,6 +4146,9 @@ exports.activatePromo = onRequest({ cors: true, timeoutSeconds: 30 }, async (req
 
       return { type: pd.type, value: pd.value };
     });
+
+    const payloadSummary = "code=" + (code.length >= 4 ? code.slice(0, 2) + "****" + code.slice(-2) : "****");
+    await writeAdminAuditLog(db, { performedByUid: uid, action: "activate_promo", targetUid: uid, payloadSummary });
 
     res.json({ ok: true, type: result.type, value: result.value });
   } catch (e) {

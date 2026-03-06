@@ -1,0 +1,55 @@
+{
+  "hosting": {
+    "site": "chatbot-acd16-staging",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firebase.*.json",
+      "*.sh",
+      "CLAUDE.md",
+      "deploy",
+      "hh",
+      "netlify",
+      "netlify.toml",
+      "photo.jpg",
+      "the wear",
+      "unit-economics.html",
+      "functions",
+      "functions/**",
+      "**/node_modules/**",
+      "node_modules"
+    ],
+    "headers": [
+      { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/admin.html", "headers": [{ "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }] },
+      { "source": "/js/**", "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }] },
+      { "source": "**/*.css", "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600, must-revalidate" }] },
+      { "source": "**/*.{woff,woff2,ttf,otf}", "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, must-revalidate" }] }
+    ],
+    "rewrites": [
+      { "source": "/api/ai-chat", "function": "aiChat" },
+      { "source": "/api/register-webhook", "function": "registerWebhook" },
+      { "source": "/api/process-knowledge", "function": "processKnowledge" },
+      { "source": "/api/verify-provider-key", "function": "verifyProviderKey" },
+      { "source": "/api/verify-telegram-token", "function": "verifyTelegramToken" },
+      { "source": "/api/transcribe", "function": "transcribeYouTube" },
+      { "source": "/api/import-url", "function": "importUrlKnowledge" },
+      { "source": "/api/projects", "function": "projectsApi" },
+      { "source": "/api/projects/**", "function": "projectsApi" },
+      { "source": "/api/sources/**", "function": "projectsApi" },
+      { "source": "/api/chats/**", "function": "projectsApi" },
+      { "source": "/api/admin-send-message", "function": "adminSendMessage" },
+      { "source": "/api/broadcast-message", "function": "broadcastMessage" },
+      { "source": "/api/telegram-auth", "function": "telegramAuth" },
+      { "source": "/api/generate-answer", "function": "generateAnswer" },
+      { "source": "/api/activate-promo", "function": "activatePromo" },
+      { "source": "/api/log-client-event", "function": "logClientEvent" },
+      { "source": "/super-admin", "destination": "/super-admin.html" },
+      { "source": "/", "destination": "/admin.html" },
+      { "source": "**", "destination": "/admin.html" }
+    ]
+  },
+  "functions": { "source": "functions", "runtime": "nodejs20" },
+  "firestore": { "rules": "firestore.rules", "indexes": "firestore.indexes.json" },
+  "storage": { "rules": "storage.rules" }
+}

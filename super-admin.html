@@ -1084,9 +1084,11 @@
         }
 
         async function loadUsers() {
-            // Call Cloud Function that uses Admin SDK to list all Auth users
+            const user = firebase.auth().currentUser;
+            if (!user) throw new Error('Войдите в аккаунт');
+            const token = await user.getIdToken();
             const FUNCTION_URL = 'https://us-central1-chatbot-acd16.cloudfunctions.net/listAllUsers';
-            const resp = await fetch(FUNCTION_URL);
+            const resp = await fetch(FUNCTION_URL, { headers: { Authorization: 'Bearer ' + token } });
             if (!resp.ok) throw new Error('Failed to load users: ' + resp.status);
             const data = await resp.json();
 

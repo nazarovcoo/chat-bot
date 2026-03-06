@@ -131,6 +131,10 @@
         "function": "activatePromo"
       },
       {
+        "source": "/api/log-client-event",
+        "function": "logClientEvent"
+      },
+      {
         "source": "/super-admin",
         "destination": "/super-admin.html"
       },

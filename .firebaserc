@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "default": "chatbot-acd16",
+    "prod": "chatbot-acd16",
+    "staging": "chatbot-acd16-staging"
+  }
+}

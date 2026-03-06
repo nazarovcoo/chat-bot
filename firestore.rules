@@ -17,9 +17,24 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    match /users/{uid}/client_events/{doc} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow write: if false;
+    }
+
     match /promoCodes/{code} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
+    }
+
+    match /adminAuditLogs/{doc} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /public_client_events/{doc} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
   }
 }
