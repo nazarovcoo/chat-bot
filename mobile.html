@@ -9,42 +9,59 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <style>
+    /* ── Tokens ── */
     :root {
-      --bg: #f5f6f8;
+      --bg: #f2f3f7;
       --card: #ffffff;
-      --text: #111111;
-      --muted: #7d7d86;
-      --line: #e7e8ec;
-      --primary: #2f6bff;
-      --primary-soft: #eaf1ff;
-      --success: #43b05c;
-      --danger: #e74c3c;
-      --shadow: 0 8px 24px rgba(17,17,17,0.06);
-      --radius-lg: 20px;
-      --radius-md: 16px;
-      --radius-sm: 12px;
+      --text: #0f0f14;
+      --text2: #4a4f5c;
+      --muted: #8e93a0;
+      --line: #e8eaef;
+      --primary: #3068ff;
+      --primary-soft: #e8eeff;
+      --primary-dim: rgba(48,104,255,0.12);
+      --success: #22c55e;
+      --success-soft: #e8faf0;
+      --danger: #ef4444;
+      --danger-soft: #fff0f0;
+      --warning: #f59e0b;
+      --shadow-sm: 0 1px 3px rgba(15,15,20,0.06), 0 4px 12px rgba(15,15,20,0.04);
+      --shadow-md: 0 4px 16px rgba(15,15,20,0.08), 0 1px 3px rgba(15,15,20,0.04);
+      --r-xl: 22px;
+      --r-lg: 18px;
+      --r-md: 14px;
+      --r-sm: 10px;
     }
 
     [data-theme="dark"] {
-      --bg: #1c1c22;
-      --card: #26262e;
-      --text: #f0f0f5;
-      --muted: #8a8ea4;
-      --line: #333340;
-      --primary: #5b8fff;
-      --primary-soft: #1a2a4a;
-      --success: #3fc360;
-      --shadow: 0 8px 24px rgba(0,0,0,0.3);
+      --bg: #141418;
+      --card: #1e1e26;
+      --text: #f2f2f8;
+      --text2: #a0a4b4;
+      --muted: #666b7e;
+      --line: #2a2a36;
+      --primary: #5585ff;
+      --primary-soft: #1a2340;
+      --primary-dim: rgba(85,133,255,0.15);
+      --success: #22c55e;
+      --success-soft: #0e2018;
+      --danger: #f87171;
+      --danger-soft: #2a1010;
+      --warning: #fbbf24;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.35);
     }
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* ── Loading ── */
@@ -54,17 +71,17 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 14px;
+      gap: 12px;
     }
     .spinner {
-      width: 34px; height: 34px;
-      border: 3px solid var(--line);
+      width: 32px; height: 32px;
+      border: 2.5px solid var(--line);
       border-top-color: var(--primary);
       border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      animation: spin 0.65s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-size: 14px; color: var(--muted); }
+    .loading-text { font-size: 13px; color: var(--muted); letter-spacing: 0.01em; }
 
     /* ── Login ── */
     #screen-login {
@@ -73,80 +90,95 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 32px 24px;
-      gap: 14px;
+      padding: 40px 24px;
+      gap: 12px;
     }
     .login-logo {
-      width: 72px; height: 72px;
-      border-radius: 22px;
-      background: linear-gradient(135deg, #5b62f6, #7f6cff);
+      width: 68px; height: 68px;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #5b62f6, #3068ff);
       display: grid;
       place-items: center;
-      font-size: 36px;
+      font-size: 32px;
       color: #fff;
-      margin-bottom: 6px;
-      box-shadow: 0 12px 30px rgba(91,98,246,0.3);
+      margin-bottom: 4px;
+      box-shadow: 0 10px 28px rgba(48,104,255,0.32);
     }
-    .login-title { font-size: 24px; font-weight: 800; }
-    .login-sub { font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 6px; }
+    .login-title { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+    .login-sub { font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 4px; }
     .input-field {
       width: 100%;
       padding: 14px 16px;
       border: 1.5px solid var(--line);
-      border-radius: var(--radius-md);
+      border-radius: var(--r-lg);
       background: var(--card);
       color: var(--text);
       font-size: 16px;
       outline: none;
+      transition: border-color 0.15s;
     }
     .input-field:focus { border-color: var(--primary); }
     .btn-primary {
       width: 100%;
       padding: 15px;
       border: none;
-      border-radius: var(--radius-md);
+      border-radius: var(--r-lg);
       background: var(--primary);
       color: #fff;
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
+      letter-spacing: -0.1px;
+      transition: opacity 0.15s;
     }
-    .btn-primary:disabled { opacity: 0.6; }
+    .btn-primary:disabled { opacity: 0.55; }
     .login-error { color: var(--danger); font-size: 13px; text-align: center; min-height: 16px; }
 
     /* ── App layout ── */
     #screen-app { display: none; }
 
+    /* ── Header (compact) ── */
     .topbar {
       position: sticky;
-      top: 0;
-      z-index: 10;
+      top: 0; z-index: 20;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: calc(env(safe-area-inset-top) + 12px) 16px 12px;
+      padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
       background: var(--card);
       border-bottom: 1px solid var(--line);
+      gap: 12px;
     }
-    .bot-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .bot-info { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
     .bot-avatar {
-      width: 40px; height: 40px;
-      border-radius: 13px;
-      background: linear-gradient(135deg, #7f6cff, #5b62f6);
+      width: 36px; height: 36px;
+      border-radius: 11px;
+      background: linear-gradient(145deg, #7f6cff, #3068ff);
       color: #fff;
       display: grid;
       place-items: center;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 800;
       flex-shrink: 0;
     }
-    .bot-name { font-size: 16px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+    .bot-meta { min-width: 0; }
+    .bot-name-row { display: flex; align-items: center; gap: 7px; }
+    .bot-name { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; letter-spacing: -0.2px; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--success-soft);
+      color: var(--success);
+      font-size: 10px; font-weight: 700;
+      padding: 2px 7px 2px 5px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
     .bot-handle { font-size: 12px; color: var(--muted); margin-top: 1px; }
-    .bot-status { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--success); font-weight: 600; margin-top: 2px; }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
 
     .add-btn {
-      width: 38px; height: 38px;
+      width: 36px; height: 36px;
       border-radius: 50%;
       border: 1.5px solid var(--line);
       background: var(--card);
@@ -154,197 +186,297 @@
       display: grid;
       place-items: center;
       font-size: 22px;
+      line-height: 1;
       cursor: pointer;
       flex-shrink: 0;
       position: relative;
     }
     .notif-badge {
       position: absolute;
-      top: -3px; right: -3px;
+      top: -4px; right: -4px;
       min-width: 17px; height: 17px;
       border-radius: 9px;
       background: var(--danger);
       color: #fff;
-      font-size: 10px;
-      font-weight: 800;
-      display: none;
-      align-items: center;
-      justify-content: center;
+      font-size: 10px; font-weight: 800;
+      display: none; align-items: center; justify-content: center;
       padding: 0 3px;
+      border: 2px solid var(--card);
     }
     .notif-badge.show { display: flex; }
 
     /* ── Tab contents ── */
-    .tab-content { display: none; padding: 16px 16px calc(env(safe-area-inset-bottom) + 82px); }
+    .tab-content { display: none; padding: 14px 14px calc(env(safe-area-inset-bottom) + 86px); }
     .tab-content.active { display: block; }
 
-    /* ── Cards ── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow);
-    }
-    .section { margin-top: 18px; }
+    /* ── Section ── */
+    .section { margin-top: 16px; }
     .section:first-child { margin-top: 0; }
     .section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .section-title { font-size: 16px; font-weight: 800; }
-    .section-link { font-size: 13px; color: var(--primary); font-weight: 700; background: none; border: none; cursor: pointer; }
+    .section-title { font-size: 15px; font-weight: 800; letter-spacing: -0.2px; }
+    .section-link {
+      font-size: 13px; color: var(--primary); font-weight: 600;
+      background: none; border: none; cursor: pointer;
+      padding: 0;
+    }
 
-    /* ── Analytics card ── */
-    .an-card { padding: 18px; }
-    .an-card-title { font-size: 16px; font-weight: 800; margin-bottom: 14px; }
-    .an-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-    .an-percent { font-size: 50px; font-weight: 900; letter-spacing: -2px; line-height: 0.95; }
-    .an-sub { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.3; }
-    .an-legend { margin-top: 14px; display: grid; gap: 8px; }
-    .an-row { display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
-    .an-left { display: flex; align-items: center; gap: 8px; color: var(--muted); }
-    .an-bullet { width: 9px; height: 9px; border-radius: 50%; background: #9bc1ff; flex-shrink: 0; }
-    .an-bullet.gray { background: #d8dbe3; }
-    .an-val { font-weight: 800; color: var(--text); }
-    .gauge {
-      width: 110px; height: 68px;
-      border-radius: 110px 110px 0 0;
-      border: 16px solid #9bc1ff;
+    /* ── Hero analytics card ── */
+    .hero-card {
+      background: var(--card);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-md);
+      padding: 18px;
+      overflow: hidden;
+      position: relative;
+    }
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 130px; height: 130px;
+      border-radius: 50%;
+      background: var(--primary-dim);
+      pointer-events: none;
+    }
+    .hero-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+    .hero-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    .hero-left {}
+    .hero-percent { font-size: 54px; font-weight: 900; letter-spacing: -3px; line-height: 1; color: var(--text); }
+    .hero-sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
+    .hero-gauge {
+      width: 96px; height: 58px;
+      border-radius: 96px 96px 0 0;
+      border: 14px solid var(--primary-soft);
       border-bottom: none;
       flex-shrink: 0;
-      margin-top: 10px;
       transition: border-color 0.4s;
     }
+    .hero-legend { display: flex; gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .legend-dot.blue { background: var(--primary); }
+    .legend-dot.gray { background: var(--line); }
+    .legend-text { color: var(--text2); }
+    .legend-val { font-weight: 800; color: var(--text); margin-left: auto; }
 
-    /* ── Stats row ── */
-    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
-    .stat-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 12px; text-align: center; box-shadow: var(--shadow); }
-    .stat-val { font-size: 22px; font-weight: 900; }
-    .stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    /* ── KPI grid ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px; }
+    .kpi-card {
+      background: var(--card);
+      border-radius: var(--r-lg);
+      padding: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .kpi-card.warn .kpi-val { color: var(--warning); }
+    .kpi-val { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }
+    .kpi-label { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 500; }
 
     /* ── Quick actions ── */
-    .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-    .quick-card {
+    .actions-card {
       background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-md);
-      padding: 14px 12px;
-      min-height: 106px;
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .action-row {
+      width: 100%;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      box-shadow: var(--shadow);
+      align-items: center;
+      gap: 13px;
+      padding: 15px 16px;
+      border: none;
+      background: none;
       cursor: pointer;
       text-align: left;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.12s;
     }
-    .quick-icon {
+    .action-row:last-child { border-bottom: none; }
+    .action-row:active { background: var(--bg); }
+    .action-icon {
       width: 38px; height: 38px;
       border-radius: 11px;
-      background: var(--primary-soft);
       display: grid;
       place-items: center;
-      font-size: 20px;
+      font-size: 18px;
+      flex-shrink: 0;
     }
-    .quick-label { font-size: 13px; font-weight: 800; line-height: 1.2; color: var(--text); margin-top: 12px; }
+    .action-icon.blue { background: var(--primary-dim); }
+    .action-icon.yellow { background: rgba(245,158,11,0.12); }
+    .action-icon.purple { background: rgba(139,92,246,0.12); }
+    .action-text { flex: 1; min-width: 0; }
+    .action-label { font-size: 15px; font-weight: 700; color: var(--text); }
+    .action-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .action-chevron { color: var(--muted); font-size: 16px; flex-shrink: 0; }
 
     /* ── Chat list ── */
+    .chats-card {
+      background: var(--card);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
     .chat-item {
       display: flex;
-      gap: 12px;
+      gap: 11px;
       align-items: flex-start;
       padding: 13px 14px;
       border-bottom: 1px solid var(--line);
-      cursor: pointer;
     }
     .chat-item:last-child { border-bottom: none; }
     .chat-av {
-      width: 42px; height: 42px;
+      width: 40px; height: 40px;
       border-radius: 50%;
       display: grid;
       place-items: center;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       color: #fff;
       flex-shrink: 0;
     }
     .chat-meta { min-width: 0; flex: 1; }
-    .chat-name { font-size: 14px; font-weight: 800; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .chat-preview { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .chat-time { font-size: 11px; color: var(--muted); flex-shrink: 0; padding-top: 2px; }
+    .chat-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chat-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .chat-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+    .chat-time { font-size: 11px; color: var(--muted); }
+    .chat-ai-tag {
+      font-size: 10px; font-weight: 700;
+      background: var(--primary-soft);
+      color: var(--primary);
+      padding: 1px 6px;
+      border-radius: 20px;
+    }
 
     /* ── Bot tab ── */
-    .bot-card { padding: 16px; margin-bottom: 12px; }
-    .bot-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .bot-card {
+      background: var(--card);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-sm);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .bot-card-hdr { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
     .bot-card-av {
-      width: 48px; height: 48px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, #7f6cff, #5b62f6);
+      width: 46px; height: 46px;
+      border-radius: 13px;
+      background: linear-gradient(145deg, #7f6cff, #3068ff);
       color: #fff;
       display: grid;
       place-items: center;
-      font-size: 20px;
+      font-size: 19px;
       font-weight: 800;
     }
     .bot-card-name { font-size: 15px; font-weight: 800; }
     .bot-card-handle { font-size: 13px; color: var(--muted); margin-top: 2px; }
-    .bot-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .bot-action-btn {
-      padding: 10px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 700;
+    .bot-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .btn-secondary {
+      padding: 11px 14px;
+      border-radius: var(--r-md);
+      font-size: 13px; font-weight: 700;
       text-align: center;
       text-decoration: none;
-      border: none;
-      cursor: pointer;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: none; cursor: pointer;
     }
-    .bot-action-btn.secondary { background: var(--primary-soft); color: var(--primary); }
-    .bot-action-btn.primary { background: var(--primary); color: #fff; }
+    .btn-blue {
+      padding: 11px 14px;
+      border-radius: var(--r-md);
+      font-size: 13px; font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      background: var(--primary);
+      color: #fff;
+      border: none; cursor: pointer;
+    }
 
     /* ── Placeholder ── */
     .placeholder {
       background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
-      padding: 32px 20px;
+      border-radius: var(--r-xl);
+      padding: 36px 20px;
       text-align: center;
+      box-shadow: var(--shadow-sm);
     }
-    .ph-icon { font-size: 40px; margin-bottom: 12px; }
+    .ph-icon { font-size: 38px; margin-bottom: 12px; }
     .ph-title { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
-    .ph-sub { font-size: 13px; color: var(--muted); line-height: 1.4; }
+    .ph-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
     .ph-btn {
       display: inline-block;
-      margin-top: 16px;
-      padding: 10px 22px;
+      margin-top: 18px;
+      padding: 11px 24px;
       background: var(--primary);
       color: #fff;
-      border-radius: var(--radius-sm);
+      border-radius: var(--r-md);
       font-size: 14px;
       font-weight: 700;
       text-decoration: none;
     }
 
-    /* ── Empty state ── */
+    /* ── Settings tab ── */
+    .settings-section { margin-top: 16px; }
+    .settings-group {
+      background: var(--card);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--line);
+      text-decoration: none;
+      color: var(--text);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+    .settings-row-label { font-size: 15px; font-weight: 600; flex: 1; }
+    .settings-chevron { color: var(--muted); font-size: 14px; }
+    .logout-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px 16px;
+      border: none;
+      background: none;
+      width: 100%;
+      cursor: pointer;
+      color: var(--danger);
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    /* ── Empty ── */
     .empty { padding: 36px 20px; text-align: center; color: var(--muted); font-size: 14px; }
-    .empty-icon { font-size: 34px; margin-bottom: 8px; }
+    .empty-icon { font-size: 32px; margin-bottom: 8px; }
 
     /* ── Bottom nav ── */
     .bottom-nav {
       position: fixed;
       left: 0; right: 0; bottom: 0;
-      background: rgba(255,255,255,0.96);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      background: var(--card);
       border-top: 1px solid var(--line);
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+      padding: 0 4px calc(env(safe-area-inset-bottom));
       z-index: 50;
     }
-    [data-theme="dark"] .bottom-nav { background: rgba(28,28,34,0.97); }
     .nav-btn {
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       gap: 3px;
-      padding: 4px;
+      padding: 10px 4px 8px;
       color: var(--muted);
       font-size: 11px;
       font-weight: 600;
@@ -352,101 +484,111 @@
       border: none;
       background: none;
       position: relative;
+      transition: color 0.15s;
     }
     .nav-btn.active { color: var(--primary); }
-    .nav-icon { font-size: 22px; line-height: 1; }
+    .nav-btn.active::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 24px; height: 2.5px;
+      background: var(--primary);
+      border-radius: 0 0 3px 3px;
+    }
+    .nav-icon {
+      font-size: 21px;
+      line-height: 1;
+    }
+    .nav-label { font-size: 10.5px; font-weight: 600; }
     .nav-badge {
       position: absolute;
-      top: 0; right: calc(50% - 20px);
-      min-width: 16px; height: 16px;
+      top: 5px; right: calc(50% - 18px);
+      min-width: 15px; height: 15px;
       border-radius: 8px;
       background: var(--danger);
       color: #fff;
-      font-size: 10px;
-      font-weight: 800;
-      display: none;
-      align-items: center;
-      justify-content: center;
+      font-size: 9px; font-weight: 800;
+      display: none; align-items: center; justify-content: center;
       padding: 0 3px;
+      border: 1.5px solid var(--card);
     }
     .nav-badge.show { display: flex; }
 
-    /* ── Sheet ── */
+    /* ── Bottom sheet ── */
     .sheet-backdrop {
       position: fixed; inset: 0;
-      background: rgba(17,17,17,0.4);
+      background: rgba(10,10,16,0.45);
       opacity: 0; pointer-events: none;
-      transition: 0.22s ease; z-index: 80;
+      transition: opacity 0.22s ease;
+      z-index: 90;
     }
     .sheet-backdrop.open { opacity: 1; pointer-events: auto; }
     .sheet {
       position: fixed;
       left: 0; right: 0; bottom: 0;
       background: var(--card);
-      border-radius: 24px 24px 0 0;
-      padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
+      border-radius: 26px 26px 0 0;
+      padding: 0 16px calc(22px + env(safe-area-inset-bottom));
       transform: translateY(100%);
-      transition: 0.26s ease; z-index: 85;
+      transition: transform 0.28s cubic-bezier(0.32,0.72,0,1);
+      z-index: 95;
     }
     .sheet.open { transform: translateY(0); }
-    .sheet-handle { width: 42px; height: 4px; border-radius: 2px; background: var(--line); margin: 6px auto 16px; }
-    .sheet-title { font-size: 17px; font-weight: 800; margin-bottom: 12px; }
-    .sheet-btn {
+    .sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 10px auto 18px; }
+    .sheet-title { font-size: 17px; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.2px; }
+    .sheet-item {
       width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 14px;
       padding: 14px 16px;
-      border: 1.5px solid var(--line);
-      border-radius: var(--radius-md);
-      background: var(--card);
+      border: none;
+      border-radius: var(--r-lg);
+      background: var(--bg);
       color: var(--text);
       font-size: 15px;
       font-weight: 700;
       text-align: left;
-      margin-top: 10px;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      margin-bottom: 8px;
+      transition: background 0.12s;
     }
-    .sheet-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .sheet-item:active { background: var(--line); }
+    .sheet-item:last-child { margin-bottom: 0; }
+    .sheet-item.primary { background: var(--primary); color: #fff; }
+    .sheet-item.primary:active { background: #2558e8; }
+    .sheet-item-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      background: rgba(255,255,255,0.15);
+      flex-shrink: 0;
+    }
+    .sheet-item:not(.primary) .sheet-item-icon { background: var(--primary-dim); }
 
     /* ── Toast ── */
     .toast {
       position: fixed;
-      bottom: calc(env(safe-area-inset-bottom) + 90px);
+      bottom: calc(env(safe-area-inset-bottom) + 95px);
       left: 50%;
-      transform: translateX(-50%) translateY(12px);
-      background: #1a1a22;
+      transform: translateX(-50%) translateY(10px);
+      background: rgba(20,20,28,0.92);
       color: #fff;
       padding: 10px 18px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 600;
+      border-radius: 14px;
+      font-size: 14px; font-weight: 600;
       opacity: 0;
-      transition: 0.2s;
+      transition: all 0.2s ease;
       z-index: 200;
       white-space: nowrap;
       pointer-events: none;
+      backdrop-filter: blur(8px);
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    [data-theme="dark"] .toast { background: #3a3a4a; }
-
-    /* ── Logout btn ── */
-    .logout-btn {
-      width: 100%;
-      padding: 14px 16px;
-      border: 1.5px solid #fddcdc;
-      border-radius: var(--radius-md);
-      background: none;
-      color: var(--danger);
-      font-size: 15px;
-      font-weight: 700;
-      text-align: left;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 10px;
-    }
+    [data-theme="dark"] .toast { background: rgba(50,50,66,0.95); }
   </style>
 </head>
 <body>
@@ -470,13 +612,17 @@
 
 <!-- Main app -->
 <div id="screen-app" style="display:none">
+
+  <!-- Compact header -->
   <header class="topbar">
     <div class="bot-info">
       <div class="bot-avatar" id="bot-avatar">?</div>
-      <div>
-        <div class="bot-name" id="bot-name">Загрузка...</div>
+      <div class="bot-meta">
+        <div class="bot-name-row">
+          <div class="bot-name" id="bot-name">Загрузка...</div>
+          <div class="status-pill"><span class="status-dot"></span>Активен</div>
+        </div>
         <div class="bot-handle" id="bot-handle"></div>
-        <div class="bot-status"><span class="status-dot"></span>Активен</div>
       </div>
     </div>
     <button class="add-btn" id="add-btn" onclick="openSheet()">
@@ -485,78 +631,110 @@
     </button>
   </header>
 
-  <!-- Analytics tab -->
+  <!-- ── Analytics tab ── -->
   <div class="tab-content active" id="tab-analytics">
-    <div class="card an-card">
-      <div class="an-card-title">AI Аналитика</div>
-      <div class="an-top">
-        <div>
-          <div class="an-percent" id="an-percent">—</div>
-          <div class="an-sub">сообщений обработал ИИ</div>
-          <div class="an-legend">
-            <div class="an-row">
-              <div class="an-left"><span class="an-bullet"></span>Ответил ИИ</div>
-              <span class="an-val" id="an-ai">—</span>
-            </div>
-            <div class="an-row">
-              <div class="an-left"><span class="an-bullet gray"></span>Ответил оператор</div>
-              <span class="an-val" id="an-op">—</span>
-            </div>
-          </div>
+
+    <!-- Hero metric -->
+    <div class="hero-card">
+      <div class="hero-label">AI аналитика</div>
+      <div class="hero-main">
+        <div class="hero-left">
+          <div class="hero-percent" id="an-percent">—</div>
+          <div class="hero-sub">сообщений обработал ИИ</div>
         </div>
-        <div class="gauge" id="gauge"></div>
+        <div class="hero-gauge" id="gauge"></div>
+      </div>
+      <div class="hero-legend">
+        <div class="legend-item" style="flex:1">
+          <span class="legend-dot blue"></span>
+          <span class="legend-text">Ответил ИИ</span>
+          <span class="legend-val" id="an-ai">—</span>
+        </div>
+        <div class="legend-item" style="flex:1">
+          <span class="legend-dot gray"></span>
+          <span class="legend-text">Оператор</span>
+          <span class="legend-val" id="an-op">—</span>
+        </div>
       </div>
     </div>
 
-    <div class="stats-row">
-      <div class="stat-card"><div class="stat-val" id="stat-dialogs">—</div><div class="stat-label">Всего диалогов</div></div>
-      <div class="stat-card"><div class="stat-val" id="stat-bots">—</div><div class="stat-label">Ботов</div></div>
-      <div class="stat-card"><div class="stat-val" id="stat-unans">—</div><div class="stat-label">Без ответа</div></div>
+    <!-- KPI cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-val" id="stat-dialogs">—</div>
+        <div class="kpi-label">Диалоги</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" id="stat-mins">—</div>
+        <div class="kpi-label">Сэкономлено мин</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-val" id="stat-bots">—</div>
+        <div class="kpi-label">Ботов</div>
+      </div>
+      <div class="kpi-card warn">
+        <div class="kpi-val" id="stat-unans">—</div>
+        <div class="kpi-label">Без ответа</div>
+      </div>
     </div>
 
+    <!-- Quick actions -->
     <div class="section">
       <div class="section-hdr">
         <div class="section-title">Быстрые действия</div>
       </div>
-      <div class="quick-grid">
-        <button class="quick-card" onclick="quickAction('source')">
-          <div class="quick-icon">&#128193;</div>
-          <div class="quick-label">Добавить источник</div>
+      <div class="actions-card">
+        <button class="action-row" onclick="quickAction('source')">
+          <div class="action-icon blue">&#128193;</div>
+          <div class="action-text">
+            <div class="action-label">Добавить источник</div>
+            <div class="action-desc">Загрузить документ или ссылку</div>
+          </div>
+          <span class="action-chevron">&#8250;</span>
         </button>
-        <button class="quick-card" onclick="quickAction('telegram')">
-          <div class="quick-icon">&#9889;</div>
-          <div class="quick-label">Подключить Telegram</div>
+        <button class="action-row" onclick="quickAction('telegram')">
+          <div class="action-icon yellow">&#9889;</div>
+          <div class="action-text">
+            <div class="action-label">Подключить Telegram</div>
+            <div class="action-desc">Привязать бота через токен</div>
+          </div>
+          <span class="action-chevron">&#8250;</span>
         </button>
-        <button class="quick-card" onclick="quickAction('test')">
-          <div class="quick-icon">&#129302;</div>
-          <div class="quick-label">Тестировать бота</div>
+        <button class="action-row" onclick="quickAction('test')">
+          <div class="action-icon purple">&#129302;</div>
+          <div class="action-text">
+            <div class="action-label">Тестировать бота</div>
+            <div class="action-desc">Проверить ответы ИИ</div>
+          </div>
+          <span class="action-chevron">&#8250;</span>
         </button>
       </div>
     </div>
 
+    <!-- Recent chats -->
     <div class="section">
       <div class="section-hdr">
         <div class="section-title">Последние чаты</div>
-        <button class="section-link" onclick="switchTab('chats')">Все чаты</button>
+        <button class="section-link" onclick="switchTab('chats')">Посмотреть все</button>
       </div>
-      <div class="card" id="recent-chats">
+      <div class="chats-card" id="recent-chats">
         <div class="empty"><div class="empty-icon">&#128172;</div>Нет чатов</div>
       </div>
     </div>
   </div>
 
-  <!-- Chats tab -->
+  <!-- ── Chats tab ── -->
   <div class="tab-content" id="tab-chats">
-    <div class="section-hdr" style="margin-top:0;margin-bottom:12px;">
+    <div class="section-hdr" style="margin-bottom:12px;">
       <div class="section-title">Все чаты</div>
-      <span id="chats-count" style="font-size:13px;color:var(--muted);font-weight:700;"></span>
+      <span id="chats-count" style="font-size:13px;color:var(--muted);font-weight:600;"></span>
     </div>
-    <div class="card" id="all-chats">
+    <div class="chats-card" id="all-chats">
       <div class="empty"><div class="empty-icon">&#128172;</div>Загрузка...</div>
     </div>
   </div>
 
-  <!-- Knowledge base tab -->
+  <!-- ── Knowledge base tab ── -->
   <div class="tab-content" id="tab-kb">
     <div class="placeholder">
       <div class="ph-icon">&#128218;</div>
@@ -566,63 +744,92 @@
     </div>
   </div>
 
-  <!-- Settings tab -->
+  <!-- ── Settings tab ── -->
   <div class="tab-content" id="tab-settings">
-    <div class="placeholder">
-      <div class="ph-icon">&#9881;</div>
-      <div class="ph-title">Настройки</div>
-      <div class="ph-sub">Настройте агента ИИ, правила ответов и уведомления</div>
-      <a href="https://chatbot-acd16.web.app" target="_blank" class="ph-btn">Открыть панель</a>
+    <div class="settings-section">
+      <div class="settings-group">
+        <a href="https://chatbot-acd16.web.app" target="_blank" class="settings-row">
+          <div class="settings-icon" style="background:var(--primary-dim);">&#129302;</div>
+          <span class="settings-row-label">Настройки агента</span>
+          <span class="settings-chevron">&#8250;</span>
+        </a>
+        <a href="https://chatbot-acd16.web.app" target="_blank" class="settings-row">
+          <div class="settings-icon" style="background:rgba(245,158,11,0.12);">&#128226;</div>
+          <span class="settings-row-label">Уведомления</span>
+          <span class="settings-chevron">&#8250;</span>
+        </a>
+        <a href="https://chatbot-acd16.web.app" target="_blank" class="settings-row">
+          <div class="settings-icon" style="background:rgba(139,92,246,0.12);">&#128100;</div>
+          <span class="settings-row-label">Профиль и тариф</span>
+          <span class="settings-chevron">&#8250;</span>
+        </a>
+      </div>
     </div>
-    <div class="card" style="padding:14px;margin-top:16px;">
-      <button class="logout-btn" onclick="doLogout()">
-        &#128682; Выйти из аккаунта
-      </button>
+    <div class="settings-section">
+      <div class="settings-group">
+        <button class="logout-row" onclick="doLogout()">
+          <div class="settings-icon" style="background:var(--danger-soft);">&#128682;</div>
+          <span>Выйти из аккаунта</span>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Bot tab -->
+  <!-- ── Bot tab ── -->
   <div class="tab-content" id="tab-bot">
     <div id="bot-tab-content">
       <div class="empty"><div class="spinner" style="margin:0 auto 10px;"></div>Загрузка...</div>
     </div>
   </div>
+
 </div>
 
-<!-- Bottom nav -->
+<!-- Bottom navigation -->
 <nav class="bottom-nav" id="bottom-nav" style="display:none">
   <button class="nav-btn active" data-tab="analytics" onclick="switchTab('analytics')">
     <span class="nav-icon">&#128202;</span>
-    <span>Аналитика</span>
+    <span class="nav-label">Аналитика</span>
   </button>
   <button class="nav-btn" data-tab="chats" onclick="switchTab('chats')">
     <span class="nav-icon">&#128172;</span>
-    <span>Чаты</span>
+    <span class="nav-label">Чаты</span>
     <span class="nav-badge" id="chats-badge"></span>
   </button>
   <button class="nav-btn" data-tab="kb" onclick="switchTab('kb')">
     <span class="nav-icon">&#128218;</span>
-    <span>База</span>
+    <span class="nav-label">База</span>
   </button>
   <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">
     <span class="nav-icon">&#9881;</span>
-    <span>Настройки</span>
+    <span class="nav-label">Настройки</span>
   </button>
   <button class="nav-btn" data-tab="bot" onclick="switchTab('bot')">
     <span class="nav-icon">&#129302;</span>
-    <span>Бот</span>
+    <span class="nav-label">Бот</span>
   </button>
 </nav>
 
-<!-- Sheet -->
+<!-- Bottom sheet -->
 <div class="sheet-backdrop" id="sheet-backdrop" onclick="closeSheet()"></div>
 <div class="sheet" id="action-sheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title">Быстрые действия</div>
-  <button class="sheet-btn primary" onclick="quickAction('add-project');closeSheet()">&#10133; Добавить проект</button>
-  <button class="sheet-btn" onclick="quickAction('telegram');closeSheet()">&#9889; Подключить Telegram</button>
-  <button class="sheet-btn" onclick="quickAction('source');closeSheet()">&#128193; Добавить источник</button>
-  <button class="sheet-btn" onclick="quickAction('test');closeSheet()">&#129302; Тестировать бота</button>
+  <button class="sheet-item primary" onclick="quickAction('add-project');closeSheet()">
+    <div class="sheet-item-icon">&#10133;</div>
+    Добавить проект
+  </button>
+  <button class="sheet-item" onclick="quickAction('telegram');closeSheet()">
+    <div class="sheet-item-icon">&#9889;</div>
+    Подключить Telegram
+  </button>
+  <button class="sheet-item" onclick="quickAction('source');closeSheet()">
+    <div class="sheet-item-icon">&#128193;</div>
+    Добавить источник
+  </button>
+  <button class="sheet-item" onclick="quickAction('test');closeSheet()">
+    <div class="sheet-item-icon">&#129302;</div>
+    Тестировать бота
+  </button>
 </div>
 
 <!-- Toast -->
@@ -642,7 +849,6 @@
       twa.onEvent('themeChanged', function () {
         var dark = twa.colorScheme === 'dark';
         document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-        var nav = document.getElementById('bottom-nav');
       });
     } catch (_) {}
   }
@@ -810,6 +1016,8 @@
     document.getElementById('stat-dialogs').textContent = S.chats.length + S.unanswered.length;
     document.getElementById('stat-bots').textContent = S.bots.length;
     document.getElementById('stat-unans').textContent = S.unanswered.length;
+    var minsEl = document.getElementById('stat-mins');
+    if (minsEl) minsEl.textContent = Math.round(S.chats.length * 2.5);
   }
 
   // ── Render recent chats (analytics) ──
@@ -847,7 +1055,10 @@
         '<div class="chat-name">' + esc(c.name || 'Пользователь') + '</div>' +
         '<div class="chat-preview">' + preview + '</div>' +
       '</div>' +
-      '<span class="chat-time">' + time + '</span>' +
+      '<div class="chat-right">' +
+        '<span class="chat-time">' + time + '</span>' +
+        '<span class="chat-ai-tag">AI</span>' +
+      '</div>' +
       '</div>';
   }
 
@@ -861,14 +1072,17 @@
     el.innerHTML = S.bots.map(function (bot) {
       var initial = (bot.name || '?').charAt(0).toUpperCase();
       var handle = bot.username ? '@' + bot.username.replace(/^@/, '') : '';
-      var openLink = bot.username ? '<a href="https://t.me/' + bot.username.replace(/^@/, '') + '" target="_blank" class="bot-action-btn primary">Открыть бота</a>' : '<div></div>';
-      return '<div class="card bot-card">' +
-        '<div class="bot-card-header">' +
+      var openLink = bot.username
+        ? '<a href="https://t.me/' + bot.username.replace(/^@/, '') + '" target="_blank" class="btn-blue">Открыть бота</a>'
+        : '<div></div>';
+      return '<div class="bot-card">' +
+        '<div class="bot-card-hdr">' +
           '<div class="bot-card-av">' + esc(initial) + '</div>' +
-          '<div><div class="bot-card-name">' + esc(bot.name || 'Бот') + '</div><div class="bot-card-handle">' + esc(handle) + '</div></div>' +
+          '<div><div class="bot-card-name">' + esc(bot.name || 'Бот') + '</div>' +
+          '<div class="bot-card-handle">' + esc(handle) + '</div></div>' +
         '</div>' +
-        '<div class="bot-actions">' +
-          '<a href="https://chatbot-acd16.web.app" target="_blank" class="bot-action-btn secondary">Настройки</a>' +
+        '<div class="bot-btns">' +
+          '<a href="https://chatbot-acd16.web.app" target="_blank" class="btn-secondary">Настройки</a>' +
           openLink +
         '</div>' +
         '</div>';
