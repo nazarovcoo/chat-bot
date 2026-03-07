@@ -1890,13 +1890,15 @@
       if (section === 'language') { section = 'general'; }
       if (typeof window.openSettings === 'function') window.openSettings(section);
     };
-    window.__cpLogout = function () {
-      if (typeof window.__showLogoutConfirm === 'function') {
-        window.__showLogoutConfirm();
-      } else {
-        try { if (typeof firebase !== 'undefined' && firebase.auth) firebase.auth().signOut(); } catch (_) {}
-        window.location.href = '/';
-      }
+    window.__cpLogout = async function () {
+      try {
+        localStorage.removeItem('LAST_PROJECT_ID');
+        localStorage.removeItem('lastScreen');
+        var _u = typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser;
+        if (_u) localStorage.removeItem('phone_verified_' + _u.uid);
+        if (typeof firebase !== 'undefined' && firebase.auth) await firebase.auth().signOut();
+      } catch (e) { console.error('[LOGOUT]', e); }
+      window.location.href = '/';
     };
 
     function closeTelegramConnectModal() {
