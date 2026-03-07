@@ -111,6 +111,14 @@
         "function": "projectsApi"
       },
       {
+        "source": "/api/trainer/**",
+        "function": "projectsApi"
+      },
+      {
+        "source": "/api/tahrirchi",
+        "function": "projectsApi"
+      },
+      {
         "source": "/api/admin-send-message",
         "function": "adminSendMessage"
       },
