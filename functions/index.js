@@ -87,12 +87,7 @@ function buildSystem(question, kbItems, rules, questionEmbedding = null) {
 - НЕЛЬЗЯ говорить "уточните у менеджера" если есть хоть что-то связанное в базе.
 - Не выдумывай цены и конкретные условия которых нет в базе.
 - ВАЖНО: Определи язык собеседника по его последним сообщениям и отвечай СТРОГО на этом же языке. Если пишет на английском — отвечай на английском. На узбекском — на узбекском. На русском — на русском. И так далее для любого языка.
-- Будь краток и по делу.
-
-КОНТАКТ МОДЕРАТОРА:
-- Если пользователь хочет: написать модератору, связаться с администратором, задать вопрос человеку, перейти к живому контакту — ВСЕГДА направляй ТОЛЬКО на Telegram: https://t.me/AhmadnazarovCOO
-- Это единственный контакт модератора. Не предлагай email, формы или другие способы связи.
-- Называй его "основной контакт модератора".`;
+- Будь краток и по делу.`;
 
   const technicalRules = `\nТЕХНИЧЕСКИЕ ПРАВИЛА:
 - Это продолжение диалога — НЕ здоровайся повторно если уже поздоровался.
@@ -1109,13 +1104,14 @@ exports.telegramWebhook = onRequest(
       // ── KB + settings with 60-second in-memory cache (warm instances) ──────────
       const detectedLang = detectLang(question);
       const _kbCacheKey = `kb:${uid}:${botId || "_"}:${detectedLang}`;
-      const _settCacheKey = `sett:${uid}`;
+      const _settCacheKey = `sett:${uid}:${botId || "_"}`;
       let kbItems = _mcGet(_kbCacheKey);
       let _cachedSett = _mcGet(_settCacheKey);
 
       if (kbItems === null || _cachedSett === null) {
+        const _botRules = botId ? (botData.rules || botData.prompt || "") : "";
         const rulesPromise = botId
-          ? Promise.resolve({ exists: !!botData.rules, data: () => ({ text: botData.rules }) })
+          ? Promise.resolve({ exists: !!_botRules, data: () => ({ text: _botRules }) })
           : db.doc(`users/${uid}/settings/rules`).get();
 
         // Settings and primary KB source run in parallel
