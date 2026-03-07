@@ -2266,6 +2266,8 @@
         } catch(e) { el.innerHTML = '<p class="trainer-empty">Ошибка загрузки</p>'; }
     }
 
+    var _kbItemsMap = {};
+
     async function _trainerLoadKnowledge() {
         const el = document.getElementById('trainer-knowledge-list');
         const cnt = document.getElementById('trainer-kb-count');
@@ -2275,6 +2277,8 @@
             const r = await _trainerApi('GET', 'trainer/knowledge');
             if (!r.ok || !r.items.length) { el.innerHTML = '<p class="trainer-empty">База знаний пуста</p>'; return; }
             cnt.textContent = r.items.length + ' записей';
+            _kbItemsMap = {};
+            r.items.forEach(item => { _kbItemsMap[item.id] = item; });
             el.innerHTML = `<table class="trainer-table">
               <thead><tr><th>Вопрос / Заголовок</th><th>Ответ</th><th>Статус</th><th>Запросов</th><th>Дата</th><th></th></tr></thead>
               <tbody>${r.items.map(item => `<tr>
@@ -2284,8 +2288,8 @@
                 <td style="text-align:center">${item.asked||0}</td>
                 <td>${_trainerDate(item.createdAt)}</td>
                 <td><div class="trainer-actions">
-                  <button class="trainer-btn" onclick="trainerEditKB('${item.id}',${JSON.stringify(item.canonicalQuestion||item.question||item.title||'')},${JSON.stringify(item.answer||item.content||'')})">Изменить</button>
-                  <button class="trainer-btn danger" onclick="trainerDeleteKB('${item.id}')">Удалить</button>
+                  <button class="trainer-btn" onclick="trainerEditKB('${_tesc(item.id)}')">Изменить</button>
+                  <button class="trainer-btn danger" onclick="trainerDeleteKB('${_tesc(item.id)}')">Удалить</button>
                 </div></td>
               </tr>`).join('')}</tbody>
             </table>`;
@@ -2298,7 +2302,11 @@
         catch(e) { showToast('Ошибка: ' + e.message); }
     }
 
-    function trainerEditKB(id, question, answer) {
+    function trainerEditKB(id) {
+        const item = _kbItemsMap[id];
+        if (!item) return;
+        const question = item.canonicalQuestion || item.question || item.title || '';
+        const answer = item.answer || item.content || '';
         _trainerEditorCtx = { mode: 'kb_edit', id };
         document.getElementById('trainer-ed-title').textContent = 'Изменить запись базы знаний';
         document.getElementById('trainer-ed-q').value = question;
