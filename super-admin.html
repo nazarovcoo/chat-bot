@@ -2157,7 +2157,10 @@
                 <td>${_tbadge(item.status||'active')}</td>
                 <td style="text-align:center">${item.asked||0}</td>
                 <td>${_trainerDate(item.createdAt)}</td>
-                <td><button class="trainer-btn danger" onclick="trainerDeleteKB('${item.id}')">Удалить</button></td>
+                <td><div class="trainer-actions">
+                  <button class="trainer-btn" onclick="trainerEditKB('${item.id}',${JSON.stringify(item.canonicalQuestion||item.question||item.title||'')},${JSON.stringify(item.answer||item.content||'')})">Изменить</button>
+                  <button class="trainer-btn danger" onclick="trainerDeleteKB('${item.id}')">Удалить</button>
+                </div></td>
               </tr>`).join('')}</tbody>
             </table>`;
         } catch(e) { el.innerHTML = '<p class="trainer-empty">Ошибка загрузки</p>'; }
@@ -2167,6 +2170,17 @@
         if (!confirm('Удалить запись из базы знаний? Бот перестанет на неё опираться.')) return;
         try { await _trainerApi('DELETE', 'trainer/knowledge/' + id); trainerLoad('knowledge'); showToast('Запись удалена'); }
         catch(e) { showToast('Ошибка: ' + e.message); }
+    }
+
+    function trainerEditKB(id, question, answer) {
+        _trainerEditorCtx = { mode: 'kb_edit', id };
+        document.getElementById('trainer-ed-title').textContent = 'Изменить запись базы знаний';
+        document.getElementById('trainer-ed-q').value = question;
+        document.getElementById('trainer-ed-a').value = answer;
+        document.getElementById('trainer-ed-save-btn').textContent = 'Сохранить изменения';
+        document.getElementById('trainer-ed-extra').innerHTML = '';
+        document.getElementById('trainer-editor-bg').style.display = 'flex';
+        _tahrirchiAutoSayqalchi();
     }
 
     async function _trainerLoadDict() {
@@ -2274,6 +2288,9 @@
             } else if (ctx.mode === 'edit') {
                 await _trainerApi('PATCH', 'trainer/drafts/' + ctx.id, { canonicalQuestion: q, answer: a });
                 showToast('Черновик обновлён');
+            } else if (ctx.mode === 'kb_edit') {
+                await _trainerApi('PATCH', 'trainer/knowledge/' + ctx.id, { question: q, answer: a });
+                showToast('Запись базы знаний обновлена');
             }
             trainerEditorClose();
             trainerLoad(_trainerCurrentTab);
