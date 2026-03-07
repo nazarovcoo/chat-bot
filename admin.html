@@ -12300,7 +12300,19 @@ ${kbSummary}`,
         }
 
         // Projects-only mode: do not start legacy listeners/screens to keep UI fast and stable.
-        if (window.FORCE_PROJECTS_MAIN) return;
+        if (window.FORCE_PROJECTS_MAIN) {
+          // Re-enter projects mode after logout→re-login (ProjectsUI already loaded)
+          if (!document.body.classList.contains('projects-mode') && window.ProjectsUI) {
+            document.body.classList.add('projects-mode');
+            const root = document.getElementById('projects-ui-root');
+            if (root && !window.__projectsUiMounted) {
+              root.style.display = 'block';
+              root.innerHTML = '';
+              window.__projectsUiMounted = window.ProjectsUI.mount(root, {});
+            }
+          }
+          return;
+        }
 
         db.collection('users').doc(user.uid).collection('settings').doc('agent').get().then(d => {
           if (d.exists) { STATE.agentActive = d.data().active !== false; applyAgentStatus(); }
@@ -12392,6 +12404,17 @@ ${kbSummary}`,
         currentUser = null;
         STATE.bots = []; STATE.kbItems = []; STATE.unanswered = []; STATE.topics = [];
         STATE.currentBotId = null; STATE.botPhotos = {}; STATE.chats = []; STATE.kbQA = [];
+        // Exit projects-mode so auth-overlay becomes visible
+        if (document.body.classList.contains('projects-mode')) {
+          document.body.classList.remove('projects-mode');
+          const projRoot = document.getElementById('projects-ui-root');
+          if (projRoot) { projRoot.style.display = 'none'; projRoot.innerHTML = ''; }
+          ['.main', '.sidebar', '#onboarding-chat-overlay'].forEach(sel => {
+            const el = document.querySelector(sel);
+            if (el) el.style.removeProperty('display');
+          });
+          window.__projectsUiMounted = null;
+        }
         document.getElementById('auth-overlay').classList.remove('hidden');
         document.getElementById('user-pill').style.display = 'none';
         const sbRowEl = document.getElementById('sb-user-row');
