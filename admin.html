@@ -6978,8 +6978,7 @@
             <div class="av-dd-item" onclick="closeAvDropdown()"><span class="av-dd-ico">🌐</span> Язык</div>
             <div class="av-dd-item" onclick="closeAvDropdown()"><span class="av-dd-ico">❓</span> Помощь</div>
             <div class="av-dd-sep"></div>
-            <div class="av-dd-item danger" onclick="signOut()"><span class="av-dd-ico">🚪</span> ...
-            </div>
+            <div class="av-dd-item danger" onclick="signOut()"><span class="av-dd-ico">🚪</span> Выйти</div>
           </div>
         </div>
       </div>
@@ -12320,8 +12319,14 @@ ${kbSummary}`,
 
       function onUserLogout() {
         stopListeners(); // unsubscribe all Firestore listeners on logout
+        // Clear user-specific localStorage (project, bot, session state)
+        const uid = currentUser ? currentUser.uid : null;
+        localStorage.removeItem('LAST_PROJECT_ID');
+        localStorage.removeItem('lastScreen');
+        if (uid) localStorage.removeItem('phone_verified_' + uid);
         currentUser = null;
         STATE.bots = []; STATE.kbItems = []; STATE.unanswered = []; STATE.topics = [];
+        STATE.currentBotId = null; STATE.botPhotos = {}; STATE.chats = []; STATE.kbQA = [];
         document.getElementById('auth-overlay').classList.remove('hidden');
         document.getElementById('user-pill').style.display = 'none';
         // In Telegram Mini App: keep spinner visible while auto-auth is in progress

@@ -753,10 +753,13 @@
         <div class="bot-handle" id="bot-handle"></div>
       </div>
     </div>
-    <button class="add-btn" id="add-btn" onclick="openSheet()">
-      +
-      <span class="notif-badge" id="notif-badge"></span>
-    </button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="add-btn" id="add-btn" onclick="openSheet()">
+        +
+        <span class="notif-badge" id="notif-badge"></span>
+      </button>
+      <button class="add-btn" id="user-av-btn" onclick="openAccountSheet()" style="background:linear-gradient(145deg,#5b62f6,#3068ff);color:#fff;border-color:transparent;font-size:14px;font-weight:800;">?</button>
+    </div>
   </header>
 
   <!-- ── Analytics tab ── -->
@@ -971,6 +974,38 @@
   </button>
 </div>
 
+<!-- Account menu sheet -->
+<div class="sheet" id="account-sheet">
+  <div class="sheet-handle"></div>
+  <!-- User header -->
+  <div style="display:flex;align-items:center;gap:14px;padding:0 2px 18px;border-bottom:1px solid var(--line);margin-bottom:14px;">
+    <div class="account-av" id="accsht-av" style="width:52px;height:52px;font-size:22px;flex-shrink:0;">?</div>
+    <div style="min-width:0;">
+      <div style="font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="accsht-name">—</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="accsht-email">—</div>
+    </div>
+  </div>
+  <!-- Menu items -->
+  <button class="sheet-item" onclick="acctAction('account')">
+    <div class="sheet-item-icon">👤</div>Мой аккаунт
+  </button>
+  <button class="sheet-item" onclick="acctAction('billing')">
+    <div class="sheet-item-icon">💳</div>Оплата и тарифы
+  </button>
+  <button class="sheet-item" onclick="acctAction('partner')">
+    <div class="sheet-item-icon">🤝</div>Кабинет партнёра
+  </button>
+  <button class="sheet-item" onclick="acctAction('language')">
+    <div class="sheet-item-icon">🌐</div>Язык
+  </button>
+  <button class="sheet-item" onclick="acctAction('help')">
+    <div class="sheet-item-icon">❓</div>Помощь
+  </button>
+  <button class="sheet-item" onclick="closeAccountSheet();doLogout()" style="color:var(--danger);">
+    <div class="sheet-item-icon" style="background:var(--danger-soft);">🚪</div>Выйти
+  </button>
+</div>
+
 <!-- Logout confirmation sheet -->
 <div class="sheet" id="logout-sheet" style="z-index:100">
   <div class="sheet-handle"></div>
@@ -1051,14 +1086,29 @@
       provider = 'telegram'; providerLabel = 'Telegram';
     }
 
+    var emailDisplay = email || (provider === 'telegram' ? 'Telegram аккаунт' : '');
+
+    // Settings tab account card
     var av = document.getElementById('account-av');
     var nameEl = document.getElementById('account-name');
     var emailEl = document.getElementById('account-email');
     var provEl = document.getElementById('account-provider');
-    if (av) { av.textContent = initial; }
+    if (av) av.textContent = initial;
     if (nameEl) nameEl.textContent = name;
-    if (emailEl) emailEl.textContent = email || (provider === 'telegram' ? 'Telegram аккаунт' : '');
-    if (provEl) { provEl.textContent = providerLabel; }
+    if (emailEl) emailEl.textContent = emailDisplay;
+    if (provEl) provEl.textContent = providerLabel;
+
+    // Topbar user avatar button
+    var userAvBtn = document.getElementById('user-av-btn');
+    if (userAvBtn) userAvBtn.textContent = initial;
+
+    // Account sheet header
+    var shtAv = document.getElementById('accsht-av');
+    var shtName = document.getElementById('accsht-name');
+    var shtEmail = document.getElementById('accsht-email');
+    if (shtAv) shtAv.textContent = initial;
+    if (shtName) shtName.textContent = name;
+    if (shtEmail) shtEmail.textContent = emailDisplay;
   }
 
   // ── Email/password login ──
@@ -1121,8 +1171,39 @@
     document.getElementById('logout-sheet').classList.remove('open');
   }
 
+  function openAccountSheet() {
+    document.getElementById('sheet-backdrop').classList.add('open');
+    document.getElementById('account-sheet').classList.add('open');
+  }
+  function closeAccountSheet() {
+    document.getElementById('sheet-backdrop').classList.remove('open');
+    document.getElementById('account-sheet').classList.remove('open');
+  }
+  function acctAction(type) {
+    closeAccountSheet();
+    var base = 'https://chatbot-acd16.web.app';
+    var map = {
+      account: base + '/?settings=account',
+      billing: base + '/?settings=billing',
+      partner: base + '/?settings=partner',
+      language: base + '/?settings=general',
+      help: 'https://t.me/createbotai'
+    };
+    var url = map[type] || base;
+    if (twa && twa.openLink) {
+      try { twa.openLink(url); } catch (_) { window.open(url, '_blank'); }
+    } else {
+      window.open(url, '_blank');
+    }
+  }
+
   function confirmLogout() {
     closeLogoutSheet();
+    // Clear user-specific localStorage
+    localStorage.removeItem('LAST_PROJECT_ID');
+    localStorage.removeItem('lastScreen');
+    if (S.uid) localStorage.removeItem('phone_verified_' + S.uid);
+    // Reset all app state
     S.unsubs.forEach(function (u) { u(); });
     S.unsubs = [];
     S.uid = null;
@@ -1365,6 +1446,7 @@
     document.getElementById('sheet-backdrop').classList.remove('open');
     document.getElementById('action-sheet').classList.remove('open');
     document.getElementById('logout-sheet').classList.remove('open');
+    document.getElementById('account-sheet').classList.remove('open');
   }
 
   // ── Quick actions ──
