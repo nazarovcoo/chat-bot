@@ -6939,7 +6939,7 @@
 
       <div class="sidebar-footer">
         <!-- User profile row — click to open account menu -->
-        <div class="sb-user-row" id="sb-user-row" style="display:none;" onclick="toggleAvDropdown(event)">
+        <div class="sb-user-row" id="sb-user-row" style="display:none;" onclick="toggleSbDropdown(event)">
           <div class="sb-user-av" id="sb-user-av">?</div>
           <div class="sb-user-info">
             <div class="sb-user-name" id="sb-user-name">—</div>
@@ -12487,21 +12487,21 @@ ${kbSummary}`,
       /* ══ AVATAR DROPDOWN ══ */
       function toggleAvDropdown(e) {
         e.stopPropagation();
-        // If triggered from sidebar user row, use the sidebar dropdown
-        const sbRow = document.getElementById('sb-user-row');
-        if (sbRow && sbRow.contains(e.currentTarget || e.target)) {
-          document.getElementById('av-dropdown-sb').classList.toggle('open');
-          document.getElementById('av-dropdown').classList.remove('open');
-        } else {
-          document.getElementById('av-dropdown').classList.toggle('open');
-          document.getElementById('av-dropdown-sb').classList.remove('open');
-        }
+        document.getElementById('av-dropdown').classList.toggle('open');
+        closeSbDropdown();
       }
       function closeAvDropdown() {
         document.getElementById('av-dropdown').classList.remove('open');
       }
+      function toggleSbDropdown(e) {
+        e.stopPropagation();
+        const dd = document.getElementById('av-dropdown-sb');
+        if (dd) dd.classList.toggle('open');
+        closeAvDropdown();
+      }
       function closeSbDropdown() {
-        document.getElementById('av-dropdown-sb').classList.remove('open');
+        const el = document.getElementById('av-dropdown-sb');
+        if (el) el.classList.remove('open');
       }
       document.addEventListener('click', () => {
         closeAvDropdown();
