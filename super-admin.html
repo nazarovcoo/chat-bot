@@ -1092,6 +1092,28 @@
             <input id="trainer-ed-q" class="trainer-input" placeholder="Канонический вопрос">
             <label>Ответ</label>
             <textarea id="trainer-ed-a" class="trainer-textarea" rows="5" placeholder="Ответ для базы знаний"></textarea>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+                <select id="tahr-src" class="trainer-input" style="width:auto;padding:4px 8px;font-size:0.78rem;">
+                    <option value="uzn_Latn">O'zbekcha (lotin)</option>
+                    <option value="uzn_Cyrl">O'zbekcha (kirill)</option>
+                    <option value="rus_Cyrl">Русский</option>
+                    <option value="eng_Latn">English</option>
+                    <option value="kaz_Cyrl">Қазақша</option>
+                    <option value="tur_Latn">Türkçe</option>
+                </select>
+                <span style="color:var(--text-dim);font-size:0.78rem;">→</span>
+                <select id="tahr-tgt" class="trainer-input" style="width:auto;padding:4px 8px;font-size:0.78rem;">
+                    <option value="rus_Cyrl">Русский</option>
+                    <option value="uzn_Latn">O'zbekcha (lotin)</option>
+                    <option value="uzn_Cyrl">O'zbekcha (kirill)</option>
+                    <option value="eng_Latn">English</option>
+                    <option value="kaz_Cyrl">Қазақша</option>
+                    <option value="tur_Latn">Türkçe</option>
+                </select>
+                <button class="trainer-btn" onclick="tahrirchiSayqalchi()" style="white-space:nowrap">✨ Sayqalchi</button>
+                <button class="trainer-btn primary" onclick="tahrirchiTilmoch()" style="white-space:nowrap">🌐 Tilmoch</button>
+                <span id="tahr-status" style="font-size:0.75rem;color:var(--text-dim);"></span>
+            </div>
             <div id="trainer-ed-extra" style="margin-top:8px;"></div>
             <div class="trainer-ed-btns">
                 <button class="tab-btn" onclick="trainerEditorClose()">Отмена</button>
@@ -2252,6 +2274,41 @@
         try { await _trainerApi('DELETE', 'trainer/dictionary/' + id); trainerLoad('dictionary'); }
         catch(e) { showToast('Ошибка: ' + e.message); }
     }
+
+    /* ══ TAHRIRCHI ══ */
+    const TAHRIRCHI_TOKEN = 'th_22abfcfd-74a5-4031-9f6b-0b2590f26bbc';
+    const TAHRIRCHI_URL = 'https://websocket.tahrirchi.uz/translate-v2';
+
+    async function _tahrirchiCall(model) {
+        const text = document.getElementById('trainer-ed-a').value.trim();
+        if (!text) { showToast('Ответ пустой'); return; }
+        const src = document.getElementById('tahr-src').value;
+        const tgt = document.getElementById('tahr-tgt').value;
+        const status = document.getElementById('tahr-status');
+        status.textContent = '⏳';
+        try {
+            const resp = await fetch(TAHRIRCHI_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': TAHRIRCHI_TOKEN },
+                body: JSON.stringify({ text, source_lang: src, target_lang: tgt, model })
+            });
+            if (!resp.ok) { status.textContent = '❌ ' + resp.status; return; }
+            const data = await resp.json();
+            if (data.translated_text) {
+                document.getElementById('trainer-ed-a').value = data.translated_text;
+                status.textContent = '✅';
+                setTimeout(() => { status.textContent = ''; }, 2000);
+            } else {
+                status.textContent = '❌';
+            }
+        } catch(e) {
+            status.textContent = '❌';
+            showToast('Tahrirchi error: ' + e.message);
+        }
+    }
+
+    function tahrirchiSayqalchi() { _tahrirchiCall('sayqalchi'); }
+    function tahrirchiTilmoch()   { _tahrirchiCall('tilmoch'); }
     </script>
 
 </body>
