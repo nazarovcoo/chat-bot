@@ -1357,6 +1357,44 @@ exports.telegramWebhook = onRequest(
       const sessionData = sessionDoc.exists ? sessionDoc.data() : {};
       const fallbackCount = sessionData.fallbackCount || 0;
 
+      // ── Direct KB answer: strong match (≥0.5) → return stored answer, skip OpenAI ──
+      if (maxKbScore >= 0.5 && kbItems.length > 0) {
+        const topIdx = kbScores.indexOf(maxKbScore);
+        const topItem = kbItems[topIdx];
+        if (topItem && topItem.content && topItem.content.trim().length > 0) {
+          clearInterval(typingInterval);
+          const directTgText = topItem.content.trim()
+            .replace(/\*\*(.+?)\*\*/gs, '$1')
+            .replace(/\*(.+?)\*/gs, '$1')
+            .replace(/__(.+?)__/gs, '$1')
+            .replace(/_([^_]+?)_/gs, '$1')
+            .replace(/#{1,6}\s/g, '');
+          const newHistoryDirect = [...allMessages,
+            { role: "user", content: question },
+            { role: "assistant", content: topItem.content }
+          ].slice(-100);
+          await Promise.all([
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chat_id: chatId, text: directTgText }),
+            }),
+            historyRef.set({ messages: newHistoryDirect, updatedAt: admin.firestore.FieldValue.serverTimestamp() }),
+            chatDocRef.set({
+              chatId, name: chatName, username: chatUsername, botId,
+              lastMessage: question.slice(0, 100),
+              lastTs: admin.firestore.FieldValue.serverTimestamp(),
+              _ts: admin.firestore.FieldValue.serverTimestamp(),
+              mode: 'ai', msgCount: newMsgCount,
+            }, { merge: true }),
+            topItem._id
+              ? db.doc(`users/${uid}/kbQA/${topItem._id}`).update({ asked: admin.firestore.FieldValue.increment(1) }).catch(() => {})
+              : Promise.resolve(),
+          ]).catch(() => {});
+          console.log(`[tgWebhook] directKB uid=${uid} score=${maxKbScore.toFixed(2)} q="${question.slice(0, 60)}"`);
+          res.status(200).end(); return;
+        }
+      }
+
       // Explicit operator request detection
       const operatorKeywords = /оператор|оператора|живой человек|живого человека|менеджер|менеджера|поддержка|support|human|operator|manager/i;
       const userWantsOperator = operatorKeywords.test(question);
@@ -2958,6 +2996,23 @@ exports.projectsApi = onRequest(
       const tdictDel = path.match(/^trainer\/dictionary\/([^/]+)$/);
       if (tdictDel && req.method === "DELETE") {
         await db.doc(`users/${uid}/trainer_dictionary/${tdictDel[1]}`).delete();
+        res.json({ ok: true });
+        return;
+      }
+
+      // ── GET /trainer/knowledge — all kbQA items for this user ──
+      if (req.method === "GET" && path === "trainer/knowledge") {
+        const snap = await db.collection(`users/${uid}/kbQA`)
+          .orderBy("createdAt", "desc").limit(300).get();
+        const items = snap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || null }));
+        res.json({ ok: true, items });
+        return;
+      }
+
+      // ── DELETE /trainer/knowledge/:id ──
+      const tkDel = path.match(/^trainer\/knowledge\/([^/]+)$/);
+      if (req.method === "DELETE" && tkDel) {
+        await db.doc(`users/${uid}/kbQA/${tkDel[1]}`).delete();
         res.json({ ok: true });
         return;
       }

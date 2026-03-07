@@ -1053,6 +1053,7 @@
                         <button class="trainer-tab active" data-tab="unanswered" onclick="trainerTab(this,'unanswered')">Без ответов</button>
                         <button class="trainer-tab" data-tab="openai" onclick="trainerTab(this,'openai')">OpenAI ответы</button>
                         <button class="trainer-tab" data-tab="drafts" onclick="trainerTab(this,'drafts')">Черновики</button>
+                        <button class="trainer-tab" data-tab="knowledge" onclick="trainerTab(this,'knowledge')">📚 База знаний</button>
                         <button class="trainer-tab" data-tab="dictionary" onclick="trainerTab(this,'dictionary')">Словарь</button>
                     </div>
                     <div class="trainer-pane active" id="tpane-unanswered">
@@ -1074,6 +1075,15 @@
                         </div>
                         <div id="trainer-drafts-list" class="trainer-table-wrap"><p class="trainer-empty">Загрузка...</p></div>
                     </div>
+                    <!-- TAB: Knowledge Base -->
+                    <div class="trainer-pane" id="tpane-knowledge">
+                        <div class="trainer-toolbar">
+                            <button class="tab-btn" style="font-size:12px" onclick="trainerLoad('knowledge')">↻ Обновить</button>
+                            <span id="trainer-kb-count" style="font-size:0.8rem;color:var(--text-dim);align-self:center;"></span>
+                        </div>
+                        <div id="trainer-knowledge-list" class="trainer-table-wrap"><p class="trainer-empty">Загрузка...</p></div>
+                    </div>
+
                     <div class="trainer-pane" id="tpane-dictionary">
                         <div class="trainer-toolbar">
                             <button class="tab-btn" style="font-size:12px" onclick="trainerLoad('dictionary')">↻ Обновить</button>
@@ -2046,6 +2056,7 @@
         if (tab === 'unanswered') _trainerLoadUnanswered();
         else if (tab === 'openai') _trainerLoadOpenai();
         else if (tab === 'drafts') _trainerLoadDrafts();
+        else if (tab === 'knowledge') _trainerLoadKnowledge();
         else if (tab === 'dictionary') _trainerLoadDict();
     }
 
@@ -2124,6 +2135,35 @@
               </tr>`).join('')}</tbody>
             </table>`;
         } catch(e) { el.innerHTML = '<p class="trainer-empty">Ошибка загрузки</p>'; }
+    }
+
+    async function _trainerLoadKnowledge() {
+        const el = document.getElementById('trainer-knowledge-list');
+        const cnt = document.getElementById('trainer-kb-count');
+        el.innerHTML = '<p class="trainer-empty">Загрузка...</p>';
+        cnt.textContent = '';
+        try {
+            const r = await _trainerApi('GET', 'trainer/knowledge');
+            if (!r.ok || !r.items.length) { el.innerHTML = '<p class="trainer-empty">База знаний пуста</p>'; return; }
+            cnt.textContent = r.items.length + ' записей';
+            el.innerHTML = `<table class="trainer-table">
+              <thead><tr><th>Вопрос / Заголовок</th><th>Ответ</th><th>Статус</th><th>Запросов</th><th>Дата</th><th></th></tr></thead>
+              <tbody>${r.items.map(item => `<tr>
+                <td title="${_tesc(item.canonicalQuestion||item.question||item.title||'')}"><b>${_tesc((item.canonicalQuestion||item.question||item.title||'—').slice(0,70))}</b></td>
+                <td title="${_tesc(item.answer||item.content||'')}">${_tesc((item.answer||item.content||'—').slice(0,100))}${((item.answer||item.content||'').length>100)?'…':''}</td>
+                <td>${_tbadge(item.status||'active')}</td>
+                <td style="text-align:center">${item.asked||0}</td>
+                <td>${_trainerDate(item.createdAt)}</td>
+                <td><button class="trainer-btn danger" onclick="trainerDeleteKB('${item.id}')">Удалить</button></td>
+              </tr>`).join('')}</tbody>
+            </table>`;
+        } catch(e) { el.innerHTML = '<p class="trainer-empty">Ошибка загрузки</p>'; }
+    }
+
+    async function trainerDeleteKB(id) {
+        if (!confirm('Удалить запись из базы знаний? Бот перестанет на неё опираться.')) return;
+        try { await _trainerApi('DELETE', 'trainer/knowledge/' + id); trainerLoad('knowledge'); showToast('Запись удалена'); }
+        catch(e) { showToast('Ошибка: ' + e.message); }
     }
 
     async function _trainerLoadDict() {
