@@ -134,6 +134,113 @@
     .btn-primary:disabled { opacity: 0.55; }
     .login-error { color: var(--danger); font-size: 13px; text-align: center; min-height: 16px; }
 
+    /* ── Auth buttons ── */
+    .btn-google {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 14px;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-lg);
+      background: var(--card);
+      color: var(--text);
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-google:active { background: var(--bg); }
+    .btn-google:disabled { opacity: 0.55; }
+    .btn-google-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+    .btn-tg {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 14px;
+      border: none;
+      border-radius: var(--r-lg);
+      background: #2aabee;
+      color: #fff;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-tg:active { opacity: 0.85; }
+    .btn-tg:disabled { opacity: 0.55; }
+
+    .auth-divider {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--muted); font-size: 13px; font-weight: 500;
+      width: 100%;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--line);
+    }
+
+    .tg-user-hint {
+      width: 100%;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px;
+      background: rgba(42,171,238,0.08);
+      border: 1px solid rgba(42,171,238,0.2);
+      border-radius: var(--r-md);
+      font-size: 13px; color: var(--text2);
+    }
+    .tg-user-hint strong { color: var(--text); }
+
+    /* ── Account card in Settings ── */
+    .account-card {
+      background: var(--card);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-sm);
+      padding: 16px;
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 16px;
+    }
+    .account-av {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #5b62f6, #3068ff);
+      color: #fff;
+      display: grid; place-items: center;
+      font-size: 20px; font-weight: 800;
+      flex-shrink: 0;
+    }
+    .account-name { font-size: 15px; font-weight: 800; }
+    .account-email { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .account-provider {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+      margin-top: 4px;
+    }
+
+    /* ── Logout confirmation sheet ── */
+    #logout-sheet { z-index: 100; }
+    .logout-confirm-title { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+    .logout-confirm-sub { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.4; }
+    .btn-danger {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: var(--r-lg);
+      background: var(--danger);
+      color: #fff;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .btn-cancel {
+      width: 100%;
+      padding: 14px;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-lg);
+      background: none;
+      color: var(--text);
+      font-size: 15px; font-weight: 600;
+      cursor: pointer;
+    }
+
     /* ── App layout ── */
     #screen-app { display: none; }
 
@@ -604,6 +711,27 @@
   <div class="login-logo">&#129302;</div>
   <div class="login-title">BotPanel</div>
   <div class="login-sub">Войдите, чтобы управлять ботами</div>
+
+  <!-- Telegram hint (shown only if running inside Telegram) -->
+  <div id="tg-user-hint" class="tg-user-hint" style="display:none">
+    <span>&#128241;</span>
+    <span>Вы в Telegram как <strong id="tg-hint-name">@user</strong></span>
+  </div>
+
+  <!-- Continue with Telegram (shown only if initData available) -->
+  <button id="btn-tg-login" class="btn-tg" style="display:none" onclick="doLoginTelegram()">
+    <svg class="btn-google-icon" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.7 8.01c-.12.55-.45.68-.91.42l-2.52-1.86-1.22 1.17c-.13.13-.25.25-.51.25l.18-2.58 4.66-4.21c.2-.18-.04-.28-.31-.1L7.4 14.96l-2.46-.77c-.53-.17-.54-.53.12-.78l9.62-3.7c.45-.16.84.11.96.09z" fill="white"/></svg>
+    Войти через Telegram
+  </button>
+
+  <!-- Continue with Google -->
+  <button id="btn-google-login" class="btn-google" onclick="doLoginGoogle()">
+    <svg class="btn-google-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Войти через Google
+  </button>
+
+  <div class="auth-divider">или</div>
+
   <input type="email" id="login-email" class="input-field" placeholder="Email" autocomplete="email" />
   <input type="password" id="login-pass" class="input-field" placeholder="Пароль" autocomplete="current-password" />
   <div id="login-error" class="login-error"></div>
@@ -746,6 +874,17 @@
 
   <!-- ── Settings tab ── -->
   <div class="tab-content" id="tab-settings">
+
+    <!-- Account card -->
+    <div class="account-card">
+      <div class="account-av" id="account-av">?</div>
+      <div>
+        <div class="account-name" id="account-name">—</div>
+        <div class="account-email" id="account-email">—</div>
+        <div class="account-provider" id="account-provider">email</div>
+      </div>
+    </div>
+
     <div class="settings-section">
       <div class="settings-group">
         <a href="https://chatbot-acd16.web.app" target="_blank" class="settings-row">
@@ -832,6 +971,15 @@
   </button>
 </div>
 
+<!-- Logout confirmation sheet -->
+<div class="sheet" id="logout-sheet" style="z-index:100">
+  <div class="sheet-handle"></div>
+  <div class="logout-confirm-title">Выйти из аккаунта?</div>
+  <div class="logout-confirm-sub">Вы будете перенаправлены на экран входа. Все сессии будут завершены.</div>
+  <button class="btn-danger" onclick="confirmLogout()">Выйти</button>
+  <button class="btn-cancel" onclick="closeLogoutSheet()">Отмена</button>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -875,10 +1023,11 @@
     unsubs: []
   };
 
-  // ── Auth ──
+  // ── Auth state ──
   auth.onAuthStateChanged(function (user) {
     if (user) {
       S.uid = user.uid;
+      populateAccountCard(user);
       showApp();
       startListeners();
     } else {
@@ -886,7 +1035,33 @@
     }
   });
 
-  // ── Login ──
+  function populateAccountCard(user) {
+    var name = user.displayName || user.email || 'Пользователь';
+    var email = user.email || '';
+    var initial = name.charAt(0).toUpperCase();
+
+    // Detect provider
+    var provider = 'email';
+    var providerLabel = 'Email';
+    if (user.providerData && user.providerData.length > 0) {
+      var pid = user.providerData[0].providerId;
+      if (pid === 'google.com') { provider = 'google'; providerLabel = 'Google'; }
+      else if (pid === 'custom' || user.uid.indexOf('tg_') === 0) { provider = 'telegram'; providerLabel = 'Telegram'; }
+    } else if (user.uid.indexOf('tg_') === 0) {
+      provider = 'telegram'; providerLabel = 'Telegram';
+    }
+
+    var av = document.getElementById('account-av');
+    var nameEl = document.getElementById('account-name');
+    var emailEl = document.getElementById('account-email');
+    var provEl = document.getElementById('account-provider');
+    if (av) { av.textContent = initial; }
+    if (nameEl) nameEl.textContent = name;
+    if (emailEl) emailEl.textContent = email || (provider === 'telegram' ? 'Telegram аккаунт' : '');
+    if (provEl) { provEl.textContent = providerLabel; }
+  }
+
+  // ── Email/password login ──
   document.getElementById('login-btn').addEventListener('click', function () {
     var email = document.getElementById('login-email').value.trim();
     var pass = document.getElementById('login-pass').value;
@@ -901,10 +1076,62 @@
     });
   });
 
+  // ── Google login ──
+  function doLoginGoogle() {
+    var btn = document.getElementById('btn-google-login');
+    var err = document.getElementById('login-error');
+    btn.disabled = true; err.textContent = '';
+    var provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(function (e) {
+      err.textContent = e.message;
+      btn.disabled = false;
+    });
+  }
+
+  // ── Telegram login ──
+  function doLoginTelegram() {
+    var btn = document.getElementById('btn-tg-login');
+    var err = document.getElementById('login-error');
+    if (!twa || !twa.initData) { err.textContent = 'Нет данных Telegram'; return; }
+    btn.disabled = true; err.textContent = '';
+    fetch('https://telegramauth-mt3q6i43mq-uc.a.run.app', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: twa.initData })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!data.ok || !data.token) throw new Error(data.error || 'Ошибка авторизации');
+      return auth.signInWithCustomToken(data.token);
+    })
+    .catch(function (e) {
+      err.textContent = e.message;
+      btn.disabled = false;
+    });
+  }
+
+  // ── Logout ──
   function doLogout() {
-    if (!confirm('Выйти из аккаунта?')) return;
+    document.getElementById('sheet-backdrop').classList.add('open');
+    document.getElementById('logout-sheet').classList.add('open');
+  }
+
+  function closeLogoutSheet() {
+    document.getElementById('sheet-backdrop').classList.remove('open');
+    document.getElementById('logout-sheet').classList.remove('open');
+  }
+
+  function confirmLogout() {
+    closeLogoutSheet();
     S.unsubs.forEach(function (u) { u(); });
     S.unsubs = [];
+    S.uid = null;
+    S.bots = [];
+    S.chats = [];
+    S.unanswered = [];
+    S.prevChatIds = null;
+    S.badgeCount = 0;
+    S.currentTab = 'analytics';
     auth.signOut();
   }
 
@@ -921,6 +1148,27 @@
     document.getElementById('screen-login').style.display = 'flex';
     document.getElementById('screen-app').style.display = 'none';
     document.getElementById('bottom-nav').style.display = 'none';
+    // Reset form
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('login-btn').disabled = false;
+    document.getElementById('login-btn').textContent = 'Войти';
+    // Show Telegram hints if inside Telegram with initData
+    var hasTgData = twa && twa.initData;
+    var hintEl = document.getElementById('tg-user-hint');
+    var tgBtn = document.getElementById('btn-tg-login');
+    if (hasTgData && twa.initDataUnsafe && twa.initDataUnsafe.user) {
+      var u = twa.initDataUnsafe.user;
+      var displayName = u.first_name + (u.last_name ? ' ' + u.last_name : '');
+      var handle = u.username ? '@' + u.username : displayName;
+      document.getElementById('tg-hint-name').textContent = handle;
+      if (hintEl) hintEl.style.display = 'flex';
+      if (tgBtn) tgBtn.style.display = 'flex';
+    } else {
+      if (hintEl) hintEl.style.display = 'none';
+      if (tgBtn) tgBtn.style.display = 'none';
+    }
   }
 
   function showApp() {
@@ -928,6 +1176,8 @@
     document.getElementById('screen-login').style.display = 'none';
     document.getElementById('screen-app').style.display = 'block';
     document.getElementById('bottom-nav').style.display = 'grid';
+    // Ensure analytics tab is active on (re-)login
+    switchTab('analytics');
   }
 
   // ── Tab switching ──
@@ -1114,6 +1364,7 @@
   function closeSheet() {
     document.getElementById('sheet-backdrop').classList.remove('open');
     document.getElementById('action-sheet').classList.remove('open');
+    document.getElementById('logout-sheet').classList.remove('open');
   }
 
   // ── Quick actions ──
