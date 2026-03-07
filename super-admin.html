@@ -2170,6 +2170,7 @@
         document.getElementById('trainer-ed-save-btn').textContent = 'Сохранить в черновики';
         document.getElementById('trainer-ed-extra').innerHTML = '';
         document.getElementById('trainer-editor-bg').style.display = 'flex';
+        _tahrirchiAutoSayqalchi();
     }
     async function trainerOpenaiAction(id, action) {
         try { await _trainerApi('POST', 'trainer/openai-responses/' + id + '/action', { action }); trainerLoad('openai'); }
@@ -2192,6 +2193,7 @@
         document.getElementById('trainer-ed-save-btn').textContent = 'Сохранить изменения';
         document.getElementById('trainer-ed-extra').innerHTML = '';
         document.getElementById('trainer-editor-bg').style.display = 'flex';
+        _tahrirchiAutoSayqalchi();
     }
     async function trainerApproveDraft(id) {
         if (!confirm('Добавить в базу знаний?')) return;
@@ -2279,9 +2281,9 @@
     const TAHRIRCHI_TOKEN = 'th_22abfcfd-74a5-4031-9f6b-0b2590f26bbc';
     const TAHRIRCHI_URL = 'https://websocket.tahrirchi.uz/translate-v2';
 
-    async function _tahrirchiCall(model) {
+    async function _tahrirchiCall(model, silent) {
         const text = document.getElementById('trainer-ed-a').value.trim();
-        if (!text) { showToast('Ответ пустой'); return; }
+        if (!text) { if (!silent) showToast('Ответ пустой'); return; }
         const src = document.getElementById('tahr-src').value;
         const tgt = document.getElementById('tahr-tgt').value;
         const status = document.getElementById('tahr-status');
@@ -2303,12 +2305,18 @@
             }
         } catch(e) {
             status.textContent = '❌';
-            showToast('Tahrirchi error: ' + e.message);
+            if (!silent) showToast('Tahrirchi error: ' + e.message);
         }
     }
 
     function tahrirchiSayqalchi() { _tahrirchiCall('sayqalchi'); }
     function tahrirchiTilmoch()   { _tahrirchiCall('tilmoch'); }
+
+    // Автоматически запускать Sayqalchi когда открывается редактор с готовым ответом
+    function _tahrirchiAutoSayqalchi() {
+        const text = document.getElementById('trainer-ed-a').value.trim();
+        if (text) setTimeout(() => _tahrirchiCall('sayqalchi', true), 100);
+    }
     </script>
 
 </body>
