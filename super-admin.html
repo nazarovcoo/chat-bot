@@ -9,8 +9,8 @@
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc2626'/><text y='74' x='50' text-anchor='middle' font-size='58' font-family='system-ui'>⚡</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -255,6 +255,12 @@
 
         .tab-panel.active {
             display: block;
+            animation: fadeInTab 0.12s ease;
+        }
+
+        @keyframes fadeInTab {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         /* ══ KPI CARDS ══ */
@@ -432,7 +438,6 @@
             z-index: 500;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(4px);
         }
 
         .modal-overlay.open {
@@ -769,7 +774,7 @@
 
         .sa-mob-overlay {
             display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-            z-index: 98; backdrop-filter: blur(2px);
+            z-index: 98;
         }
 
         .sa-mob-overlay.open { display: block; }
@@ -782,7 +787,7 @@
         }
 
         @media (max-width: 768px) {
-            .sa-sidebar { transform: translateX(-100%); transition: transform 0.25s ease; z-index: 200; }
+            .sa-sidebar { transform: translateX(-100%); transition: transform 0.22s ease; z-index: 200; will-change: transform; }
             .sa-sidebar.mob-open { transform: translateX(0); }
             .sa-main { margin-left: 0; }
             .sa-mob-toggle { display: flex; }
@@ -1344,10 +1349,9 @@
         async function loadAll() {
             showToast('⏳ Загрузка данных...');
             try {
-                await loadUsers();
+                await Promise.all([loadUsers(), loadPromos()]);
                 renderDashboard();
                 renderUsersTable();
-                await loadPromos();
                 showToast('✅ Данные загружены');
             } catch (e) {
                 console.error(e);
