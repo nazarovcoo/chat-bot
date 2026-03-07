@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BotPanel — Super Admin</title>
+    <title>CREATE BAI — Super Admin</title>
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23dc2626'/><text y='74' x='50' text-anchor='middle' font-size='58' font-family='system-ui'>⚡</text></svg>" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -710,7 +710,7 @@
     <!-- Auth: Login -->
     <div class="auth-screen" id="screen-login" style="display:none;">
         <div class="auth-screen-icon">🔐</div>
-        <div class="auth-screen-title">BotPanel Admin</div>
+        <div class="auth-screen-title">CREATE BAI Admin</div>
         <div class="auth-screen-sub">Войдите через Google-аккаунт команды для доступа к супер-админке.</div>
         <button class="auth-btn" onclick="doLogin()">🔑 Войти через Google</button>
     </div>
@@ -719,7 +719,7 @@
     <div class="auth-screen" id="screen-denied" style="display:none;">
         <div class="auth-screen-icon">🚫</div>
         <div class="auth-screen-title">Доступ запрещён</div>
-        <div class="auth-screen-sub">Ваш аккаунт не входит в список администраторов BotPanel.</div>
+        <div class="auth-screen-sub">Ваш аккаунт не входит в список администраторов CREATE BAI.</div>
         <div id="denied-uid" style="font-size:0.7rem;color:var(--text-dim);font-family:monospace;"></div>
         <button class="auth-btn danger" onclick="firebase.auth().signOut()">Выйти</button>
     </div>
@@ -731,7 +731,7 @@
         <div class="topbar">
             <div class="topbar-left">
                 <div class="topbar-logo">⚡</div>
-                <span class="topbar-title">BotPanel</span>
+                <span class="topbar-title">CREATE BAI</span>
                 <span class="topbar-badge">ADMIN</span>
             </div>
             <div class="topbar-user">
