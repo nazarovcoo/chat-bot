@@ -1796,7 +1796,7 @@
     // Account menu actions — delegate to admin.html handlers
     window.__cpOpenAcct = function (section) {
       if (section === 'help') {
-        var url = 'https://t.me/createbotai';
+        var url = 'https://t.me/createbotaiagentbot';
         if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
           try { window.Telegram.WebApp.openLink(url); } catch (_) { window.open(url, '_blank'); }
         } else {
