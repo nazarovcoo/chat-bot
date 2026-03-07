@@ -12168,7 +12168,7 @@ ${kbSummary}`,
         }
       }
 
-      async function signOut() {
+      window.signOut = async function signOut() {
         showConfirm({
           icon: '🚪',
           title: I18n.t('logoutConfirm'),
