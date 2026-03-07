@@ -2962,6 +2962,22 @@ exports.projectsApi = onRequest(
         return;
       }
 
+      // ── POST /tahrirchi ──
+      if (req.method === "POST" && path === "tahrirchi") {
+        const { text, source_lang, target_lang, model } = req.body || {};
+        if (!text || !source_lang || !target_lang || !model) {
+          res.status(400).json({ error: "Missing fields" }); return;
+        }
+        const tahrResp = await fetch("https://websocket.tahrirchi.uz/translate-v2", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "th_22abfcfd-74a5-4031-9f6b-0b2590f26bbc" },
+          body: JSON.stringify({ text, source_lang, target_lang, model }),
+        });
+        const tahrData = await tahrResp.json();
+        res.json(tahrData);
+        return;
+      }
+
       res.status(404).json({ error: "Not found" });
     } catch (err) {
       console.error("projectsApi error:", err);

@@ -2277,10 +2277,7 @@
         catch(e) { showToast('Ошибка: ' + e.message); }
     }
 
-    /* ══ TAHRIRCHI ══ */
-    const TAHRIRCHI_TOKEN = 'th_22abfcfd-74a5-4031-9f6b-0b2590f26bbc';
-    const TAHRIRCHI_URL = 'https://websocket.tahrirchi.uz/translate-v2';
-
+    /* ══ TAHRIRCHI (proxied via Cloud Function — token stays server-side) ══ */
     async function _tahrirchiCall(model, silent) {
         const text = document.getElementById('trainer-ed-a').value.trim();
         if (!text) { if (!silent) showToast('Ответ пустой'); return; }
@@ -2289,9 +2286,11 @@
         const status = document.getElementById('tahr-status');
         status.textContent = '⏳';
         try {
-            const resp = await fetch(TAHRIRCHI_URL, {
+            const user = firebase.auth().currentUser;
+            const token = user ? await user.getIdToken() : null;
+            const resp = await fetch('/api/tahrirchi', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': TAHRIRCHI_TOKEN },
+                headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
                 body: JSON.stringify({ text, source_lang: src, target_lang: tgt, model })
             });
             if (!resp.ok) { status.textContent = '❌ ' + resp.status; return; }
