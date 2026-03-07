@@ -67,10 +67,10 @@ function buildSystem(question, kbItems, rules, questionEmbedding = null) {
     .map((i) => ({ item: i, score: scoreRelevance(question, i, questionEmbedding) }))
     .sort((a, b) => b.score - a.score);
 
-  // We lower the threshold slightly to catch good semantic matches (e.g. > 0.1)
-  const hasMatch = scored.length > 0 && scored[0].score > 0.1;
+  // Threshold 0.25: requires meaningful semantic overlap to count as a KB match
+  const hasMatch = scored.length > 0 && scored[0].score > 0.25;
   const relevant = hasMatch
-    ? scored.filter((s) => s.score > 0.1).slice(0, TOP_K).map((s) => s.item)
+    ? scored.filter((s) => s.score > 0.25).slice(0, TOP_K).map((s) => s.item)
     : all.slice(0, 10);
 
   const kbText = relevant
@@ -1340,8 +1340,8 @@ exports.telegramWebhook = onRequest(
       // Fallback detection: check if KB has any matching content
       const kbScores = kbItems.map(i => scoreRelevance(question, i, qEmbedding));
       const maxKbScore = kbScores.length > 0 ? Math.max(...kbScores) : 0;
-      // Consider it a match if score > 0.1 (lowered threshold since semantic scores are fractional)
-      const noKbMatch = maxKbScore < 0.1 && kbItems.length > 0;
+      // KB match requires score > 0.25 — weak coincidental overlaps (0.1–0.25) don't count
+      const noKbMatch = maxKbScore < 0.25 && kbItems.length > 0;
       const sessionData = sessionDoc.exists ? sessionDoc.data() : {};
       const fallbackCount = sessionData.fallbackCount || 0;
 
@@ -1393,9 +1393,11 @@ exports.telegramWebhook = onRequest(
       const outputTokens = aiResult.outputTokens;
 
       // Increment `asked` counter on top matching kbQA items
+      // topMatches: only items with genuine KB relevance (score > 0.25)
+      // If no item clears this threshold → question goes to unanswered regardless of AI fallback answer
       const topMatches = kbItems
         .map((i) => ({ item: i, score: scoreRelevance(question, i, qEmbedding) }))
-        .filter((s) => s.score > 0.1)
+        .filter((s) => s.score > 0.25)
         .sort((a, b) => b.score - a.score)
         .slice(0, 3);
       const askIncrements = topMatches.map((s) =>
