@@ -2,8 +2,9 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>BotPanel Mobile Dashboard</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
       --bg: #f5f6f8;
@@ -28,32 +29,15 @@
 
     body {
       margin: 0;
-      background: #111;
+      background: var(--bg);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
       color: var(--text);
     }
 
-    .phone {
-      width: 100%;
-      max-width: 430px;
-      min-height: 100vh;
-      margin: 0 auto;
-      background: var(--bg);
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    .status-bar {
-      height: 42px;
-      background: #000;
-    }
-
     .app {
       background: var(--bg);
-      min-height: calc(100vh - 42px);
-      border-top-left-radius: 28px;
-      border-top-right-radius: 28px;
-      overflow: hidden;
+      min-height: 100vh;
+      overflow-x: hidden;
       padding-bottom: 104px;
     }
 
@@ -61,7 +45,7 @@
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      padding: 18px 18px 14px;
+      padding: calc(18px + env(safe-area-inset-top)) 18px 14px;
       background: var(--card);
       border-bottom: 1px solid var(--line);
     }
@@ -393,11 +377,10 @@
 
     .bottom-nav {
       position: fixed;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 0;
+      right: 0;
       bottom: 0;
       width: 100%;
-      max-width: 430px;
       background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(12px);
       border-top: 1px solid var(--line);
@@ -515,10 +498,7 @@
   </style>
 </head>
 <body>
-  <div class="phone">
-    <div class="status-bar"></div>
-
-    <div class="app">
+  <div class="app">
       <header class="topbar">
         <div class="project-box">
           <div class="avatar">G</div>
@@ -619,11 +599,11 @@
           </div>
         </section>
       </main>
-    </div>
+  </div>
 
-    <button class="fab" id="fabBtn" type="button">+</button>
+  <button class="fab" id="fabBtn" type="button">+</button>
 
-    <nav class="bottom-nav">
+  <nav class="bottom-nav">
       <a href="#" class="nav-item active">
         <span class="icon">📊</span>
         <span>Аналитика</span>
@@ -646,8 +626,8 @@
       </a>
     </nav>
 
-    <div class="sheet-backdrop" id="sheetBackdrop"></div>
-    <div class="sheet" id="actionSheet">
+  <div class="sheet-backdrop" id="sheetBackdrop"></div>
+  <div class="sheet" id="actionSheet">
       <div class="sheet-handle"></div>
       <div class="sheet-title">Быстрые действия</div>
 
@@ -655,10 +635,14 @@
       <button class="sheet-btn" type="button">Подключить Telegram</button>
       <button class="sheet-btn" type="button">Добавить источник</button>
       <button class="sheet-btn" type="button">Открыть бота</button>
-    </div>
   </div>
 
   <script>
+    if (window.Telegram && window.Telegram.WebApp) {
+      Telegram.WebApp.ready();
+      Telegram.WebApp.expand();
+    }
+
     const openSheetBtn = document.getElementById("openSheetBtn");
     const fabBtn = document.getElementById("fabBtn");
     const sheetBackdrop = document.getElementById("sheetBackdrop");
