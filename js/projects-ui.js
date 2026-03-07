@@ -33,33 +33,33 @@
       ".cp-nav-item.active{background:#f2f2f7;color:#1e5cfb}",
       ".cp-nav-bottom{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 16px}",
       // ── Agent sidebar (248px) ──────────────────────────────────────────────
-      ".cp-agent-sidebar{width:248px;min-width:248px;height:100vh;background:#fff;border-right:1px solid #f2f2f7;display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:99;overflow-y:auto;overflow-x:hidden}",
+      ".cp-agent-sidebar{width:248px;min-width:248px;height:100vh;background:#1a1d27;border-right:none;display:flex;flex-direction:column;position:fixed;left:0;top:0;z-index:99;overflow-y:auto;overflow-x:hidden}",
       ".cp-sidebar-header{padding:16px 12px 8px;flex-shrink:0}",
-      ".cp-sidebar-title{font-size:22px;font-weight:700;color:#000;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.27}",
+      ".cp-sidebar-title{font-size:22px;font-weight:700;color:#fff;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.27}",
       ".cp-status-row{display:flex;align-items:center;gap:6px}",
       ".cp-status-dot{width:8px;height:8px;border-radius:50%;background:#34c759;flex-shrink:0}",
       ".cp-status-dot.offline{background:#ff3b30}",
-      ".cp-status-label{font-size:16px;color:#000;line-height:1}",
-      ".cp-stop-btn{width:calc(100% - 24px);height:32px;background:transparent;border:1px solid #1e5cfb;border-radius:8px;font-size:16px;font-weight:400;color:#000;cursor:pointer;margin:4px 12px 4px;font-family:'Inter',sans-serif;transition:background .15s;flex-shrink:0}",
-      ".cp-stop-btn:hover{background:rgba(30,92,251,0.06)}",
+      ".cp-status-label{font-size:16px;color:rgba(255,255,255,0.55);line-height:1}",
+      ".cp-stop-btn{width:calc(100% - 24px);height:32px;background:transparent;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-size:16px;font-weight:400;color:rgba(255,255,255,0.85);cursor:pointer;margin:4px 12px 4px;font-family:'Inter',sans-serif;transition:background .15s;flex-shrink:0}",
+      ".cp-stop-btn:hover{background:rgba(255,255,255,0.08)}",
       // Sub-nav (tabs) inside sidebar
       ".cp-subnav{padding:4px 8px;display:flex;flex-direction:column;gap:2px;flex-shrink:0}",
-      ".projects-tab{display:flex;align-items:center;gap:10px;padding:0 8px;height:36px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:400;color:rgba(60,60,67,0.72);background:transparent;border:none;width:100%;text-align:left;font-family:'Inter',sans-serif;transition:background .15s,color .15s;white-space:nowrap}",
-      ".projects-tab:hover{background:#f2f2f7;color:#000}",
-      ".projects-tab.active{background:#f2f2f7;color:#000;font-weight:500}",
+      ".projects-tab{display:flex;align-items:center;gap:10px;padding:0 8px;height:36px;border-radius:8px;cursor:pointer;font-size:16px;font-weight:400;color:rgba(255,255,255,0.6);background:transparent;border:none;width:100%;text-align:left;font-family:'Inter',sans-serif;transition:background .15s,color .15s;white-space:nowrap}",
+      ".projects-tab:hover{background:rgba(255,255,255,0.08);color:#fff}",
+      ".projects-tab.active{background:rgba(255,255,255,0.12);color:#fff;font-weight:500}",
       ".cp-tab-icon{flex-shrink:0;color:inherit;opacity:.75}",
       ".projects-tab.active .cp-tab-icon{opacity:1}",
       ".cp-tab-badge{margin-left:auto;background:#ff3b30;color:#fff;border-radius:9999px;min-width:20px;height:20px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}",
       // Sidebar section / projects list
-      ".cp-section-title{font-size:18px;font-weight:700;color:#000;padding:14px 12px 6px;flex-shrink:0}",
-      ".cp-action-item{display:flex;align-items:center;gap:8px;padding:0 8px;height:36px;border-radius:8px;font-size:15px;font-weight:400;color:#000;background:transparent;border:none;cursor:pointer;width:calc(100% - 16px);margin:0 8px;font-family:'Inter',sans-serif;flex-shrink:0;transition:background .15s}",
-      ".cp-action-item:hover{background:#f2f2f7}",
-      ".cp-action-icon{color:#1e5cfb;flex-shrink:0;display:flex;align-items:center}",
+      ".cp-section-title{font-size:11px;font-weight:600;color:rgba(255,255,255,0.35);padding:14px 16px 6px;flex-shrink:0;text-transform:uppercase;letter-spacing:.06em}",
+      ".cp-action-item{display:flex;align-items:center;gap:8px;padding:0 8px;height:36px;border-radius:8px;font-size:15px;font-weight:400;color:rgba(255,255,255,0.75);background:transparent;border:none;cursor:pointer;width:calc(100% - 16px);margin:0 8px;font-family:'Inter',sans-serif;flex-shrink:0;transition:background .15s}",
+      ".cp-action-item:hover{background:rgba(255,255,255,0.08)}",
+      ".cp-action-icon{color:rgba(255,255,255,0.5);flex-shrink:0;display:flex;align-items:center}",
       ".projects-list{display:flex;flex-direction:column;overflow-y:auto;max-height:220px;padding:0 8px 4px}",
-      ".cp-sidebar-divider{height:1px;background:#f2f2f7;margin:8px 0;flex-shrink:0}",
-      ".project-row{display:flex;align-items:center;gap:8px;padding:0 8px;height:36px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:400;color:rgba(60,60,67,0.6);background:transparent;border:none;width:100%;text-align:left;font-family:'Inter',sans-serif;transition:background .15s,color .15s;position:relative}",
-      ".project-row:hover{background:#f2f2f7;color:#000}",
-      ".project-row.active{background:#fff;color:#000;box-shadow:0 1px 4px rgba(0,0,0,0.10)}",
+      ".cp-sidebar-divider{height:1px;background:rgba(255,255,255,0.08);margin:8px 0;flex-shrink:0}",
+      ".project-row{display:flex;align-items:center;gap:8px;padding:0 8px;height:36px;border-radius:10px;cursor:pointer;font-size:15px;font-weight:400;color:rgba(255,255,255,0.55);background:transparent;border:none;width:100%;text-align:left;font-family:'Inter',sans-serif;transition:background .15s,color .15s;position:relative}",
+      ".project-row:hover{background:rgba(255,255,255,0.08);color:#fff}",
+      ".project-row.active{background:rgba(255,255,255,0.12);color:#fff;box-shadow:none}",
       ".project-row.active svg{opacity:1!important}",
       ".proj-switcher-dd{position:fixed;z-index:100001;background:#fff;border:1px solid #e5e5ea;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);padding:6px;min-width:220px;display:flex;flex-direction:column;gap:2px}",
       ".proj-switcher-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:15px;color:#000;background:transparent;border:none;width:100%;text-align:left;font-family:inherit;transition:background .15s}",
@@ -72,20 +72,20 @@
       ".cp-topbar-left{cursor:pointer;padding:4px 8px;border-radius:8px;transition:background .15s;margin-left:-8px}",
       ".cp-topbar-left:hover{background:rgba(0,0,0,0.04)}",
       ".project-name{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}",
-      ".proj-menu-btn{background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:6px;color:#737378;font-size:13px;letter-spacing:1px;line-height:1;opacity:0;flex-shrink:0;font-family:inherit}",
+      ".proj-menu-btn{background:none;border:none;cursor:pointer;padding:2px 5px;border-radius:6px;color:rgba(255,255,255,0.45);font-size:13px;letter-spacing:1px;line-height:1;opacity:0;flex-shrink:0;font-family:inherit}",
       ".project-row:hover .proj-menu-btn,.project-row.active .proj-menu-btn{opacity:1}",
-      ".proj-menu-btn:hover{background:rgba(0,0,0,.06)}",
+      ".proj-menu-btn:hover{background:rgba(255,255,255,0.1)}",
       // Sidebar footer — pushed to bottom
-      ".cp-sidebar-footer{padding:12px 16px;border-top:1px solid #f2f2f7;flex-shrink:0;margin-top:auto}",
+      ".cp-sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0;margin-top:auto}",
       ".cp-ai-counter{margin-bottom:4px;cursor:pointer}",
-      ".cp-ai-counter-title{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:#000;margin-bottom:6px}",
-      ".cp-ai-counter-title-ico{width:16px;height:16px;border-radius:50%;border:1.5px solid #c7c7cc;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#8e8e93;font-weight:700;line-height:1;flex-shrink:0}",
+      ".cp-ai-counter-title{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:rgba(255,255,255,0.7);margin-bottom:6px}",
+      ".cp-ai-counter-title-ico{width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.25);display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;line-height:1;flex-shrink:0}",
       ".cp-ai-counter-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}",
-      ".cp-ai-counter-val{font-size:20px;font-weight:600;color:#000;line-height:1.1}",
-      ".cp-ai-counter-arrow{color:#1e5cfb;display:flex;align-items:center}",
-      ".cp-progress-track{background:#e5e5ea;height:6px;border-radius:100px;overflow:hidden}",
+      ".cp-ai-counter-val{font-size:20px;font-weight:600;color:#fff;line-height:1.1}",
+      ".cp-ai-counter-arrow{color:#6b8fff;display:flex;align-items:center}",
+      ".cp-progress-track{background:rgba(255,255,255,0.12);height:6px;border-radius:100px;overflow:hidden}",
       ".cp-progress-fill{background:#13cd25;border-radius:100px;height:100%;transition:width .6s}",
-      ".cp-ai-trial-badge{display:inline-block;font-size:11px;color:#737378;margin-top:6px}",
+      ".cp-ai-trial-badge{display:inline-block;font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px}",
       // ── Main content ───────────────────────────────────────────────────────
       ".cp-main{margin-left:248px;flex:1;min-height:100vh;display:flex;flex-direction:column;background:#f9f9fb;overflow:hidden}",
       ".cp-topbar{height:68px;background:transparent;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;gap:12px}",
@@ -749,18 +749,18 @@
       "@media(max-width:700px){.cp-pricing-cards{grid-template-columns:1fr}.cp-pricing-box{padding:24px}.cp-pricing-wrap{padding:16px 0}.cp-pricing-box{border-radius:20px 20px 0 0}}",
       // ── AI Agent sidebar section ────────────────────────────────────────────
       ".cp-agent-section{padding:12px 8px 0;flex-shrink:0}",
-      ".cp-agent-section-hdr{font-size:11px;font-weight:700;color:#8e8e93;text-transform:uppercase;letter-spacing:.06em;padding:0 8px;margin-bottom:6px}",
-      ".cp-agent-nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:none;border:none;width:100%;text-align:left;font-size:14px;font-weight:400;color:#3c3c43;font-family:'Inter',sans-serif;cursor:pointer;transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent;position:relative}",
-      ".cp-agent-nav-item:hover{background:#f2f2f7;color:#000}",
-      ".cp-agent-nav-item.active{background:#eef2ff;color:#1e5cfb;font-weight:500}",
+      ".cp-agent-section-hdr{font-size:11px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:.06em;padding:0 8px;margin-bottom:6px}",
+      ".cp-agent-nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:none;border:none;width:100%;text-align:left;font-size:14px;font-weight:400;color:rgba(255,255,255,0.65);font-family:'Inter',sans-serif;cursor:pointer;transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent;position:relative}",
+      ".cp-agent-nav-item:hover{background:rgba(255,255,255,0.08);color:#fff}",
+      ".cp-agent-nav-item.active{background:rgba(255,255,255,0.12);color:#fff;font-weight:500}",
       ".cp-agent-nav-item svg{flex-shrink:0;opacity:.7}",
       ".cp-agent-nav-item.active svg{opacity:1}",
       ".cp-agent-nav-badge{margin-left:auto;background:#ff3b30;color:#fff;border-radius:20px;font-size:11px;font-weight:700;padding:2px 7px;min-width:20px;text-align:center;flex-shrink:0}",
       ".cp-agent-nav-badge.blue{background:#1e5cfb}",
-      ".cp-agent-divider{height:1px;background:#f2f2f7;margin:10px 8px 4px}",
-      ".cp-agent-quick-hdr{font-size:12px;font-weight:700;color:#000;padding:6px 10px 4px;letter-spacing:-.01em}",
-      ".cp-agent-quick-btn{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:none;border:none;width:100%;text-align:left;font-size:14px;color:#1e5cfb;font-family:'Inter',sans-serif;cursor:pointer;transition:background .12s;-webkit-tap-highlight-color:transparent;pointer-events:auto;position:relative;z-index:2}",
-      ".cp-agent-quick-btn:hover{background:#eef2ff}",
+      ".cp-agent-divider{height:1px;background:rgba(255,255,255,0.08);margin:10px 8px 4px}",
+      ".cp-agent-quick-hdr{font-size:12px;font-weight:700;color:rgba(255,255,255,0.4);padding:6px 10px 4px;letter-spacing:-.01em}",
+      ".cp-agent-quick-btn{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;background:none;border:none;width:100%;text-align:left;font-size:14px;color:rgba(255,255,255,0.7);font-family:'Inter',sans-serif;cursor:pointer;transition:background .12s;-webkit-tap-highlight-color:transparent;pointer-events:auto;position:relative;z-index:2}",
+      ".cp-agent-quick-btn:hover{background:rgba(255,255,255,0.08)}",
       ".cp-agent-quick-btn svg{flex-shrink:0}",
 
     ].join("");
@@ -4177,16 +4177,16 @@
         "</nav>" +
         // ── Agent sidebar ──────────────────────────────────────────────────
         "<aside class='cp-agent-sidebar'>" +
-        "<div class='cp-sidebar-header' id='cp-sidebar-switcher' style='cursor:pointer;padding:12px;border-bottom:1px solid #f2f2f7;flex-shrink:0;display:flex;align-items:center;gap:10px;transition:background .15s;border-radius:0;' onmouseenter=\"this.style.background='rgba(0,0,0,0.03)'\" onmouseleave=\"this.style.background='transparent'\">" +
+        "<div class='cp-sidebar-header' id='cp-sidebar-switcher' style='cursor:pointer;padding:12px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;display:flex;align-items:center;gap:10px;transition:background .15s;border-radius:0;' onmouseenter=\"this.style.background='rgba(255,255,255,0.06)'\" onmouseleave=\"this.style.background='transparent'\">" +
         "<div id='cp-sw-av' style='width:36px;height:36px;border-radius:50%;background:#6366f1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0;'>?</div>" +
         "<div style='flex:1;min-width:0;'>" +
-        "<div id='projects-active-title' style='font-size:0.9rem;font-weight:700;color:#000;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>Выберите проект</div>" +
+        "<div id='projects-active-title' style='font-size:0.9rem;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>Выберите проект</div>" +
         "<div class='cp-status-row' id='cp-status-row' style='margin-top:2px;'>" +
         "<div class='cp-status-dot offline' id='cp-status-dot'></div>" +
         "<span class='cp-status-label' id='cp-status-label' style='font-size:0.72rem;'>Не активен</span>" +
         "</div>" +
         "</div>" +
-        "<span id='cp-sw-arrow' style='font-size:11px;color:#8e8e93;flex-shrink:0;transition:transform 0.2s;'>▾</span>" +
+        "<span id='cp-sw-arrow' style='font-size:11px;color:rgba(255,255,255,0.35);flex-shrink:0;transition:transform 0.2s;'>▾</span>" +
         "</div>" +
         "<button class='cp-stop-btn' id='cp-stop-btn' style='display:none'>Остановить</button>" +
         // Sub-navigation (tabs)
@@ -4221,8 +4221,8 @@
         "Настройки</button>" +
         // Divider + New project + Quick actions
         "<div class='cp-agent-divider'></div>" +
-        "<button type='button' class='cp-agent-quick-btn' id='cp-new-project-btn' style='color:#1e5cfb;font-weight:600;' onclick=\"window._cpAddProject&&window._cpAddProject()\">" +
-        "<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#1e5cfb' stroke-width='2.2' stroke-linecap='round'><line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/></svg>" +
+        "<button type='button' class='cp-agent-quick-btn' id='cp-new-project-btn' style='color:#6b8fff;font-weight:600;' onclick=\"window._cpAddProject&&window._cpAddProject()\">" +
+        "<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#6b8fff' stroke-width='2.2' stroke-linecap='round'><line x1='12' y1='5' x2='12' y2='19'/><line x1='5' y1='12' x2='19' y2='12'/></svg>" +
         "Добавить проект</button>" +
         "<div class='cp-agent-divider'></div>" +
         "<div class='cp-agent-quick-hdr'>Добавить информацию</div>" +
