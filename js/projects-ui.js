@@ -103,6 +103,13 @@
       ".cp-desk-sw-arrow.open{transform:rotate(180deg)}",
       // ── Cards ─────────────────────────────────────────────────────────────
       ".projects-card{background:#fff;border:1px solid #e5e5ea;border-radius:16px;padding:16px}",
+      ".cp-acct-menu-row{width:100%;display:flex;align-items:center;gap:12px;padding:11px 4px;border:none;background:none;cursor:pointer;font-size:15px;font-family:'Inter',sans-serif;color:#000;border-radius:8px;transition:background .12s;text-align:left}",
+      ".cp-acct-menu-row:hover{background:#f2f2f7}",
+      ".cp-acct-menu-ico{font-size:18px;width:24px;text-align:center;flex-shrink:0}",
+      ".cp-acct-menu-row span:nth-child(2){flex:1}",
+      ".cp-acct-menu-chev{color:#c7c7cc;font-size:16px;flex-shrink:0}",
+      ".cp-acct-logout-row{color:#ef4444}",
+      ".cp-acct-logout-row:hover{background:#fff0f0}",
       ".cardHead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:12px;border-bottom:1px solid #e5e5ea;margin-bottom:16px}",
       ".cardHead h2{margin:0;font-size:16px;font-weight:500;color:#000}",
       ".muted{color:#737378;font-size:14px}",
@@ -1785,6 +1792,24 @@
     window.openTelegramConnectModal = function (mode) { _openTelegramModal(mode); };
     window._cpAddProject = function () { handleAddProjectClick(); };
     window._cpHandleAddProject = handleAddProjectClick;
+
+    // Account menu actions — delegate to admin.html handlers
+    window.__cpOpenAcct = function (section) {
+      if (section === 'help') {
+        var url = 'https://t.me/createbotai';
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+          try { window.Telegram.WebApp.openLink(url); } catch (_) { window.open(url, '_blank'); }
+        } else {
+          window.open(url, '_blank');
+        }
+        return;
+      }
+      if (section === 'language') { section = 'general'; }
+      if (typeof window.openSettings === 'function') window.openSettings(section);
+    };
+    window.__cpLogout = function () {
+      if (typeof window.signOut === 'function') window.signOut();
+    };
 
     function closeTelegramConnectModal() {
       var bg = nodes.tgModalBg || document.getElementById("tg-connect-modal");
@@ -3777,6 +3802,20 @@
         "</div></div>" +
         (isTgConnected ? "" : "<div style='font-size:14px;color:#737378;background:#f2f2f7;border-radius:8px;padding:10px 12px;line-height:1.5;'>💡 Получите токен у <b><a href=\"https://t.me/BotFather\" target=\"_blank\" style=\"color:#1e5cfb;\">@BotFather</a></b> командой /newbot</div>") +
         "</div></div>" +
+        // ── Account section ─────────────────────────────────────────────────
+        "<div class='projects-card' id='cp-account-card'>" +
+        "<div class='cardHead'><h2>Аккаунт</h2></div>" +
+        "<div style='display:flex;flex-direction:column;gap:2px;'>" +
+        "<button class='cp-acct-menu-row' onclick=\"window.__cpOpenAcct&&window.__cpOpenAcct('account')\"><span class='cp-acct-menu-ico'>👤</span><span>Мой аккаунт</span><span class='cp-acct-menu-chev'>›</span></button>" +
+        "<button class='cp-acct-menu-row' onclick=\"window.__cpOpenAcct&&window.__cpOpenAcct('billing')\"><span class='cp-acct-menu-ico'>💳</span><span>Оплата и тарифы</span><span class='cp-acct-menu-chev'>›</span></button>" +
+        "<button class='cp-acct-menu-row' onclick=\"window.__cpOpenAcct&&window.__cpOpenAcct('partner')\"><span class='cp-acct-menu-ico'>🤝</span><span>Кабинет партнёра</span><span class='cp-acct-menu-chev'>›</span></button>" +
+        "<button class='cp-acct-menu-row' onclick=\"window.__cpOpenAcct&&window.__cpOpenAcct('language')\"><span class='cp-acct-menu-ico'>🌐</span><span>Язык</span><span class='cp-acct-menu-chev'>›</span></button>" +
+        "<button class='cp-acct-menu-row' onclick=\"window.__cpOpenAcct&&window.__cpOpenAcct('help')\"><span class='cp-acct-menu-ico'>❓</span><span>Помощь</span><span class='cp-acct-menu-chev'>›</span></button>" +
+        "</div>" +
+        "<div style='height:1px;background:#e5e5ea;margin:12px 0;'></div>" +
+        "<button class='cp-acct-menu-row cp-acct-logout-row' onclick=\"window.__cpLogout&&window.__cpLogout()\"><span class='cp-acct-menu-ico'>🚪</span><span>Выйти</span></button>" +
+        "</div>" +
+        // ────────────────────────────────────────────────────────────────────
         "</div></div>" +
         // ── Behavior settings panel ─────────────────────────────────────────
         "<div class='cp-stab-panel' data-panel='behavior' style='display:none;'>" +
