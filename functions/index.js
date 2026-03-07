@@ -110,6 +110,22 @@ function buildPrompt(question, kbItems, rules, questionEmbedding = null) {
   return buildSystem(question, kbItems, rules, questionEmbedding) + `\n\nВопрос: ${question}`;
 }
 
+// ── Uzbek/general text normalizer for Trainer matching ────────────────────
+function normalizeText(text, dictionary) {
+  if (!text) return '';
+  let n = text.toLowerCase().trim()
+    .replace(/[''`ʼ]/g, "'")
+    .replace(/\s+/g, ' ');
+  if (dictionary && dictionary.length) {
+    const tokens = n.split(/\s+/);
+    n = tokens.map(tok => {
+      const e = dictionary.find(d => d.variant === tok);
+      return e ? e.canonical : tok;
+    }).join(' ');
+  }
+  return n;
+}
+
 // ── Language detection from message text ──────────────────────────────────
 function detectLang(text) {
   const t = (text || '').trim();
@@ -1493,8 +1509,9 @@ exports.telegramWebhook = onRequest(
         }
       }
 
-      // If no KB match → save to unanswered so owner can review & add to KB
-      const unansweredWrite = topMatches.length === 0
+      // If no KB match → save to unanswered + trainer collections
+      const noKbMatchNow = topMatches.length === 0;
+      const unansweredWrite = noKbMatchNow
         ? db.collection(`users/${uid}/unanswered`).add({
           text: question.slice(0, 300),
           aiAnswer: answer.slice(0, 2000),
@@ -1502,6 +1519,35 @@ exports.telegramWebhook = onRequest(
           chatName,
           botId,
           _ts: admin.firestore.FieldValue.serverTimestamp(),
+        }).then(async (unansweredRef) => {
+          // Save to trainer_unanswered
+          const normQ = normalizeText(question, []);
+          const tUnRef = await db.collection(`users/${uid}/trainer_unanswered`).add({
+            projectId: _projectId || '',
+            userQuestion: question.slice(0, 500),
+            normalizedQuestion: normQ.slice(0, 500),
+            originalLanguage: detectedLang,
+            source: 'telegram',
+            chatId,
+            botId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: 'pending',
+            kbMatchFound: false,
+            fallbackUsed: true,
+            openaiResponseId: null,
+          });
+          // Save OpenAI response to trainer_openai_responses
+          await db.collection(`users/${uid}/trainer_openai_responses`).add({
+            projectId: _projectId || '',
+            question: question.slice(0, 500),
+            normalizedQuestion: normQ.slice(0, 500),
+            openaiAnswer: answer.slice(0, 3000),
+            model: resolvedModel,
+            provider,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            status: 'pending',
+            linkedUnansweredId: tUnRef.id,
+          }).then(r => tUnRef.update({ openaiResponseId: r.id }).catch(() => {})).catch(() => {});
         }).catch(() => { })
         : Promise.resolve();
 
@@ -2696,6 +2742,223 @@ exports.projectsApi = onRequest(
           }));
         }
         res.json({ ok: true, messages });
+        return;
+      }
+
+      // ──────────────────────────────────────────────────────────────────────
+      // TRAINER API
+      // ──────────────────────────────────────────────────────────────────────
+
+      // GET /trainer/unanswered
+      if (req.method === "GET" && path === "trainer/unanswered") {
+        const limit = Math.min(Number(req.query.limit) || 50, 200);
+        const snap = await db.collection(`users/${uid}/trainer_unanswered`)
+          .orderBy("createdAt", "desc").limit(limit).get();
+        res.json({ ok: true, items: snap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: _asIso(d.data().createdAt) })) });
+        return;
+      }
+
+      // POST /trainer/unanswered/:id/action  (action: resolve|ignore|draft)
+      const tuAct = path.match(/^trainer\/unanswered\/([^/]+)\/action$/);
+      if (tuAct && req.method === "POST") {
+        const { action, answer: ans, canonicalQuestion } = req.body || {};
+        const ref = db.doc(`users/${uid}/trainer_unanswered/${tuAct[1]}`);
+        const snap = await ref.get();
+        if (!snap.exists) { res.status(404).json({ error: "Not found" }); return; }
+        const d = snap.data();
+        if (action === "ignore") {
+          await ref.update({ status: "ignored", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        } else if (action === "resolve") {
+          await ref.update({ status: "resolved", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        } else if (action === "draft" && ans) {
+          const draftRef = await db.collection(`users/${uid}/trainer_drafts`).add({
+            projectId: d.projectId || '',
+            canonicalQuestion: canonicalQuestion || d.userQuestion,
+            normalizedQuestion: d.normalizedQuestion || normalizeText(d.userQuestion, []),
+            answer: String(ans).slice(0, 5000),
+            sourceType: "unanswered",
+            linkedUnansweredId: tuAct[1],
+            language: d.originalLanguage || 'ru',
+            tags: [],
+            status: "draft",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          await ref.update({ status: "resolved", draftId: draftRef.id, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        } else {
+          res.status(400).json({ error: "Invalid action" }); return;
+        }
+        res.json({ ok: true });
+        return;
+      }
+
+      // GET /trainer/openai-responses
+      if (req.method === "GET" && path === "trainer/openai-responses") {
+        const limit = Math.min(Number(req.query.limit) || 50, 200);
+        const snap = await db.collection(`users/${uid}/trainer_openai_responses`)
+          .orderBy("createdAt", "desc").limit(limit).get();
+        res.json({ ok: true, items: snap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: _asIso(d.data().createdAt) })) });
+        return;
+      }
+
+      // POST /trainer/openai-responses/:id/action  (action: approve|reject|draft)
+      const toAct = path.match(/^trainer\/openai-responses\/([^/]+)\/action$/);
+      if (toAct && req.method === "POST") {
+        const { action, answer: editedAns, canonicalQuestion } = req.body || {};
+        const ref = db.doc(`users/${uid}/trainer_openai_responses/${toAct[1]}`);
+        const snap = await ref.get();
+        if (!snap.exists) { res.status(404).json({ error: "Not found" }); return; }
+        const d = snap.data();
+        if (action === "reject") {
+          await ref.update({ status: "rejected", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        } else if (action === "draft") {
+          const finalAns = editedAns || d.openaiAnswer;
+          await db.collection(`users/${uid}/trainer_drafts`).add({
+            projectId: d.projectId || '',
+            canonicalQuestion: canonicalQuestion || d.question,
+            normalizedQuestion: d.normalizedQuestion || normalizeText(d.question, []),
+            answer: String(finalAns).slice(0, 5000),
+            sourceType: "openai",
+            linkedOpenaiId: toAct[1],
+            language: 'auto',
+            tags: [],
+            status: "draft",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          await ref.update({ status: "approved", updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        } else {
+          res.status(400).json({ error: "Invalid action" }); return;
+        }
+        res.json({ ok: true });
+        return;
+      }
+
+      // GET /trainer/drafts
+      if (req.method === "GET" && path === "trainer/drafts") {
+        const limit = Math.min(Number(req.query.limit) || 50, 200);
+        const snap = await db.collection(`users/${uid}/trainer_drafts`)
+          .orderBy("createdAt", "desc").limit(limit).get();
+        res.json({ ok: true, items: snap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: _asIso(d.data().createdAt) })) });
+        return;
+      }
+
+      // POST /trainer/drafts  (manual create)
+      if (req.method === "POST" && path === "trainer/drafts") {
+        const { projectId, canonicalQuestion, answer: ans, language = 'ru', tags = [] } = req.body || {};
+        if (!canonicalQuestion || !ans) { res.status(400).json({ error: "canonicalQuestion and answer required" }); return; }
+        const ref = await db.collection(`users/${uid}/trainer_drafts`).add({
+          projectId: projectId || '',
+          canonicalQuestion: String(canonicalQuestion).slice(0, 500),
+          normalizedQuestion: normalizeText(canonicalQuestion, []).slice(0, 500),
+          answer: String(ans).slice(0, 5000),
+          sourceType: "manual",
+          language,
+          tags: Array.isArray(tags) ? tags : [],
+          status: "draft",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        res.status(201).json({ ok: true, id: ref.id });
+        return;
+      }
+
+      // PATCH /trainer/drafts/:id
+      const tdPatch = path.match(/^trainer\/drafts\/([^/]+)$/);
+      if (tdPatch && req.method === "PATCH") {
+        const { canonicalQuestion, answer: ans, language, tags } = req.body || {};
+        const upd = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+        if (canonicalQuestion !== undefined) {
+          upd.canonicalQuestion = String(canonicalQuestion).slice(0, 500);
+          upd.normalizedQuestion = normalizeText(canonicalQuestion, []).slice(0, 500);
+        }
+        if (ans !== undefined) upd.answer = String(ans).slice(0, 5000);
+        if (language !== undefined) upd.language = language;
+        if (Array.isArray(tags)) upd.tags = tags;
+        await db.doc(`users/${uid}/trainer_drafts/${tdPatch[1]}`).set(upd, { merge: true });
+        res.json({ ok: true });
+        return;
+      }
+
+      // DELETE /trainer/drafts/:id
+      const tdDel = path.match(/^trainer\/drafts\/([^/]+)$/);
+      if (tdDel && req.method === "DELETE") {
+        await db.doc(`users/${uid}/trainer_drafts/${tdDel[1]}`).delete();
+        res.json({ ok: true });
+        return;
+      }
+
+      // POST /trainer/drafts/:id/approve  → move to kbQA
+      const tdApprove = path.match(/^trainer\/drafts\/([^/]+)\/approve$/);
+      if (tdApprove && req.method === "POST") {
+        const ref = db.doc(`users/${uid}/trainer_drafts/${tdApprove[1]}`);
+        const snap = await ref.get();
+        if (!snap.exists) { res.status(404).json({ error: "Not found" }); return; }
+        const d = snap.data();
+        // Check for duplicate in kbQA
+        const dupeSnap = await db.collection(`users/${uid}/kbQA`)
+          .where("question", "==", d.canonicalQuestion).limit(1).get();
+        if (!dupeSnap.empty) {
+          res.status(409).json({ ok: false, error: "Duplicate question already in Knowledge Base" }); return;
+        }
+        const kbRef = await db.collection(`users/${uid}/kbQA`).add({
+          question: d.canonicalQuestion,
+          answer: d.answer,
+          normalizedQuestion: d.normalizedQuestion || normalizeText(d.canonicalQuestion, []),
+          tags: d.tags || [],
+          language: d.language || 'ru',
+          source: 'trainer',
+          projectId: d.projectId || '',
+          status: 'approved',
+          usageCount: 0,
+          asked: 0,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        await ref.update({ status: "approved", kbId: kbRef.id, approvedAt: admin.firestore.FieldValue.serverTimestamp() });
+        res.json({ ok: true, kbId: kbRef.id });
+        return;
+      }
+
+      // GET /trainer/dictionary
+      if (req.method === "GET" && path === "trainer/dictionary") {
+        const snap = await db.collection(`users/${uid}/trainer_dictionary`)
+          .orderBy("createdAt", "desc").limit(500).get();
+        res.json({ ok: true, items: snap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: _asIso(d.data().createdAt) })) });
+        return;
+      }
+
+      // POST /trainer/dictionary
+      if (req.method === "POST" && path === "trainer/dictionary") {
+        const { canonical, variant, type = "synonym", language = "uz" } = req.body || {};
+        if (!canonical || !variant) { res.status(400).json({ error: "canonical and variant required" }); return; }
+        const ref = await db.collection(`users/${uid}/trainer_dictionary`).add({
+          canonical: String(canonical).toLowerCase().trim(),
+          variant: String(variant).toLowerCase().trim(),
+          type,
+          language,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        res.status(201).json({ ok: true, id: ref.id });
+        return;
+      }
+
+      // PATCH /trainer/dictionary/:id
+      const tdictPatch = path.match(/^trainer\/dictionary\/([^/]+)$/);
+      if (tdictPatch && req.method === "PATCH") {
+        const { canonical, variant, type, language } = req.body || {};
+        const upd = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+        if (canonical) upd.canonical = String(canonical).toLowerCase().trim();
+        if (variant) upd.variant = String(variant).toLowerCase().trim();
+        if (type) upd.type = type;
+        if (language) upd.language = language;
+        await db.doc(`users/${uid}/trainer_dictionary/${tdictPatch[1]}`).set(upd, { merge: true });
+        res.json({ ok: true });
+        return;
+      }
+
+      // DELETE /trainer/dictionary/:id
+      const tdictDel = path.match(/^trainer\/dictionary\/([^/]+)$/);
+      if (tdictDel && req.method === "DELETE") {
+        await db.doc(`users/${uid}/trainer_dictionary/${tdictDel[1]}`).delete();
+        res.json({ ok: true });
         return;
       }
 
