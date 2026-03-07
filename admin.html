@@ -16049,22 +16049,38 @@ ${kbSummary}`,
         function waitForProjectsAuth(timeoutMs = 12000) {
           return new Promise((resolve) => {
             try {
-              if (window.firebase?.auth?.().currentUser) {
-                resolve(true);
+              const auth = window.firebase?.auth?.();
+              if (!auth) {
+                resolve(false);
+                return;
+              }
+              async function onUserReady(user) {
+                if (!user) return;
+                try {
+                  await user.getIdToken(true);
+                  resolve(true);
+                } catch (_) {
+                  resolve(false);
+                }
+              }
+              const current = auth.currentUser;
+              if (current) {
+                onUserReady(current);
                 return;
               }
               const started = Date.now();
-              const unsub = window.firebase?.auth?.().onAuthStateChanged((u) => {
+              const unsub = auth.onAuthStateChanged((u) => {
                 if (u) {
                   try { unsub && unsub(); } catch (_) { }
-                  resolve(true);
+                  onUserReady(u);
                 }
               });
               const timer = setInterval(() => {
-                if (window.firebase?.auth?.().currentUser) {
+                const u = auth.currentUser;
+                if (u) {
                   clearInterval(timer);
                   try { unsub && unsub(); } catch (_) { }
-                  resolve(true);
+                  onUserReady(u);
                   return;
                 }
                 if (Date.now() - started >= timeoutMs) {

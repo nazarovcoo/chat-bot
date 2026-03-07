@@ -110,6 +110,15 @@
       ".cp-acct-menu-chev{color:#c7c7cc;font-size:16px;flex-shrink:0}",
       ".cp-acct-logout-row{color:#ef4444}",
       ".cp-acct-logout-row:hover{background:#fff0f0}",
+      ".cp-logout-confirm-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300001;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}",
+      ".cp-logout-confirm-dialog{background:#fff;border-radius:16px;padding:24px;max-width:400px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,0.18)}",
+      ".cp-logout-confirm-title{font-size:18px;font-weight:700;color:#000;margin:0 0 8px;line-height:1.3}",
+      ".cp-logout-confirm-sub{font-size:14px;color:#737378;margin:0 0 24px;line-height:1.4}",
+      ".cp-logout-confirm-btn{display:block;width:100%;padding:12px 20px;border-radius:10px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;border:none;margin-bottom:10px;transition:background .15s}",
+      ".cp-logout-confirm-btn.primary{background:#000;color:#fff}",
+      ".cp-logout-confirm-btn.primary:hover{background:#333}",
+      ".cp-logout-confirm-btn.cancel{background:#fff;color:#000;border:1px solid #e5e5ea}",
+      ".cp-logout-confirm-btn.cancel:hover{background:#f9f9fb}",
       ".cardHead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:12px;border-bottom:1px solid #e5e5ea;margin-bottom:16px}",
       ".cardHead h2{margin:0;font-size:16px;font-weight:500;color:#000}",
       ".muted{color:#737378;font-size:14px}",
@@ -1366,6 +1375,89 @@
         }
       });
 
+      // ── Выход (Выйти): делегирование + подтверждение + логика в этом файле ─
+      function doLogoutNow() {
+        console.log("[LOGOUT] executing");
+        try {
+          if (typeof firebase !== "undefined" && firebase.auth) firebase.auth().signOut();
+        } catch (err) { console.warn("[LOGOUT] signOut error", err); }
+        try { localStorage.clear(); sessionStorage.clear(); } catch (_) {}
+        window.location.href = "/";
+      }
+      function showLogoutConfirm() {
+        var email = "";
+        try {
+          if (typeof firebase !== "undefined" && firebase.auth && firebase.auth().currentUser)
+            email = firebase.auth().currentUser.email || "";
+        } catch (_) {}
+        var subText = email ? "Выйти из аккаунта как " + email + "?" : "Выйти из аккаунта?";
+        var bg = document.createElement("div");
+        bg.className = "cp-logout-confirm-bg";
+        bg.setAttribute("role", "dialog");
+        bg.setAttribute("aria-modal", "true");
+        bg.setAttribute("aria-labelledby", "cp-logout-confirm-title");
+        var dialog = document.createElement("div");
+        dialog.className = "cp-logout-confirm-dialog";
+        var title = document.createElement("div");
+        title.className = "cp-logout-confirm-title";
+        title.id = "cp-logout-confirm-title";
+        title.textContent = "Вы уверены, что хотите выйти?";
+        var sub = document.createElement("div");
+        sub.className = "cp-logout-confirm-sub";
+        sub.textContent = subText;
+        var btnOk = document.createElement("button");
+        btnOk.type = "button";
+        btnOk.className = "cp-logout-confirm-btn primary";
+        btnOk.setAttribute("data-cp-logout-ok", "");
+        btnOk.textContent = "Выйти";
+        var btnCancel = document.createElement("button");
+        btnCancel.type = "button";
+        btnCancel.className = "cp-logout-confirm-btn cancel";
+        btnCancel.setAttribute("data-cp-logout-cancel", "");
+        btnCancel.textContent = "Отменить";
+        dialog.appendChild(title);
+        dialog.appendChild(sub);
+        dialog.appendChild(btnOk);
+        dialog.appendChild(btnCancel);
+        bg.appendChild(dialog);
+        function closeConfirm() {
+          bg.remove();
+          document.removeEventListener("keydown", onKey);
+        }
+        function onKey(e) {
+          if (e.key === "Escape") closeConfirm();
+        }
+        bg.addEventListener("click", function (e) {
+          if (e.target === bg) closeConfirm();
+        });
+        btnOk.addEventListener("click", function () {
+          closeConfirm();
+          doLogoutNow();
+        });
+        btnCancel.addEventListener("click", closeConfirm);
+        document.addEventListener("keydown", onKey);
+        document.body.appendChild(bg);
+      }
+      window.__showLogoutConfirm = showLogoutConfirm;
+      function onLogoutClick(e) {
+        var target = e.target.closest && e.target.closest(".cp-acct-logout-row, [data-action='logout'], #cp-menu-signout");
+        if (!target) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (menu && menu.classList.contains("open")) closeMenu();
+        showLogoutConfirm();
+      }
+      root.addEventListener("click", onLogoutClick, true);
+      document.addEventListener("click", function (e) {
+        if (!root.contains(e.target)) return;
+        var t = e.target.closest && e.target.closest(".cp-acct-logout-row, [data-action='logout'], #cp-menu-signout");
+        if (!t) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (menu && menu.classList.contains("open")) closeMenu();
+        showLogoutConfirm();
+      }, true);
+
       // Menu item handlers
       var btnAccount = root.querySelector("#cp-menu-account");
       var btnBilling = root.querySelector("#cp-menu-billing");
@@ -1678,16 +1770,7 @@
         closeMenu();
         showToast("Помощь — скоро доступно");
       });
-      if (btnSignout) btnSignout.addEventListener("click", function () {
-        closeMenu();
-        if (window.confirm("Выйти из аккаунта?")) {
-          try {
-            if (typeof firebase !== "undefined" && firebase.auth) {
-              firebase.auth().signOut();
-            }
-          } catch (_) { }
-        }
-      });
+      if (btnSignout) btnSignout.addEventListener("click", function () { closeMenu(); });
     })();
 
     // "Остановить" — disconnect Telegram from current project
@@ -1808,7 +1891,12 @@
       if (typeof window.openSettings === 'function') window.openSettings(section);
     };
     window.__cpLogout = function () {
-      if (typeof window.signOut === 'function') window.signOut();
+      if (typeof window.__showLogoutConfirm === 'function') {
+        window.__showLogoutConfirm();
+      } else {
+        try { if (typeof firebase !== 'undefined' && firebase.auth) firebase.auth().signOut(); } catch (_) {}
+        window.location.href = '/';
+      }
     };
 
     function closeTelegramConnectModal() {
@@ -3813,7 +3901,7 @@
         "<button class='cp-acct-menu-row' onclick=\"window.__cpOpenAcct&&window.__cpOpenAcct('help')\"><span class='cp-acct-menu-ico'>❓</span><span>Помощь</span><span class='cp-acct-menu-chev'>›</span></button>" +
         "</div>" +
         "<div style='height:1px;background:#e5e5ea;margin:12px 0;'></div>" +
-        "<button class='cp-acct-menu-row cp-acct-logout-row' onclick=\"window.__cpLogout&&window.__cpLogout()\"><span class='cp-acct-menu-ico'>🚪</span><span>Выйти</span></button>" +
+        "<button type='button' class='cp-acct-menu-row cp-acct-logout-row' data-action='logout'><span class='cp-acct-menu-ico'>🚪</span><span>Выйти</span></button>" +
         "</div>" +
         // ────────────────────────────────────────────────────────────────────
         "</div></div>" +
@@ -4902,7 +4990,22 @@
         "</div></div>";
     }
 
+    function isUnauthorized(err) {
+      return (err && err.status === 401) || (err && /unauthorized/i.test(String(err.message || err)));
+    }
+    function showLoadingState() {
+      nodes.content.innerHTML = "<div class='projects-card' style='text-align:center;color:#6b7280;padding:24px'>Загрузка проекта...</div>";
+    }
     refreshProjects().catch(function (e) {
+      if (isUnauthorized(e)) {
+        showLoadingState();
+        setTimeout(function () {
+          refreshProjects().catch(function (e2) {
+            nodes.content.innerHTML = "<div class='projects-card'>Ошибка загрузки Projects UI: " + esc(e2.message || e2) + "</div>";
+          });
+        }, 1200);
+        return;
+      }
       nodes.content.innerHTML = "<div class='projects-card'>Ошибка загрузки Projects UI: " + esc(e.message || e) + "</div>";
     });
 
