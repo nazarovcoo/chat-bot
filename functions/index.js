@@ -2290,6 +2290,7 @@ exports.projectsApi = onRequest(
 
     const db = admin.firestore();
     const path = _apiPath(req);
+    console.log(`[projectsApi] ${req.method} /${path} uid=${uid}`);
 
     try {
       // GET /projects

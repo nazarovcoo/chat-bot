@@ -2029,17 +2029,20 @@
     /* ══ TRAINER ══ */
     var _trainerCurrentTab = 'unanswered';
     var _trainerEditorCtx = null;
+    const _PROJECTS_API = 'https://projectsapi-mt3q6i43mq-uc.a.run.app';
 
     async function _trainerApi(method, endpoint, body) {
         const user = firebase.auth().currentUser;
         if (!user) throw new Error('Not authenticated');
         const token = await user.getIdToken();
-        const resp = await fetch('/api/' + endpoint, {
+        const resp = await fetch(_PROJECTS_API + '/api/' + endpoint, {
             method,
             headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
             body: body ? JSON.stringify(body) : undefined,
         });
-        return resp.json();
+        const text = await resp.text();
+        try { return JSON.parse(text); }
+        catch(e) { throw new Error('HTTP ' + resp.status + ': ' + text.slice(0, 200)); }
     }
 
     function trainerTab(btn, tab) {
@@ -2087,7 +2090,7 @@
                 </div></td>
               </tr>`).join('')}</tbody>
             </table>`;
-        } catch(e) { el.innerHTML = '<p class="trainer-empty">Ошибка загрузки</p>'; }
+        } catch(e) { console.error('[trainer/unanswered]', e); el.innerHTML = `<p class="trainer-empty">Ошибка: ${e.message}</p>`; }
     }
 
     async function _trainerLoadOpenai() {
